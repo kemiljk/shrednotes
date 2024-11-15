@@ -84,7 +84,7 @@ struct GradientButton<T, HapticTrigger, Destination>: View where Destination: Vi
         case .primary:
             return Color.indigo.gradient
         case .secondary:
-            return Color(.systemGray3).gradient
+            return Color(.systemGray5).gradient
         }
     }
     

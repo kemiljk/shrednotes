@@ -9,9 +9,24 @@ import SwiftUI
 
 @main
 struct Add_Session_Watch_AppApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
+    @State private var navigateToAddEntry = false
+
+       var body: some Scene {
+           WindowGroup {
+               NavigationStack {
+                   AddJournalEntryView()
+               }
+               .environment(\.modelContext, watchExtensionModelContainer.mainContext)
+               .modelContainer(watchExtensionModelContainer)
+               .onOpenURL { url in
+                   handleDeepLink(url)
+               }
+           }
+       }
+
+       private func handleDeepLink(_ url: URL) {
+           if url.scheme == "journalapp" && url.host == "addentry" {
+               navigateToAddEntry = true
+           }
+       }
 }

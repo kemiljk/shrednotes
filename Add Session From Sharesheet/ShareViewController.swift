@@ -1,30 +1,44 @@
-//
-//  ShareViewController.swift
-//  Add Session From Sharesheet
-//
-//  Created by Karl Koch on 14/11/2024.
-//
-
-import UIKit
 import Social
+import SwiftUI
+import Combine
 
-class ShareViewController: SLComposeServiceViewController {
+class ShareViewController: UIViewController {
+    private var coordinator = ShareCoordinator()
+    private var cancellables = Set<AnyCancellable>()
 
-    override func isContentValid() -> Bool {
-        // Do validation of contentText and/or NSExtensionContext attachments here
-        return true
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        print("ShareViewController viewDidLoad called")
+        
+        guard let extensionContext = extensionContext else {
+            print("extensionContext is nil")
+            return
+        }
+        
+        print("Initializing ShareView with model container")
+        let shareView = ShareView(extensionContext: extensionContext, coordinator: coordinator)
+            .modelContainer(skateSessionExtensionModelContainer)
+        
+        let hostingController = UIHostingController(rootView: shareView)
+        
+        addChild(hostingController)
+        hostingController.view.frame = view.bounds
+        view.addSubview(hostingController.view)
+        hostingController.didMove(toParent: self)
+        
+        coordinator.$shouldDismiss.sink { [weak self] shouldDismiss in
+            print("shouldDismiss: \(shouldDismiss)")
+            if shouldDismiss {
+                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            }
+        }.store(in: &cancellables)
+        
+        coordinator.$shouldSave.sink { [weak self] shouldSave in
+            print("shouldSave: \(shouldSave)")
+            if shouldSave {
+                self?.extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
+            }
+        }.store(in: &cancellables)
     }
-
-    override func didSelectPost() {
-        // This is called after the user selects Post. Do the upload of contentText and/or NSExtensionContext attachments.
-    
-        // Inform the host that we're done, so it un-blocks its UI. Note: Alternatively you could call super's -didSelectPost, which will similarly complete the extension context.
-        self.extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
-    }
-
-    override func configurationItems() -> [Any]! {
-        // To add configuration options via table cells at the bottom of the sheet, return an array of SLComposeSheetConfigurationItem here.
-        return []
-    }
-
 }

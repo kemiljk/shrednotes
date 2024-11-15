@@ -18,15 +18,21 @@ class SessionManager: NSObject, ObservableObject, WCSessionDelegate {
         // Handle activation completion
     }
     
+    // iOS-specific methods
+    #if os(iOS)
     func sessionDidBecomeInactive(_ session: WCSession) {
         // Handle session becoming inactive
     }
     
     func sessionDidDeactivate(_ session: WCSession) {
         // Handle session deactivation
-        // iOS-only: Reactivate the session
         WCSession.default.activate()
     }
+    
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        // Handle watch state changes
+    }
+    #endif
     
     func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         if let sessionData = message["session"] as? Data {
@@ -44,7 +50,7 @@ class SessionManager: NSObject, ObservableObject, WCSessionDelegate {
     
     func sendSession(_ session: SkateSession) {
         guard WCSession.default.isReachable else {
-            print("Watch is not reachable")
+            print("Counterpart is not reachable")
             return
         }
         
@@ -59,12 +65,10 @@ class SessionManager: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
     
-    // New method to add received session to SwiftData
+    // Method to add received session to SwiftData
+    @MainActor
     private func addReceivedSessionToSwiftData(_ session: SkateSession) {
-        guard let modelContext = sharedModelContainer.mainContext else {
-            print("Model context not available")
-            return
-        }
+        let modelContext = watchExtensionModelContainer.mainContext
         
         // Check if a session with the same ID already exists
         let fetchDescriptor = FetchDescriptor<SkateSession>(predicate: #Predicate { $0.id == session.id })

@@ -25,6 +25,7 @@ struct EditSessionView: View {
     @State private var selectedMediaIds: Set<UUID> = []
     @State private var isEditMode: Bool = false
     @State private var isAddingTricks = false
+    @State private var isSelectingCombo = false
     @State private var isSaved = false
     @State private var suggestedTricks: [Trick] = []
     
@@ -41,6 +42,27 @@ struct EditSessionView: View {
     @State private var region: MKCoordinateRegion
     @State private var selectedLocation: IdentifiableLocation?
     @State private var mapSelection: MKMapItem?
+    
+    @State private var hasDuration: Bool = false
+    @State private var duration: Date = {
+        let calendar = Calendar.current
+        let reference = Date(timeIntervalSinceReferenceDate: 0)
+        return reference
+    }()
+    @State private var manualDuration: TimeInterval?
+    
+    private func initializeDuration() {
+        if let workoutDuration = session.workoutDuration, workoutDuration > 0 {
+            let hours = Int(workoutDuration) / 3600
+            let minutes = Int(workoutDuration) % 3600 / 60
+            
+            let calendar = Calendar.current
+            let reference = Date(timeIntervalSinceReferenceDate: 0)
+            if let newDate = calendar.date(bySettingHour: hours, minute: minutes, second: 0, of: reference) {
+                duration = newDate
+            }
+        }
+    }
 
     init(session: SkateSession) {
         self.session = session
@@ -71,10 +93,40 @@ struct EditSessionView: View {
                         }
                     
                     DatePicker("Date", selection: $session.date.withDefault(Date()), displayedComponents: .date)
+                    
+                    HStack {
+                        Text("Duration")
+                        Spacer()
+                        Text(formatDuration(duration))
+                            .padding(.vertical, 5)
+                            .padding(.horizontal, 10)
+                            .background {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.secondary.opacity(0.2))
+                            }
+                    }
+                    .onTapGesture {
+                        withAnimation {
+                            hasDuration.toggle()
+                        }
+                    }
+                    
+                    if hasDuration {
+                        DatePicker("Duration", selection: $duration, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(.wheel)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
+                            .animation(.spring, value: hasDuration)
+                            .onChange(of: duration) { oldValue, newValue in
+                                manualDuration = getDurationInSeconds() ?? 0
+                            }
+                    }
+                    
                     Section(header: Text("Feeling").font(.subheadline).fontWeight(.semibold).foregroundStyle(.secondary)) {
                         FeelingPickerView(feelings: $session.feeling.withDefault([]))
                             .listRowInsets(EdgeInsets())
                     }
+                    
                     TextField("Add some more details...", text: $debouncedNote, axis: .vertical)
                         .padding()
                         .overlay(
@@ -89,16 +141,16 @@ struct EditSessionView: View {
                 }
                 .listRowSeparator(.hidden)
                 
-//                if !suggestedTricks.isEmpty {
-//                    TrickSuggestionPickerView(
-//                        suggestedTricks: $suggestedTricks,
-//                        selectedTricks: Binding(
-//                            get: { Set(session.tricks ?? []) },
-//                            set: { session.tricks = Array($0) }
-//                        ),
-//                        note: debouncedNote
-//                    )
-//                }
+                if !suggestedTricks.isEmpty {
+                    TrickSuggestionPickerView(
+                        suggestedTricks: $suggestedTricks,
+                        selectedTricks: Binding(
+                            get: { Set(session.tricks ?? []) },
+                            set: { session.tricks = Array($0) }
+                        ),
+                        note: debouncedNote
+                    )
+                }
                 
                 mediaSection
                 
@@ -122,9 +174,30 @@ struct EditSessionView: View {
                 }
                 .listRowSeparator(.hidden)
                 
+                Section(header: Text("Combos")) {
+                    ForEach(Array(session.combos ?? []), id: \.id) { combo in
+                        if let name = combo.name {
+                            Text(name)
+                                .fontWidth(.expanded)
+                        }
+                    }
+                    Button {
+                        self.isSelectingCombo = true
+                    } label: {
+                        Label("Select Combos", systemImage: "list.bullet")
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 32)
+                    }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.roundedRectangle(radius: 16))
+                    .controlSize(.large)
+                }
+                .listRowSeparator(.hidden)
+                
                 Section(header: Text("Location")) {
                     LocationPickerView(selectedLocation: $selectedLocation, locationSearchIsFocused: $locationSearchIsFocused)
                         .frame(height: 300)
+                        .listRowSeparator(.hidden)
                 }
                 .listRowSeparator(.hidden)
             }
@@ -166,10 +239,19 @@ struct EditSessionView: View {
                     get: { Set(session.tricks ?? []) },
                     set: { session.tricks = Array($0) }
                 ))
+                .presentationCornerRadius(24)
+            }
+            .sheet(isPresented: $isSelectingCombo) {
+                ComboPicker(selectedCombos: Binding(
+                    get: { Set(session.combos ?? []) },
+                    set: { session.combos = Array($0) }
+                ))
+                .presentationCornerRadius(24)
             }
         }
         .onAppear {
             loadExistingMedia()
+            initializeDuration()
         }
     }
     
@@ -179,32 +261,117 @@ struct EditSessionView: View {
         locationSearchIsFocused = false
     }
     
+    private func formatDuration(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        
+        if hour == 0 {
+            return "\(minute)min"
+        } else if minute == 0 {
+            return "\(hour)hr"
+        } else {
+            return "\(hour)hr \(minute)min"
+        }
+    }
+    
+    private func getDurationInSeconds() -> TimeInterval? {
+        guard hasDuration else { return nil }
+        
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: duration)
+        let minute = calendar.component(.minute, from: duration)
+        
+        print("Converting duration - Hours: \(hour), Minutes: \(minute)")
+        let seconds = TimeInterval(hour * 3600 + minute * 60)
+        print("Total seconds: \(seconds)")
+        
+        return seconds
+    }
+    
     @MainActor
     private func findMatchingTricks(in note: String) {
-        let words = note.lowercased().components(separatedBy: .whitespacesAndNewlines)
+        // Split on whitespace and remove punctuation from each word
+        let words = note.lowercased()
+            .components(separatedBy: .whitespacesAndNewlines)
+            .map { word in
+                word.trimmingCharacters(in: .punctuationCharacters)
+            }
+            .filter { !$0.isEmpty }
+        
         var scoredTricks: [(trick: Trick, score: Int)] = []
+        
+        func standardizeWord(_ word: String) -> String {
+            // Handle common plural forms and possessives
+            var standardized = word.lowercased()
+            if standardized.hasSuffix("'s") {
+                standardized = String(standardized.dropLast(2))
+            } else if standardized.hasSuffix("s") && !standardized.hasSuffix("bs") {  // Don't strip 's' from 'bs'
+                standardized = String(standardized.dropLast())
+            }
+            return standardized
+        }
         
         func standardizeTrickName(_ name: String) -> [String] {
             return name.lowercased()
-                .replacingOccurrences(of: "'s", with: "s")
-                .replacingOccurrences(of: "-", with: " ")
                 .components(separatedBy: .whitespacesAndNewlines)
+                .map(standardizeWord)
                 .filter { !$0.isEmpty }
+        }
+        
+        func isExactMatch(_ word: String, _ trickWord: String) -> Bool {
+            let standardizedWord = standardizeWord(word)
+            let standardizedTrickWord = standardizeWord(trickWord)
+            
+            // Handle FS/BS cases
+            if (word == "fs" || word == "bs"), let wordIndex = words.firstIndex(of: word),
+               wordIndex + 1 < words.count {
+                // Look for "FS" or "BS" followed by the rest of the trick name
+                let remainingWords = words[(wordIndex + 1)...].joined(separator: " ")
+                let expectedMatch = word + " " + remainingWords
+                return standardizeWord(trickWord) == standardizeWord(expectedMatch)
+            }
+            
+            // For regular words, match standardized forms
+            return standardizedWord == standardizedTrickWord
         }
         
         for trick in allTricks {
             let trickWords = standardizeTrickName(trick.name)
             var score = 0
             var lastMatchIndex = -1
+            var matchedIndices = Set<Int>()
             
-            for word in words where word.count > 1 {
-                if let matchIndex = trickWords.firstIndex(where: { $0.contains(word) || word.contains($0) }) {
-                    score += 1
-                    if matchIndex > lastMatchIndex {
-                        score += 1  // Bonus for correct word order
-                    }
-                    lastMatchIndex = matchIndex
+            // Handle full matches for FS/BS tricks
+            if trick.name.lowercased().starts(with: "fs ") || trick.name.lowercased().starts(with: "bs ") {
+                // Check if input contains the full trick name (after standardizing both)
+                let inputPhrase = words.joined(separator: " ")
+                let standardizedInput = standardizeWord(inputPhrase)
+                let standardizedTrick = standardizeWord(trick.name.lowercased())
+                
+                if standardizedInput.contains(standardizedTrick) {
+                    score += 5  // High score for complete FS/BS trick match
                 }
+            }
+            
+            // Then try matching individual words
+            for word in words where word.count > 1 {
+                for (index, trickWord) in trickWords.enumerated() where !matchedIndices.contains(index) {
+                    if isExactMatch(word, trickWord) {
+                        score += 2 // Higher score for exact matches
+                        if index > lastMatchIndex {
+                            score += 1  // Bonus for correct word order
+                        }
+                        lastMatchIndex = index
+                        matchedIndices.insert(index)
+                        break
+                    }
+                }
+            }
+            
+            // Extra points for matching all words in the trick name
+            if matchedIndices.count == trickWords.count {
+                score += 3
             }
             
             if score > 0 {
@@ -220,7 +387,6 @@ struct EditSessionView: View {
             return $0.trick.name.count < $1.trick.name.count
         }
         
-        // Take top 5 matches
         let maxSuggestions = 5
         suggestedTricks = scoredTricks.prefix(maxSuggestions).map { $0.trick }
     }
@@ -415,6 +581,24 @@ struct EditSessionView: View {
     }
     
     private func saveSession() {
+        if manualDuration != nil {
+            session.workoutDuration = manualDuration
+        }
+        
+        // Calculate estimated energy burned if we don't have actual data
+        let energyBurned: Double
+        if let actualEnergy = session.workoutEnergyBurned, actualEnergy > 0 {
+            energyBurned = actualEnergy
+        } else {
+            let skateMET = 5.0 // Metabolic equivalent for skateboarding
+            let averageWeightKg = 70.0 // Average adult weight in kg
+            let duration = session.workoutDuration ?? 0
+            let durationHours = duration / 3600.0 // Convert seconds to hours
+            
+            // Formula: MET × Weight(kg) × Duration(hours)
+            energyBurned = skateMET * averageWeightKg * durationHours
+        }
+        
         session.title = debouncedTitle
         session.note = debouncedNote
         session.media = mediaItems
@@ -422,8 +606,10 @@ struct EditSessionView: View {
             session.latitude = selectedLocation.coordinate.latitude
             session.longitude = selectedLocation.coordinate.longitude
         }
+        session.workoutEnergyBurned = energyBurned
         session.location = selectedLocation
         try? modelContext.save()
+        print("Session saved with duration: \(session.workoutDuration ?? 0)")
         isSaved = true
         dismiss()
     }

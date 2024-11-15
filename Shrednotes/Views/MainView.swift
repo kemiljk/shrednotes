@@ -221,7 +221,7 @@ struct MainView: View {
                 }
                 .fullScreenCover(isPresented: $isShowingJournal) {
                     JournalView()
-//                        .environmentObject(SessionManager.shared)
+                        .environmentObject(SessionManager.shared)
                 }
                 .fullScreenCover(isPresented: $showingComboBuilder, content: {
                     NavigationStack {
@@ -254,6 +254,13 @@ struct MainView: View {
                         )
                         .presentationCornerRadius(24)
                         .presentationBackground(.ultraThickMaterial)
+                        .onDisappear {
+                            updateNextTrickInAppStorage()
+                            inProgressTricks = computeInProgressTricks()
+                            nextCombinationTricks = computeNextCombinationTricks()
+                            filteredTricks = computeFilteredTricks()
+                            WidgetCenter.shared.reloadAllTimelines()
+                        }
                     case .onboarding:
                         OnboardingView(isOnboardingComplete: $isOnboardingComplete)
                             .presentationCornerRadius(24)
@@ -282,41 +289,37 @@ struct MainView: View {
                     linkActive = true
                 }
             }
+            .navigationDestination(isPresented: $linkActive) {
+                if let trick = trick {
+                    TrickDetailView(trick: trick)
+                }
+            }
             .onOpenURL { url in
                 if let session = decodeJournalEntry(from: url) {
                     self.session = session
                     sessionLinkActive = true
                 }
             }
-            .navigationDestination(isPresented: $linkActive) {
-                if let trick = trick {
-                    TrickDetailView(trick: trick)
-                }
-            }
-            .sheet(isPresented: $sessionLinkActive, onDismiss: {
-                do {
-                    try modelContext.save()
-                } catch {
-                    print("Error saving context: \(error)")
-                }
-            }) {
+            .fullScreenCover(isPresented: $sessionLinkActive) {
                 if let session = session {
                     SessionDetailView(session: session, mediaState: mediaState)
-                        .presentationBackground(.regularMaterial)
+                        .presentationCornerRadius(24)
                         .navigationTransition(.zoom(sourceID: session.id, in: detailView))
                 }
             }
-            .sheet(isPresented: $navigateToAddEntry, onDismiss: {
-                do {
-                    try modelContext.save()
-                } catch {
-                    print("Error saving context: \(error)")
-                }
-            }) {
+            .sheet(isPresented: $navigateToAddEntry) {
                 AddSessionView()
+                    .presentationCornerRadius(24)
             }
             .navigationDestination(for: Trick.self) { trick in
                 TrickDetailView(trick: trick)
+                    .onDisappear {
+                        updateNextTrickInAppStorage()
+                        inProgressTricks = computeInProgressTricks()
+                        nextCombinationTricks = computeNextCombinationTricks()
+                        filteredTricks = computeFilteredTricks()
+                        WidgetCenter.shared.reloadAllTimelines()
+                }
             }
         }
         .id(inProgressTricksCount)

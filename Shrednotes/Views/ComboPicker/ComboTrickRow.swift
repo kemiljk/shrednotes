@@ -11,10 +11,11 @@ struct ComboTrickRow: View {
     var combo: ComboTrick
 
     var body: some View {
-        HStack {
+        VStack(alignment: .leading) {
             if let name = combo.name {
                 Text(name)
-                    .font(.headline)
+                    .fontWidth(.expanded)
+                    .multilineTextAlignment(.leading)
             }
             Spacer()
             if let elements = combo.comboElements {
@@ -25,6 +26,7 @@ struct ComboTrickRow: View {
                         Text("^[\(totalTricks) trick](inflect: true)")
                     }
                     if totalObstacles != 0 {
+                        Text("•")
                         Text("^[\(totalObstacles) obstacle](inflect: true)")
                     }
                 }

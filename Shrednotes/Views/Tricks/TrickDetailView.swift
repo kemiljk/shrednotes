@@ -129,6 +129,7 @@ struct TrickDetailView: View {
 //        }
         .sheet(isPresented: $showPracticeView) {
             TrickPracticeView(singleTrick: trick)
+                .presentationCornerRadius(24)
         }
         .fullScreenCover(item: $selectedMediaItem, onDismiss: {
             currentZoom = 0.0

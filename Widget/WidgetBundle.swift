@@ -9,8 +9,13 @@ import WidgetKit
 import SwiftUI
 
 @main
-struct WidgetBundle: WidgetBundle {
+struct SkateWidgetBundle: WidgetBundle {
+    @WidgetBundleBuilder
     var body: some Widget {
-        Widget()
+        QuickGlanceWidget()
+        LatestSessionWidget()
+        SessionStatsWidget()
+        LearnNextWidget()
+        JournalControlWidget()
     }
 }

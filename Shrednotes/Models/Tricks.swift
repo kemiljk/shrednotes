@@ -57,7 +57,6 @@ func generateTricks() -> [Trick] {
     let biggerflip = Trick(name: "Biggerflip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [bigflip])])
     let impossible = Trick(name: "Impossible", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [])])
     let inwardHeelflip = Trick(name: "Inward Heelflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let shuvit = Trick(name: "Shuvit", difficulty: 2, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
     let nollieShuvit = Trick(name: "Nollie Shove It", difficulty: 2, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
     let fsShuvit = Trick(name: "Nollie FS Shove It", difficulty: 2, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
     let nollieFsShuvit = Trick(name: "FS Shove It", difficulty: 2, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
@@ -257,7 +256,7 @@ func generateTricks() -> [Trick] {
         ollie, fs180, bs180, kickturn, nollie, fakieOllie, ticTac, bs360, fs360, bsCaballerial, fsCaballerial, bsHalfCab, fsHalfCab, ollieNorth, ollieSouth, powerslide, switchBs180, switchBs360, switchFs180, switchFs360, switchOllie,
 
         // Flip and Shove-It Tricks
-        kickflip, heelflip, popShuvit, fsPopShuvit, varialKickflip, varialHeelflip, fsKickflip, bsKickflip, fsHeelflip, bsHeelflip, nollieBs180, nollieFs180, nollie360Flip, nollie360Hardflip, nollie360PopShuvit, nollieBsBigspin, nollieFsBigspin, nollieHardflip, nollieHeelflip, nollieImpossible, nollieInwardHeelflip, nollieKickflip, nollieLaserFlip, nollieVarialHeelflip, nollieVarialKickflip, fsBigspin, bsBigspin, treFlip, hardflip, laserFlip, bigspin, bigflip, biggerflip, shuvit, fsShuvit, nollieShuvit, nollieFsShuvit,
+        kickflip, heelflip, popShuvit, fsPopShuvit, varialKickflip, varialHeelflip, fsKickflip, bsKickflip, fsHeelflip, bsHeelflip, nollieBs180, nollieFs180, nollie360Flip, nollie360Hardflip, nollie360PopShuvit, nollieBsBigspin, nollieFsBigspin, nollieHardflip, nollieHeelflip, nollieImpossible, nollieInwardHeelflip, nollieKickflip, nollieLaserFlip, nollieVarialHeelflip, nollieVarialKickflip, fsBigspin, bsBigspin, treFlip, hardflip, laserFlip, bigspin, bigflip, biggerflip, fsShuvit, nollieShuvit, nollieFsShuvit,
 
         // Grinds and Slides
         backside50_50, frontside50_50, backside5_0, frontside5_0, backsideCrooked, frontsideCrooked, backsideFeeble, frontsideFeeble, backsideLipslide, frontsideLipslide, backsideNosegrind, frontsideNosegrind, backsideNoseslide, frontsideNoseslide, backsideOvercrook, frontsideOvercrook, backsideSalad, frontsideSalad, backsideSmith, frontsideSmith, backsideSuski, frontsideSuski, backsideTailslide, frontsideTailslide, backsideBluntslide, frontsideBluntslide, backsideNosebluntSlide, frontsideNosebluntSlide, backsideBoardslide, frontsideBoardslide, backsideHurricaneStall, frontsideHurricaneStall,

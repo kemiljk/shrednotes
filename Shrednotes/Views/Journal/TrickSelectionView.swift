@@ -145,7 +145,6 @@ struct TrickSelectionView: View {
                         }) {
                             Image(systemName: "plus.circle.fill")
                                 .symbolRenderingMode(.hierarchical)
-                                .font(.title3)
                         }
                     }
                     ToolbarItemGroup(placement: .topBarTrailing) {
@@ -176,23 +175,14 @@ struct TrickSelectionView: View {
                         }
                     }
                 }
-//                .sheet(isPresented: $showNewTrickSheet, onDismiss: {
-//                    do {
-//                        try modelContext.save()
-//                    } catch {
-//                        // Handle the error appropriately
-//                        print("Failed to save context: \(error)")
-//                    }
-//                }) {
-//                    NewTrickView { newTrick in
-//                        modelContext.insert(newTrick)
-//                        selectedTricks.insert(newTrick)
-//                    }
-//                    .presentationCornerRadius(24)
-//                }
             }
             .padding(.top, 24)
             .onAppear(perform: loadVisibleTrickTypes)
+            .sheet(isPresented: $showNewTrickSheet) {
+                AddTrickView()
+                    .modelContext(modelContext)
+                    .presentationCornerRadius(24)
+            }
         }
     }
     

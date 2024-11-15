@@ -47,7 +47,18 @@ struct AddSessionView: View {
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var cameraPosition: MapCameraPosition = .automatic
-
+    
+    @State private var hasDuration: Bool = false
+    @State private var duration: Date = {
+        let calendar = Calendar.current
+        let reference = Date(timeIntervalSinceReferenceDate: 0)  // January 1, 2001, 00:00:00 UTC
+        let components = DateComponents(hour: 0, minute: 0)
+        return calendar.date(bySettingHour: components.hour ?? 0,
+                            minute: components.minute ?? 0,
+                            second: 0,
+                            of: reference) ?? reference
+    }()
+    
     init(mediaItems: [MediaItem] = [], title: String = "", note: String = "") {
         self._mediaItems = State(initialValue: mediaItems)
         self._title = State(initialValue: title)
@@ -72,6 +83,31 @@ struct AddSessionView: View {
                             findMatchingWorkouts(for: newDate)
                         }
                     
+                    HStack {
+                        Text("Duration")
+                        Spacer()
+                        Text(formatDuration(duration))
+                            .padding(.vertical, 5)
+                            .padding(.horizontal, 10)
+                            .background {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.secondary.opacity(0.2))
+                            }
+                    }
+                    .onTapGesture {
+                        withAnimation {
+                            hasDuration.toggle()
+                        }
+                    }
+                    
+                    if hasDuration {
+                        DatePicker("Duration", selection: $duration, displayedComponents: .hourAndMinute)
+                            .datePickerStyle(.wheel)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
+                            .animation(.spring, value: hasDuration)
+                    }
+                    
                     Section(header: Text("Feeling").font(.subheadline).fontWeight(.semibold).foregroundStyle(.secondary)) {
                         FeelingPickerView(feelings: $feelings)
                             .listRowInsets(EdgeInsets())
@@ -94,13 +130,13 @@ struct AddSessionView: View {
                 }
                 .listRowSeparator(.hidden)
                 
-//                if !suggestedTricks.isEmpty {
-//                    TrickSuggestionPickerView(
-//                            suggestedTricks: $suggestedTricks,
-//                            selectedTricks: $selectedTricks,
-//                            note: note
-//                        )
-//                }
+                if !suggestedTricks.isEmpty {
+                    TrickSuggestionPickerView(
+                            suggestedTricks: $suggestedTricks,
+                            selectedTricks: $selectedTricks,
+                            note: note
+                        )
+                }
                 
                 mediaSection
                 
@@ -162,9 +198,9 @@ struct AddSessionView: View {
                     locationManager.requestLocationAuthorization()
                 }
             }
-//            .onChange(of: debouncedNote) { _, newValue in
-//                findMatchingTricks(in: newValue)
-//            }
+            .onChange(of: debouncedNote) { _, newValue in
+                findMatchingTricks(in: newValue)
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     HStack {
@@ -202,16 +238,16 @@ struct AddSessionView: View {
                 TrickSelectionView(selectedTricks: $selectedTricks)
                     .presentationCornerRadius(24)
             }
-//            .sheet(isPresented: $isSelectingCombo, onDismiss: {
-//                do {
-//                    try modelContext.save()
-//                } catch {
-//                    print("Error saving context: \(error)")
-//                }
-//            }) {
-//                ComboPicker(selectedCombos: $selectedCombos)
-//                    .presentationCornerRadius(24)
-//            }
+            .sheet(isPresented: $isSelectingCombo, onDismiss: {
+                do {
+                    try modelContext.save()
+                } catch {
+                    print("Error saving context: \(error)")
+                }
+            }) {
+                ComboPicker(selectedCombos: $selectedCombos)
+                    .presentationCornerRadius(24)
+            }
             .onAppear {
                 if isHealthAccessGranted {
                     healthKitManager.fetchLatestWorkout()
@@ -237,32 +273,111 @@ struct AddSessionView: View {
         locationSearchIsFocused = false
     }
     
+    private func formatDuration(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        
+        if hour == 0 {
+            return "\(minute)min"
+        } else if minute == 0 {
+            return "\(hour)hr"
+        } else {
+            return "\(hour)hr \(minute)min"
+        }
+    }
+    
+    private func getDurationInSeconds() -> TimeInterval? {
+        guard hasDuration else { return nil }
+        let calendar = Calendar.current
+        let hour = calendar.component(.hour, from: duration)
+        let minute = calendar.component(.minute, from: duration)
+        return TimeInterval(hour * 3600 + minute * 60)  // Converting to TimeInterval explicitly
+    }
+    
     @MainActor
     private func findMatchingTricks(in note: String) {
-        let words = note.lowercased().components(separatedBy: .whitespacesAndNewlines)
+        // Split on whitespace and remove punctuation from each word
+        let words = note.lowercased()
+            .components(separatedBy: .whitespacesAndNewlines)
+            .map { word in
+                word.trimmingCharacters(in: .punctuationCharacters)
+            }
+            .filter { !$0.isEmpty }
+        
         var scoredTricks: [(trick: Trick, score: Int)] = []
+        
+        func standardizeWord(_ word: String) -> String {
+            // Handle common plural forms and possessives
+            var standardized = word.lowercased()
+            if standardized.hasSuffix("'s") {
+                standardized = String(standardized.dropLast(2))
+            } else if standardized.hasSuffix("s") && !standardized.hasSuffix("bs") {  // Don't strip 's' from 'bs'
+                standardized = String(standardized.dropLast())
+            }
+            return standardized
+        }
         
         func standardizeTrickName(_ name: String) -> [String] {
             return name.lowercased()
-                .replacingOccurrences(of: "'s", with: "s")
-                .replacingOccurrences(of: "-", with: " ")
                 .components(separatedBy: .whitespacesAndNewlines)
+                .map(standardizeWord)
                 .filter { !$0.isEmpty }
+        }
+        
+        func isExactMatch(_ word: String, _ trickWord: String) -> Bool {
+            let standardizedWord = standardizeWord(word)
+            let standardizedTrickWord = standardizeWord(trickWord)
+            
+            // Handle FS/BS cases
+            if (word == "fs" || word == "bs"), let wordIndex = words.firstIndex(of: word),
+               wordIndex + 1 < words.count {
+                // Look for "FS" or "BS" followed by the rest of the trick name
+                let remainingWords = words[(wordIndex + 1)...].joined(separator: " ")
+                let expectedMatch = word + " " + remainingWords
+                return standardizeWord(trickWord) == standardizeWord(expectedMatch)
+            }
+            
+            // For regular words, match standardized forms
+            return standardizedWord == standardizedTrickWord
         }
         
         for trick in allTricks {
             let trickWords = standardizeTrickName(trick.name)
             var score = 0
             var lastMatchIndex = -1
+            var matchedIndices = Set<Int>()
             
-            for word in words where word.count > 1 {
-                if let matchIndex = trickWords.firstIndex(where: { $0.contains(word) || word.contains($0) }) {
-                    score += 1
-                    if matchIndex > lastMatchIndex {
-                        score += 1  // Bonus for correct word order
-                    }
-                    lastMatchIndex = matchIndex
+            // Handle full matches for FS/BS tricks
+            if trick.name.lowercased().starts(with: "fs ") || trick.name.lowercased().starts(with: "bs ") {
+                // Check if input contains the full trick name (after standardizing both)
+                let inputPhrase = words.joined(separator: " ")
+                let standardizedInput = standardizeWord(inputPhrase)
+                let standardizedTrick = standardizeWord(trick.name.lowercased())
+                
+                if standardizedInput.contains(standardizedTrick) {
+                    score += 5  // High score for complete FS/BS trick match
                 }
+            }
+            
+            // Then try matching individual words
+            for word in words where word.count > 1 {
+                for (index, trickWord) in trickWords.enumerated() where !matchedIndices.contains(index) {
+                    if isExactMatch(word, trickWord) {
+                        score += 2 // Higher score for exact matches
+                        if index > lastMatchIndex {
+                            score += 1  // Bonus for correct word order
+                        }
+                        lastMatchIndex = index
+                        matchedIndices.insert(index)
+                        break
+                    }
+                }
+            }
+            
+            // Extra points for matching all words in the trick name
+            if matchedIndices.count == trickWords.count {
+                score += 3
             }
             
             if score > 0 {
@@ -278,7 +393,6 @@ struct AddSessionView: View {
             return $0.trick.name.count < $1.trick.name.count
         }
         
-        // Take top 5 matches
         let maxSuggestions = 5
         suggestedTricks = scoredTricks.prefix(maxSuggestions).map { $0.trick }
     }
@@ -303,6 +417,21 @@ struct AddSessionView: View {
     }
     
     private func saveSession() {
+        let sessionDuration: TimeInterval = totalDuration > 0 ? totalDuration : (getDurationInSeconds() ?? 0)
+        
+        // Calculate estimated energy burned if we don't have actual data
+        let energyBurned: Double
+        if totalEnergyBurned > 0 {
+            energyBurned = totalEnergyBurned
+        } else {
+            let skateMET = 5.0 // Metabolic equivalent for skateboarding
+            let averageWeightKg = 70.0 // Average adult weight in kg
+            let durationHours = sessionDuration / 3600.0 // Convert seconds to hours
+            
+            // Formula: MET × Weight(kg) × Duration(hours)
+            energyBurned = skateMET * averageWeightKg * durationHours
+        }
+
         let newSession = SkateSession(
             title: title,
             date: date,
@@ -314,11 +443,11 @@ struct AddSessionView: View {
             latitude: selectedLocation?.coordinate.latitude,
             longitude: selectedLocation?.coordinate.longitude,
             location: selectedLocation,
-            workoutUUID: matchingWorkouts.first?.uuid.uuidString,
-            workoutDuration: totalDuration,
-            workoutEnergyBurned: totalEnergyBurned
+            workoutUUID: matchingWorkouts.first?.uuid,
+            workoutDuration: sessionDuration,
+            workoutEnergyBurned: energyBurned
         )
-
+        
         modelContext.insert(newSession)
         WidgetCenter.shared.reloadAllTimelines()
         try? modelContext.save()

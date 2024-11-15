@@ -87,6 +87,7 @@ struct ComboPicker: View {
                         .foregroundStyle(.indigo)
                 }
             }
+            .contentShape(.rect)
         }
         .buttonStyle(PlainButtonStyle())
         .listRowSeparator(.hidden)

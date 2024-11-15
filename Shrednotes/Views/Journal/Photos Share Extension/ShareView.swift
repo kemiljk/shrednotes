@@ -1,10 +1,3 @@
-//
-//  ShareView.swift
-//  Shrednotes
-//
-//  Created by Karl Koch on 14/11/2024.
-//
-
 import SwiftUI
 import UniformTypeIdentifiers
 import SwiftData
@@ -18,7 +11,7 @@ struct ShareView: View {
 
     var body: some View {
         NavigationView {
-            SEAddSessionView(mediaItems: $mediaItems, coordinator: coordinator, mediaState: mediaState)
+            SEAddSessionView(coordinator: coordinator, mediaItems: mediaItems)
                 .environment(\.modelContext, modelContext)
         }
         .onAppear {

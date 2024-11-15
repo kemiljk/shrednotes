@@ -1,10 +1,3 @@
-//
-//  Journal_App_Intent.swift
-//  Journal App Intent
-//
-//  Created by Karl Koch on 14/11/2024.
-//
-
 import AppIntents
 
 struct JournalControlWidgetIntent: AppIntent {
@@ -28,4 +21,4 @@ struct JournalControlWidgetIntent: AppIntent {
 
 enum IntentError: Error {
     case invalidURL
-}
+} 

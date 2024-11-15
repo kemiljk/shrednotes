@@ -77,7 +77,7 @@ struct ComboBuilderView: View {
                         if shouldShowIndentation(at: index) {
                             HStack {
                                 Spacer()
-                                Text(comboElements[index].indentation?.rawValue.capitalized ?? "None")
+                                Text(comboElements[index].indentation?.displayName ?? "None")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .padding(8)
@@ -185,7 +185,7 @@ struct ComboBuilderView: View {
         guard index < comboElements.count - 1,
               comboElements[index + 1].isBreak != true,
               let indentation = comboElements[index].indentation,
-              indentation != .none else {
+              indentation != 0 else {
             return false
         }
         return true

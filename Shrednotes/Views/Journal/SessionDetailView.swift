@@ -98,6 +98,21 @@ struct SessionDetailView: View {
                         }
                     }
                     
+                    if let combos = session.combos, !combos.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Combos Practiced")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .fontWidth(.expanded)
+                                .padding(.top, 16)
+                            ForEach(combos) { combo in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ComboTrickRow(combo: combo)
+                                }
+                            }
+                        }
+                    }
+                    
                     if session.date != nil {
                         StoredWorkoutView(session: session, condensed: true)
                     } else {

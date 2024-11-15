@@ -101,17 +101,36 @@ struct InsightDetailView: View {
             count + (session.media?.count ?? 0)
         }
     }
-    
+
     private func formatTotalTime() -> String {
-        let totalSeconds = sessions.reduce(0.0) { total, session in
-            total + (session.workoutDuration ?? 0)
+        let totalMinutes = sessions.reduce(0.0) { $0 + ($1.workoutDuration ?? 0) }
+        
+        let years = Int(totalMinutes / 525600) // 365 days * 24 hours * 60 minutes
+        let months = Int((totalMinutes.truncatingRemainder(dividingBy: 525600)) / 43800) // 30.5 days * 24 hours * 60 minutes
+        let days = Int((totalMinutes.truncatingRemainder(dividingBy: 43800)) / 1440) // 24 hours * 60 minutes
+        let hours = Int((totalMinutes.truncatingRemainder(dividingBy: 1440)) / 60)
+        let minutes = Int(totalMinutes.truncatingRemainder(dividingBy: 60))
+        
+        var components: [String] = []
+        
+        if years > 0 {
+            components.append("\(years) years")
+        }
+        if months > 0 {
+            components.append("\(months) months")
+        }
+        if days > 0 {
+            components.append("\(days) days")
+        }
+        if hours > 0 {
+            components.append("\(hours) hours")
+        }
+        if minutes > 0 || components.isEmpty {
+            components.append("\(minutes) minutes")
         }
         
-        let months = Int(totalSeconds / (30 * 24 * 60 * 60))
-        let remainingSeconds = totalSeconds.truncatingRemainder(dividingBy: 30 * 24 * 60 * 60)
-        let days = Int(remainingSeconds / (24 * 60 * 60))
-        
-        return "\(months) months \(days) days"
+        // Return first two most significant units
+        return components.prefix(2).joined(separator: " ")
     }
 }
 

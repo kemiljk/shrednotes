@@ -149,7 +149,6 @@ struct JournalView: View {
             }
             .fullScreenCover(item: $selectedSession) { session in
                 SessionDetailView(session: session, mediaState: mediaState)
-                    .presentationBackground(.regularMaterial)
                     .navigationTransition(.zoom(sourceID: session.id, in: detailView))
                     
             }

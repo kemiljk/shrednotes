@@ -42,9 +42,27 @@ enum TrickType: String, CaseIterable, Codable {
     var displayName: String {
         switch self {
         case .shuvit:
-            return "Shove-it"
+            return "Shove it"
         default:
             return rawValue.capitalized
+        }
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        
+        switch value.lowercased() {
+        case "shuvit": self = .shuvit
+        default:
+            if let type = TrickType(rawValue: value) {
+                self = type
+            } else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Invalid TrickType value: \(value)"
+                ))
+            }
         }
     }
 }
@@ -65,13 +83,28 @@ enum ElementType: String, Codable {
             return rawValue.capitalized
         }
     }
-}
-
-enum IndentationType: String, Codable, CaseIterable {
-    case none
-    case on
-    case over
-    case to
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        
+        switch value.lowercased() {
+        case "base trick": self = .baseTrick
+        case "direction": self = .direction
+        case "rotation": self = .rotation
+        case "landing": self = .landing
+        case "obstacle": self = .obstacle
+        default:
+            if let type = ElementType(rawValue: value) {
+                self = type
+            } else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Invalid ElementType value: \(value)"  // Changed from TrickType
+                ))
+            }
+        }
+    }
 }
 
 enum ProgressState: String, CaseIterable {

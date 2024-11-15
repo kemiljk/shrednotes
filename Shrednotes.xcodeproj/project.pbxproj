@@ -6,8 +6,114 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CF656C2A2CE66C30002BD1B4 /* Journal App Intent.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = CF656C212CE66C30002BD1B4 /* Journal App Intent.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CF656C4C2CE68E43002BD1B4 /* Add Session From Sharesheet.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CF656C422CE68E43002BD1B4 /* Add Session From Sharesheet.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CF656C6D2CE699B2002BD1B4 /* Add Session Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CF656C602CE699B0002BD1B4 /* Add Session Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CF923BF82CE74C4000009865 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9F28C52CE5FACE007379D5 /* WidgetKit.framework */; };
+		CF923BF92CE74C4000009865 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9F28C72CE5FACE007379D5 /* SwiftUI.framework */; };
+		CF923C042CE74C4100009865 /* OpenJournalWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CF923BF72CE74C4000009865 /* OpenJournalWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CF9F28C62CE5FACE007379D5 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9F28C52CE5FACE007379D5 /* WidgetKit.framework */; };
+		CF9F28C82CE5FACE007379D5 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF9F28C72CE5FACE007379D5 /* SwiftUI.framework */; };
+		CF9F28D32CE5FAD0007379D5 /* WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CF9F28C32CE5FACE007379D5 /* WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CF656C282CE66C30002BD1B4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF4C6E5E2CE38E6200F1A90D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CF656C202CE66C30002BD1B4;
+			remoteInfo = "Journal App Intent";
+		};
+		CF656C4A2CE68E43002BD1B4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF4C6E5E2CE38E6200F1A90D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CF656C412CE68E43002BD1B4;
+			remoteInfo = "Add Session From Sharesheet";
+		};
+		CF656C6B2CE699B2002BD1B4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF4C6E5E2CE38E6200F1A90D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CF656C5F2CE699B0002BD1B4;
+			remoteInfo = "Add Session Watch App";
+		};
+		CF923C022CE74C4100009865 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF4C6E5E2CE38E6200F1A90D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CF923BF62CE74C4000009865;
+			remoteInfo = WatchComplicationExtension;
+		};
+		CF9F28D12CE5FAD0007379D5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CF4C6E5E2CE38E6200F1A90D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CF9F28C22CE5FACE007379D5;
+			remoteInfo = WidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		CF656C2F2CE66C30002BD1B4 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				CF656C2A2CE66C30002BD1B4 /* Journal App Intent.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C712CE699B2002BD1B4 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				CF656C6D2CE699B2002BD1B4 /* Add Session Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF923C092CE74C4100009865 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				CF923C042CE74C4100009865 /* OpenJournalWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF9F28D82CE5FAD0007379D5 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				CF656C4C2CE68E43002BD1B4 /* Add Session From Sharesheet.appex in Embed Foundation Extensions */,
+				CF9F28D32CE5FAD0007379D5 /* WidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		CF4C6E662CE38E6200F1A90D /* Shrednotes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Shrednotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF656C212CE66C30002BD1B4 /* Journal App Intent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = "Journal App Intent.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF656C422CE68E43002BD1B4 /* Add Session From Sharesheet.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Add Session From Sharesheet.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF656C602CE699B0002BD1B4 /* Add Session Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Add Session Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF923BF72CE74C4000009865 /* OpenJournalWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OpenJournalWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF9F28C32CE5FACE007379D5 /* WidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF9F28C52CE5FACE007379D5 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		CF9F28C72CE5FACE007379D5 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		CF9F28DE2CE5FDE9007379D5 /* WidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -18,6 +124,83 @@
 			);
 			target = CF4C6E652CE38E6200F1A90D /* Shrednotes */;
 		};
+		CF656C2E2CE66C30002BD1B4 /* Exceptions for "Journal App Intent" folder in "Journal App Intent" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CF656C202CE66C30002BD1B4 /* Journal App Intent */;
+		};
+		CF656C322CE66CF0002BD1B4 /* Exceptions for "Journal App Intent" folder in "Shrednotes" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Journal_App_Intent.swift,
+			);
+			target = CF4C6E652CE38E6200F1A90D /* Shrednotes */;
+		};
+		CF656C332CE66CF0002BD1B4 /* Exceptions for "Journal App Intent" folder in "WidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Journal_App_Intent.swift,
+			);
+			target = CF9F28C22CE5FACE007379D5 /* WidgetExtension */;
+		};
+		CF656C502CE68E43002BD1B4 /* Exceptions for "Add Session From Sharesheet" folder in "Add Session From Sharesheet" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CF656C412CE68E43002BD1B4 /* Add Session From Sharesheet */;
+		};
+		CF656C522CE68E68002BD1B4 /* Exceptions for "Shrednotes" folder in "Add Session From Sharesheet" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Components/FeelingPickerView.swift,
+				Models/Model.swift,
+				Models/ShareCoordinator.swift,
+				Models/SharedModelContainer.swift,
+				Models/Tricks.swift,
+				Utilities/Utils.swift,
+				"Views/Journal/Photos Share Extension/SEAddSessionView.swift",
+				"Views/Journal/Photos Share Extension/ShareView.swift",
+			);
+			target = CF656C412CE68E43002BD1B4 /* Add Session From Sharesheet */;
+		};
+		CF656C772CE69A86002BD1B4 /* Exceptions for "Shrednotes" folder in "Add Session Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/Model.swift,
+				Models/SessionManager.swift,
+				Models/WatchModelContainer.swift,
+			);
+			target = CF656C5F2CE699B0002BD1B4 /* Add Session Watch App */;
+		};
+		CF923C082CE74C4100009865 /* Exceptions for "WatchComplication" folder in "OpenJournalWidget" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CF923BF62CE74C4000009865 /* OpenJournalWidget */;
+		};
+		CF9F28D72CE5FAD0007379D5 /* Exceptions for "Widget" folder in "WidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CF9F28C22CE5FACE007379D5 /* WidgetExtension */;
+		};
+		CF9F28DA2CE5FAF1007379D5 /* Exceptions for "Shrednotes" folder in "WidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/Model.swift,
+				Models/ShareCoordinator.swift,
+				Models/SharedModelContainer.swift,
+				Models/Tricks.swift,
+				Utilities/TextSummarizer.swift,
+				Utilities/Utils.swift,
+			);
+			target = CF9F28C22CE5FACE007379D5 /* WidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -25,8 +208,50 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				CF4C6E762CE38E6300F1A90D /* Exceptions for "Shrednotes" folder in "Shrednotes" target */,
+				CF9F28DA2CE5FAF1007379D5 /* Exceptions for "Shrednotes" folder in "WidgetExtension" target */,
+				CF656C522CE68E68002BD1B4 /* Exceptions for "Shrednotes" folder in "Add Session From Sharesheet" target */,
+				CF656C772CE69A86002BD1B4 /* Exceptions for "Shrednotes" folder in "Add Session Watch App" target */,
 			);
 			path = Shrednotes;
+			sourceTree = "<group>";
+		};
+		CF656C222CE66C30002BD1B4 /* Journal App Intent */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CF656C322CE66CF0002BD1B4 /* Exceptions for "Journal App Intent" folder in "Shrednotes" target */,
+				CF656C332CE66CF0002BD1B4 /* Exceptions for "Journal App Intent" folder in "WidgetExtension" target */,
+				CF656C2E2CE66C30002BD1B4 /* Exceptions for "Journal App Intent" folder in "Journal App Intent" target */,
+			);
+			path = "Journal App Intent";
+			sourceTree = "<group>";
+		};
+		CF656C432CE68E43002BD1B4 /* Add Session From Sharesheet */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CF656C502CE68E43002BD1B4 /* Exceptions for "Add Session From Sharesheet" folder in "Add Session From Sharesheet" target */,
+			);
+			path = "Add Session From Sharesheet";
+			sourceTree = "<group>";
+		};
+		CF656C612CE699B0002BD1B4 /* Add Session Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Add Session Watch App";
+			sourceTree = "<group>";
+		};
+		CF923BFA2CE74C4000009865 /* WatchComplication */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CF923C082CE74C4100009865 /* Exceptions for "WatchComplication" folder in "OpenJournalWidget" target */,
+			);
+			path = WatchComplication;
+			sourceTree = "<group>";
+		};
+		CF9F28C92CE5FACE007379D5 /* Widget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CF9F28D72CE5FAD0007379D5 /* Exceptions for "Widget" folder in "WidgetExtension" target */,
+			);
+			path = Widget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -39,13 +264,59 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CF656C1E2CE66C30002BD1B4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C3F2CE68E43002BD1B4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C5D2CE699B0002BD1B4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF923BF42CE74C4000009865 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF923BF92CE74C4000009865 /* SwiftUI.framework in Frameworks */,
+				CF923BF82CE74C4000009865 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF9F28C02CE5FACE007379D5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF9F28C82CE5FACE007379D5 /* SwiftUI.framework in Frameworks */,
+				CF9F28C62CE5FACE007379D5 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		CF4C6E5D2CE38E6200F1A90D = {
 			isa = PBXGroup;
 			children = (
+				CF9F28DE2CE5FDE9007379D5 /* WidgetExtension.entitlements */,
 				CF4C6E682CE38E6200F1A90D /* Shrednotes */,
+				CF9F28C92CE5FACE007379D5 /* Widget */,
+				CF656C222CE66C30002BD1B4 /* Journal App Intent */,
+				CF656C432CE68E43002BD1B4 /* Add Session From Sharesheet */,
+				CF656C612CE699B0002BD1B4 /* Add Session Watch App */,
+				CF923BFA2CE74C4000009865 /* WatchComplication */,
+				CF9F28C42CE5FACE007379D5 /* Frameworks */,
 				CF4C6E672CE38E6200F1A90D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,8 +325,22 @@
 			isa = PBXGroup;
 			children = (
 				CF4C6E662CE38E6200F1A90D /* Shrednotes.app */,
+				CF9F28C32CE5FACE007379D5 /* WidgetExtension.appex */,
+				CF656C212CE66C30002BD1B4 /* Journal App Intent.appex */,
+				CF656C422CE68E43002BD1B4 /* Add Session From Sharesheet.appex */,
+				CF656C602CE699B0002BD1B4 /* Add Session Watch App.app */,
+				CF923BF72CE74C4000009865 /* OpenJournalWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CF9F28C42CE5FACE007379D5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CF9F28C52CE5FACE007379D5 /* WidgetKit.framework */,
+				CF9F28C72CE5FACE007379D5 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -68,10 +353,17 @@
 				CF4C6E622CE38E6200F1A90D /* Sources */,
 				CF4C6E632CE38E6200F1A90D /* Frameworks */,
 				CF4C6E642CE38E6200F1A90D /* Resources */,
+				CF9F28D82CE5FAD0007379D5 /* Embed Foundation Extensions */,
+				CF656C2F2CE66C30002BD1B4 /* Embed ExtensionKit Extensions */,
+				CF656C712CE699B2002BD1B4 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CF9F28D22CE5FAD0007379D5 /* PBXTargetDependency */,
+				CF656C292CE66C30002BD1B4 /* PBXTargetDependency */,
+				CF656C4B2CE68E43002BD1B4 /* PBXTargetDependency */,
+				CF656C6C2CE699B2002BD1B4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CF4C6E682CE38E6200F1A90D /* Shrednotes */,
@@ -82,6 +374,118 @@
 			productName = Shrednotes;
 			productReference = CF4C6E662CE38E6200F1A90D /* Shrednotes.app */;
 			productType = "com.apple.product-type.application";
+		};
+		CF656C202CE66C30002BD1B4 /* Journal App Intent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CF656C2B2CE66C30002BD1B4 /* Build configuration list for PBXNativeTarget "Journal App Intent" */;
+			buildPhases = (
+				CF656C1D2CE66C30002BD1B4 /* Sources */,
+				CF656C1E2CE66C30002BD1B4 /* Frameworks */,
+				CF656C1F2CE66C30002BD1B4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CF656C222CE66C30002BD1B4 /* Journal App Intent */,
+			);
+			name = "Journal App Intent";
+			packageProductDependencies = (
+			);
+			productName = "Journal App Intent";
+			productReference = CF656C212CE66C30002BD1B4 /* Journal App Intent.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
+		CF656C412CE68E43002BD1B4 /* Add Session From Sharesheet */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CF656C4D2CE68E43002BD1B4 /* Build configuration list for PBXNativeTarget "Add Session From Sharesheet" */;
+			buildPhases = (
+				CF656C3E2CE68E43002BD1B4 /* Sources */,
+				CF656C3F2CE68E43002BD1B4 /* Frameworks */,
+				CF656C402CE68E43002BD1B4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CF656C432CE68E43002BD1B4 /* Add Session From Sharesheet */,
+			);
+			name = "Add Session From Sharesheet";
+			packageProductDependencies = (
+			);
+			productName = "Add Session From Sharesheet";
+			productReference = CF656C422CE68E43002BD1B4 /* Add Session From Sharesheet.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		CF656C5F2CE699B0002BD1B4 /* Add Session Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CF656C6E2CE699B2002BD1B4 /* Build configuration list for PBXNativeTarget "Add Session Watch App" */;
+			buildPhases = (
+				CF656C5C2CE699B0002BD1B4 /* Sources */,
+				CF656C5D2CE699B0002BD1B4 /* Frameworks */,
+				CF656C5E2CE699B0002BD1B4 /* Resources */,
+				CF923C092CE74C4100009865 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CF923C032CE74C4100009865 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CF656C612CE699B0002BD1B4 /* Add Session Watch App */,
+			);
+			name = "Add Session Watch App";
+			packageProductDependencies = (
+			);
+			productName = "Add Session Watch App";
+			productReference = CF656C602CE699B0002BD1B4 /* Add Session Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CF923BF62CE74C4000009865 /* OpenJournalWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CF923C052CE74C4100009865 /* Build configuration list for PBXNativeTarget "OpenJournalWidget" */;
+			buildPhases = (
+				CF923BF32CE74C4000009865 /* Sources */,
+				CF923BF42CE74C4000009865 /* Frameworks */,
+				CF923BF52CE74C4000009865 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CF923BFA2CE74C4000009865 /* WatchComplication */,
+			);
+			name = OpenJournalWidget;
+			packageProductDependencies = (
+			);
+			productName = WatchComplicationExtension;
+			productReference = CF923BF72CE74C4000009865 /* OpenJournalWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		CF9F28C22CE5FACE007379D5 /* WidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CF9F28D42CE5FAD0007379D5 /* Build configuration list for PBXNativeTarget "WidgetExtension" */;
+			buildPhases = (
+				CF9F28BF2CE5FACE007379D5 /* Sources */,
+				CF9F28C02CE5FACE007379D5 /* Frameworks */,
+				CF9F28C12CE5FACE007379D5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CF9F28C92CE5FACE007379D5 /* Widget */,
+			);
+			name = WidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = WidgetExtension;
+			productReference = CF9F28C32CE5FACE007379D5 /* WidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -94,6 +498,21 @@
 				LastUpgradeCheck = 1610;
 				TargetAttributes = {
 					CF4C6E652CE38E6200F1A90D = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					CF656C202CE66C30002BD1B4 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					CF656C412CE68E43002BD1B4 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					CF656C5F2CE699B0002BD1B4 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					CF923BF62CE74C4000009865 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					CF9F28C22CE5FACE007379D5 = {
 						CreatedOnToolsVersion = 16.1;
 					};
 				};
@@ -113,12 +532,52 @@
 			projectRoot = "";
 			targets = (
 				CF4C6E652CE38E6200F1A90D /* Shrednotes */,
+				CF9F28C22CE5FACE007379D5 /* WidgetExtension */,
+				CF656C202CE66C30002BD1B4 /* Journal App Intent */,
+				CF656C412CE68E43002BD1B4 /* Add Session From Sharesheet */,
+				CF656C5F2CE699B0002BD1B4 /* Add Session Watch App */,
+				CF923BF62CE74C4000009865 /* OpenJournalWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		CF4C6E642CE38E6200F1A90D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C1F2CE66C30002BD1B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C402CE68E43002BD1B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C5E2CE699B0002BD1B4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF923BF52CE74C4000009865 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF9F28C12CE5FACE007379D5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -135,12 +594,76 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CF656C1D2CE66C30002BD1B4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C3E2CE68E43002BD1B4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF656C5C2CE699B0002BD1B4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF923BF32CE74C4000009865 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF9F28BF2CE5FACE007379D5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CF656C292CE66C30002BD1B4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CF656C202CE66C30002BD1B4 /* Journal App Intent */;
+			targetProxy = CF656C282CE66C30002BD1B4 /* PBXContainerItemProxy */;
+		};
+		CF656C4B2CE68E43002BD1B4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CF656C412CE68E43002BD1B4 /* Add Session From Sharesheet */;
+			targetProxy = CF656C4A2CE68E43002BD1B4 /* PBXContainerItemProxy */;
+		};
+		CF656C6C2CE699B2002BD1B4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CF656C5F2CE699B0002BD1B4 /* Add Session Watch App */;
+			targetProxy = CF656C6B2CE699B2002BD1B4 /* PBXContainerItemProxy */;
+		};
+		CF923C032CE74C4100009865 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CF923BF62CE74C4000009865 /* OpenJournalWidget */;
+			targetProxy = CF923C022CE74C4100009865 /* PBXContainerItemProxy */;
+		};
+		CF9F28D22CE5FAD0007379D5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CF9F28C22CE5FACE007379D5 /* WidgetExtension */;
+			targetProxy = CF9F28D12CE5FAD0007379D5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		CF4C6E782CE38E6300F1A90D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon2 AppIcon3";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Shrednotes/Shrednotes.entitlements;
@@ -170,8 +693,8 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.Shrednotes.2;
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -186,6 +709,7 @@
 		CF4C6E792CE38E6300F1A90D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon2 AppIcon3";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Shrednotes/Shrednotes.entitlements;
@@ -215,8 +739,8 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.Shrednotes.2;
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -342,6 +866,323 @@
 			};
 			name = Release;
 		};
+		CF656C2C2CE66C30002BD1B4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Journal App Intent/Journal App Intent.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Journal App Intent/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Journal App Intent";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kejk.ShredNotes.Journal-App-Intent";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CF656C2D2CE66C30002BD1B4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Journal App Intent/Journal App Intent.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Journal App Intent/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Journal App Intent";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kejk.ShredNotes.Journal-App-Intent";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CF656C4E2CE68E43002BD1B4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Add Session From Sharesheet/Add Session From Sharesheet.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Add Session From Sharesheet/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Add Session From Sharesheet";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kejk.ShredNotes.Add-Session-From-Sharesheet";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CF656C4F2CE68E43002BD1B4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Add Session From Sharesheet/Add Session From Sharesheet.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Add Session From Sharesheet/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Add Session From Sharesheet";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kejk.ShredNotes.Add-Session-From-Sharesheet";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CF656C6F2CE699B2002BD1B4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = "Add Session Watch App/Add Session Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Add Session Watch App/Preview Content\"";
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Add-Session-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Shrednotes Journal";
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ComplicationController";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.kejk.ShredNotes;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Debug;
+		};
+		CF656C702CE699B2002BD1B4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = "Add Session Watch App/Add Session Watch App.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Add Session Watch App/Preview Content\"";
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Add-Session-Watch-App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Shrednotes Journal";
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ComplicationController";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.kejk.ShredNotes;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Release;
+		};
+		CF923C062CE74C4100009865 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WatchComplication/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WatchComplication;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp.OpenJournalWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Debug;
+		};
+		CF923C072CE74C4100009865 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WatchComplication/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WatchComplication;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp.OpenJournalWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.1;
+			};
+			name = Release;
+		};
+		CF9F28D52CE5FAD0007379D5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Widget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CF9F28D62CE5FAD0007379D5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = WidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WMGJ7B26TT;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Widget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -359,6 +1200,51 @@
 			buildConfigurations = (
 				CF4C6E782CE38E6300F1A90D /* Debug */,
 				CF4C6E792CE38E6300F1A90D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CF656C2B2CE66C30002BD1B4 /* Build configuration list for PBXNativeTarget "Journal App Intent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF656C2C2CE66C30002BD1B4 /* Debug */,
+				CF656C2D2CE66C30002BD1B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CF656C4D2CE68E43002BD1B4 /* Build configuration list for PBXNativeTarget "Add Session From Sharesheet" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF656C4E2CE68E43002BD1B4 /* Debug */,
+				CF656C4F2CE68E43002BD1B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CF656C6E2CE699B2002BD1B4 /* Build configuration list for PBXNativeTarget "Add Session Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF656C6F2CE699B2002BD1B4 /* Debug */,
+				CF656C702CE699B2002BD1B4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CF923C052CE74C4100009865 /* Build configuration list for PBXNativeTarget "OpenJournalWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF923C062CE74C4100009865 /* Debug */,
+				CF923C072CE74C4100009865 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CF9F28D42CE5FAD0007379D5 /* Build configuration list for PBXNativeTarget "WidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF9F28D52CE5FAD0007379D5 /* Debug */,
+				CF9F28D62CE5FAD0007379D5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

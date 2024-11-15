@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage("HideJournal") private var hideJournal: Bool = false
     @State private var showDebug: Bool = false
     @State private var isFetching = false
+    @State private var currentAppIcon: AppIcon = .appIcon
     
     var body: some View {
         NavigationStack {
@@ -25,38 +26,38 @@ struct SettingsView: View {
 
                 List {
                     Section(header: Text("Customisation").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        Menu {
-                            ForEach(TrickType.allCases, id: \.self) { type in
-                                Button(action: {
-                                    if visibleTrickTypes.contains(type) {
-                                        visibleTrickTypes.remove(type)
-                                    } else {
-                                        visibleTrickTypes.insert(type)
-                                    }
-                                    saveVisibleTrickTypes()
-                                }) {
-                                    HStack {
-                                        Text(type.displayName)
-                                        Spacer()
+                        HStack {
+                            Label("Active Types", systemImage: "list.bullet")
+                            Spacer()
+                            Menu {
+                                ForEach(TrickType.allCases, id: \.self) { type in
+                                    Button(action: {
                                         if visibleTrickTypes.contains(type) {
-                                            Image(systemName: "checkmark")
+                                            visibleTrickTypes.remove(type)
+                                        } else {
+                                            visibleTrickTypes.insert(type)
+                                        }
+                                        saveVisibleTrickTypes()
+                                    }) {
+                                        HStack {
+                                            Text(type.displayName)
+                                            Spacer()
+                                            if visibleTrickTypes.contains(type) {
+                                                Image(systemName: "checkmark")
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        } label: {
-                            HStack {
-                                Label("Active Types", systemImage: "list.bullet")
-                                Spacer()
+                            } label: {
                                 HStack {
                                     Text("\(visibleTrickTypes.count)")
-                                    Image(systemName: "chevron.right")
+                                    Image(systemName: "chevron.up.chevron.down")
                                         .imageScale(.small)
                                         .foregroundStyle(.secondary)
                                 }
                             }
+                            .tint(.primary)
                         }
-                        .tint(.primary)
                         Toggle(isOn: $hideRecommendations) {
                             Label("Hide Recommendations", systemImage: "sparkles.rectangle.stack")
                         }
@@ -70,6 +71,32 @@ struct SettingsView: View {
                         .tint(.indigo)
                         .onChange(of: hideJournal) { _, newValue in
                             UserDefaults.standard.set(newValue, forKey: "HideJournal")
+                        }
+                    }
+                    .listRowSeparator(.hidden)
+                    
+                    Section(header: Text("Change App Icon").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
+                        HStack {
+                            ForEach(AppIcon.allCases, id: \.rawValue) { icon in
+                                VStack {
+                                    Image(icon.previewImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 48, height: 48)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(currentAppIcon == icon ? Color.pink : Color.clear, lineWidth: 2)
+                                        }
+                                }
+                                .contentShape(.rect)
+                                .onTapGesture {
+                                    Task {
+                                        try? await UIApplication.shared.setAlternateIconName(icon.iconValue)
+                                        currentAppIcon = icon
+                                    }
+                                }
+                            }
                         }
                     }
                     .listRowSeparator(.hidden)
@@ -188,6 +215,13 @@ struct SettingsView: View {
                     .tint(.secondary)
                 }
             }
+            .onAppear {
+                if let alternativeAppIcon = UIApplication.shared.alternateIconName, let appIcon = AppIcon.allCases.first(where: { $0.rawValue == alternativeAppIcon }) {
+                    currentAppIcon = appIcon
+                } else {
+                    currentAppIcon = .appIcon
+                }
+            }
         }
     }
     
@@ -202,6 +236,31 @@ struct SettingsView: View {
                 notificationAccessGranted = granted
                 UserDefaults.standard.set(notificationAccessGranted, forKey: "NotificationAccessGranted")
             }
+        }
+    }
+}
+
+enum AppIcon: String, CaseIterable {
+    case appIcon = "Default"
+    case appIcon2 = "AppIcon2"
+    case appIcon3 = "AppIcon3"
+    
+    var iconValue: String? {
+        if self == .appIcon {
+            return nil
+        } else {
+            return rawValue
+        }
+    }
+    
+    var previewImage: String {
+        switch self {
+            case .appIcon:
+            return "Logo 1"
+        case .appIcon2:
+            return "Logo 2"
+        case .appIcon3:
+            return "Logo 3"
         }
     }
 }

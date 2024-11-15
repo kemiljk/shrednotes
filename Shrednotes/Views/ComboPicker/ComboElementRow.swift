@@ -52,7 +52,7 @@ struct ComboElementRow: View {
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button {
-                element.indentation = IndentationType.none
+                element.indentation = 0
             } label: {
                 Label("None", systemImage: "xmark")
             }
@@ -67,25 +67,37 @@ struct ComboElementRow: View {
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
-                element.indentation = .on
+                element.indentation = 1
             } label: {
                 Text("On")
             }
             .tint(.primary.opacity(0.7))
             
             Button {
-                element.indentation = .over
+                element.indentation = 2
             } label: {
                 Text("Over")
             }
             .tint(.secondary)
             
             Button {
-                element.indentation = .to
+                element.indentation = 3
             } label: {
                 Text("To")
             }
             .tint(.secondary.opacity(0.5))
+        }
+    }
+}
+
+extension Int {
+    var displayName: String {
+        switch self {
+        case 0: return "None"
+        case 1: return "On"
+        case 2: return "Over"
+        case 3: return "To"
+        default: return "None"
         }
     }
 }

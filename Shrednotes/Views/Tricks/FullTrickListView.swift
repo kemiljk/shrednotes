@@ -16,6 +16,7 @@ struct FullTrickListView: View {
     @Binding var expandedGroups: [String: Bool]
     @Binding var selectedType: TrickType?
     @FocusState private var searchIsFocused: Bool
+    @State private var isShowingAddTrickView: Bool = false
     
     @Query(sort: [
         SortDescriptor(\Trick.difficulty, order: .forward),
@@ -162,7 +163,41 @@ struct FullTrickListView: View {
                                                             .padding(.horizontal, 0)
                                                     }
                                                     .contextMenu {
-                                                        // ... (rest of your context menu code)
+                                                        Button {
+                                                            trick.isLearned.toggle()
+                                                            trick.isLearnedDate = Date()
+                                                            trick.isLearning = false
+                                                            trick.wantToLearn = false
+                                                            trick.wantToLearnDate = nil
+                                                        } label: {
+                                                            Label("Learned", systemImage: trick.isLearned ? "xmark.circle" : "checkmark.circle")
+                                                        }
+                                                        Button {
+                                                            trick.isLearning.toggle()
+                                                            trick.isLearned = false
+                                                            trick.wantToLearn = false
+                                                            trick.wantToLearnDate = nil
+                                                        } label: {
+                                                            Label("Learning", systemImage: trick.isLearning ? "xmark.circle" : "circle.dashed")
+                                                        }
+                                                        Button {
+                                                            trick.wantToLearn.toggle()
+                                                            trick.isSkipped = false
+                                                            trick.isLearned = false
+                                                            trick.isLearning = false
+                                                            trick.wantToLearnDate = Date()
+                                                        } label: {
+                                                            Label(trick.wantToLearn ? "Learning Next" : "Learn Next", systemImage: trick.wantToLearn ? "xmark.circle" : "text.insert")
+                                                        }
+                                                        Button {
+                                                            trick.isSkipped.toggle()
+                                                            trick.isLearning = false
+                                                            trick.isLearned = false
+                                                            trick.wantToLearn = false
+                                                            trick.wantToLearnDate = nil
+                                                        } label: {
+                                                            Label(trick.isSkipped ? "Skipped" : "Skip", systemImage: trick.isSkipped ? "checkmark.circle" : "arrow.clockwise")
+                                                        }
                                                     }
                                                     .tint(.primary)
                                                 }
@@ -208,6 +243,14 @@ struct FullTrickListView: View {
                         }
                     }
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        isShowingAddTrickView.toggle()
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
@@ -223,6 +266,11 @@ struct FullTrickListView: View {
             }
             .navigationDestination(for: Trick.self) { trick in
                 TrickDetailView(trick: trick)
+            }
+            .sheet(isPresented: $isShowingAddTrickView) {
+                AddTrickView()
+                    .modelContext(modelContext)
+                    .presentationCornerRadius(24)
             }
             Spacer()
             HStack {

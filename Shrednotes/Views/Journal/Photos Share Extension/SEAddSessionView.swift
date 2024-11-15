@@ -11,8 +11,8 @@ import SwiftData
 struct SEAddSessionView: View {
     @Environment(\.modelContext) private var modelContext
     @Query var sessions: [SkateSession]
-    @State private var mediaItems: [MediaItem] = []
-    @ObservedObject var coordinator = ShareCoordinator()
+    @State private var mediaItems: [MediaItem]
+    @ObservedObject var coordinator: ShareCoordinator
     @StateObject private var mediaState = MediaState()
     @State private var title: String = ""
     @State private var date: Date = Date()
@@ -21,6 +21,11 @@ struct SEAddSessionView: View {
     
     @FocusState private var titleIsFocused: Bool
     @FocusState private var noteIsFocused: Bool
+    
+    init(coordinator: ShareCoordinator, mediaItems: [MediaItem]) {
+        self.coordinator = coordinator
+        self.mediaItems = mediaItems
+    }
     
     var body: some View {
         List {
@@ -80,28 +85,34 @@ struct SEAddSessionView: View {
         }
     }
     
+    @ViewBuilder
     private func mediaItemView(for mediaItem: MediaItem) -> some View {
-        let size = UIScreen.main.bounds.width / 3 - 16
-        return Group {
-            if let uiImage = mediaState.imageCache[mediaItem.id ?? UUID()] {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size, height: size)
-                    .clipped()
-                    .cornerRadius(8)
-            } else if let thumbnail = mediaState.videoThumbnails[mediaItem.id ?? UUID()] {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size, height: size)
-                    .clipped()
-                    .cornerRadius(8)
-            } else {
-                ProgressView()
-                    .frame(width: size, height: size)
+        GeometryReader { geometry in
+            Group {
+                if let uiImage = mediaState.imageCache[mediaItem.id ?? UUID()] {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.width) // Makes it square
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else if let thumbnail = mediaState.videoThumbnails[mediaItem.id ?? UUID()] {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.width) // Makes it square
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else {
+                    ProgressView()
+                        .frame(width: geometry.size.width, height: geometry.size.width) // Makes it square
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(radius: 5)
+                }
             }
         }
+        .aspectRatio(1, contentMode: .fit) // This ensures the GeometryReader itself maintains a square aspect ratio
     }
     
     private func saveSession() {

@@ -16,7 +16,7 @@ final class SkateSession: Codable {
     var latitude: Double?
     var longitude: Double?
     var location: IdentifiableLocation?
-    var workoutUUID: String?
+    var workoutUUID: UUID?
     var workoutDuration: Double?
     var workoutEnergyBurned: Double?
 
@@ -24,7 +24,7 @@ final class SkateSession: Codable {
         case id, title, date, note, feeling, media, tricks, combos, latitude, longitude, location, workoutUUID, workoutDuration, workoutEnergyBurned
     }
 
-    init(title: String = "", date: Date = Date(), note: String = "", feeling: [Feeling] = [], media: [MediaItem] = [], tricks: [Trick]? = nil, combos: [ComboTrick]? = nil, latitude: Double? = nil, longitude: Double? = nil, location: IdentifiableLocation? = nil, workoutUUID: String? = nil, workoutDuration: Double? = nil, workoutEnergyBurned: Double? = nil) {
+    init(title: String = "", date: Date = Date(), note: String = "", feeling: [Feeling] = [], media: [MediaItem] = [], tricks: [Trick]? = nil, combos: [ComboTrick]? = nil, latitude: Double? = nil, longitude: Double? = nil, location: IdentifiableLocation? = nil, workoutUUID: UUID? = nil, workoutDuration: Double? = nil, workoutEnergyBurned: Double? = nil) {
         self.id = UUID()
         self.title = title
         self.date = date
@@ -54,7 +54,7 @@ final class SkateSession: Codable {
         latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
         longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
         location = try container.decodeIfPresent(IdentifiableLocation.self, forKey: .location)
-        workoutUUID = try container.decodeIfPresent(String.self, forKey: .workoutUUID)
+        workoutUUID = try container.decodeIfPresent(UUID.self, forKey: .workoutUUID)
         workoutDuration = try container.decodeIfPresent(TimeInterval.self, forKey: .workoutDuration)
         workoutEnergyBurned = try container.decodeIfPresent(Double.self, forKey: .workoutEnergyBurned)
     }
@@ -99,6 +99,7 @@ final class Trick: ObservableObject, Identifiable, Codable {
     @Relationship(inverse: \Prerequisite.prerequisiteTricks) var prerequisites: [Prerequisite]?
     @Relationship(inverse: \Entry.trick) var entries: [Entry]?
     @Relationship(inverse: \SkateSession.tricks) var sessions: [SkateSession]?
+    @Relationship(inverse: \ComboTrick.tricks) var combos: [ComboTrick]?
 
 
     init(id: UUID = UUID(), timestamp: Date = Date(), name: String = "Ollie", difficulty: Int = 1, type: TrickType = .air, isLearned: Bool = false, isLearnedDate: Date? = nil, isLearning: Bool = false, isSkipped: Bool = false, prerequisites: [Prerequisite]? = nil, dependentTricks: [DependentTricks]? = nil, notes: [Note]? = [], media: [MediaItem]? = nil, consistency: Int = 0, sessions: [SkateSession]? = nil, entries: [Entry]? = nil, wantToLearn: Bool = false, wantToLearnDate: Date? = nil) {
@@ -258,29 +259,27 @@ class MediaState: ObservableObject {
 
 @Model
 final class ComboTrick: Identifiable, Codable {
-    var id: String?
+    var id: UUID?
     var name: String?
     var difficulty: Int?
     var isLearned: Bool?
     var isLearning: Bool?
     var isSkipped: Bool?
     var comboElements: [ComboElement]?
+    var tricks: [Trick]?
     
     @Relationship(inverse: \SkateSession.combos) var sessions: [SkateSession]?
     
-    init(
-        id: String = UUID().uuidString,
-        name: String,
-        difficulty: Int,
-        comboElements: [ComboElement]? = nil
-    ) {
+init(id: UUID = UUID(), name: String, difficulty: Int, isLearned: Bool = false, isLearning: Bool = false, isSkipped: Bool = false, comboElements: [ComboElement] = [], tricks: [Trick] = [], sessions: [SkateSession] = []) {
         self.id = id
         self.name = name
         self.difficulty = difficulty
-        self.isLearned = false
-        self.isLearning = false
-        self.isSkipped = false
+        self.isLearned = isLearned
+        self.isLearning = isLearning
+        self.isSkipped = isSkipped
         self.comboElements = comboElements
+        self.tricks = tricks
+        self.sessions = sessions
     }
     
     enum CodingKeys: String, CodingKey {
@@ -291,6 +290,8 @@ final class ComboTrick: Identifiable, Codable {
         case isLearning
         case isSkipped
         case comboElements
+        case tricks
+        case sessions
     }
     
     func encode(to encoder: Encoder) throws {
@@ -306,7 +307,7 @@ final class ComboTrick: Identifiable, Codable {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
+        id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         difficulty = try container.decode(Int.self, forKey: .difficulty)
         isLearned = try container.decode(Bool.self, forKey: .isLearned)
@@ -321,9 +322,9 @@ struct ComboElement: Identifiable, Codable, Equatable {
     var value: String?
     var displayValue: String?
     var isBreak: Bool = false
-    var indentation: IndentationType?
+    var indentation: Int? = nil
     
-    init(id: UUID = UUID(), type: ElementType = .baseTrick, value: String = "", displayValue: String = "", isBreak: Bool = false, indentation: IndentationType = .none) {
+    init(id: UUID = UUID(), type: ElementType = .baseTrick, value: String = "", displayValue: String = "", isBreak: Bool = false, indentation: Int? = nil) {
         self.id = id
         self.type = type
         self.value = value
@@ -348,7 +349,7 @@ struct ComboElement: Identifiable, Codable, Equatable {
         value = try container.decode(String.self, forKey: .value)
         displayValue = try container.decode(String.self, forKey: .displayValue)
         isBreak = try container.decodeIfPresent(Bool.self, forKey: .isBreak) ?? false
-        indentation = try container.decode(IndentationType.self, forKey: .indentation)
+        indentation = try container.decode(Int.self, forKey: .indentation)
     }
     
     func encode(to encoder: Encoder) throws {

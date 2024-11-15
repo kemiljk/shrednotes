@@ -20,7 +20,7 @@ struct FeelingPickerView: View {
                         Text(feel.rawValue.capitalized)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(feelings.contains(feel) ? Color.accent : Color.secondary.opacity(0.2))
+                            .background(feelings.contains(feel) ? Color.indigo : Color.secondary.opacity(0.2))
                             .foregroundColor(feelings.contains(feel) ? .white : .primary)
                             .cornerRadius(20)
                     }

@@ -53,13 +53,15 @@ struct SessionCard: View {
                 }
             }
             if let note = session.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let trimmedLines = note.components(separatedBy: .newlines)
-                    .map { $0.trimmingCharacters(in: .whitespaces) }
-                    .filter { !$0.isEmpty }
+                let summarizer = TextSummarizer(tricks: session.tricks ?? [])
+                let summary = summarizer.summarizeSession(
+                    notes: note,
+                    landedTricks: session.tricks ?? [],
+                    date: session.date ?? .now
+                )
                 
-                Text(trimmedLines.joined(separator: "\n"))
+                Text(summary)
                     .font(.body)
-                    .lineLimit(trimmedLines.count > 1 ? 2 : 1)
                     .multilineTextAlignment(.leading)
                     .padding(.top, 8)
             }
@@ -103,10 +105,25 @@ struct SessionCard: View {
             }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.ultraThinMaterial)
-        )
+        .background {
+            if let media = session.media?.first,
+               let uiImage = UIImage(data: media.data) {
+                GeometryReader { geometry in
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .opacity(0.2)
+                        .overlay {
+                            Rectangle()
+                                .fill(.ultraThinMaterial)
+                        }
+                }
+            } else {
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(.ultraThinMaterial)
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 24)
                 .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
@@ -122,7 +139,7 @@ struct SessionCard: View {
     }
     
     @ViewBuilder
-    private func mediaItemView(for item: MediaItem, fullWidth: Bool = false) -> some View {        
+    private func mediaItemView(for item: MediaItem, fullWidth: Bool = false) -> some View {
         if let uiImage = UIImage(data: item.data) {
             Image(uiImage: uiImage)
                 .resizable()
