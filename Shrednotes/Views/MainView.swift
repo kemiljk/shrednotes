@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import WidgetKit
 import HealthKit
+import AppIntents
 
 struct MainView: View {
     @Namespace private var buttonNamespace: Namespace.ID
@@ -22,8 +23,8 @@ struct MainView: View {
     @State private var showingAddSession = false
     @State private var trick: Trick?
     @State private var session: SkateSession?
-    @State private var linkActive = false
-    @State private var sessionLinkActive = false
+    @State private var showTrickDetail: Bool = false
+    @State private var showSessionDetail: Bool = false
     @State private var isShowingJournal: Bool = false
     @State private var nextCombinationTricks: [Trick] = []
     @State private var filteredTricks: [Trick] = []
@@ -36,11 +37,11 @@ struct MainView: View {
     @State private var isComboExpanded = false
     @State private var latestWorkoutRefreshTrigger = UUID()
     
+    @Environment(NavigationModel.self) private var navigationModel
+
     @MainActor @AppStorage("nextTrickToLearn", store: UserDefaults(suiteName: "group.com.shredNotes.nextTrick")) private var nextTrickData: Data = Data()
     @AppStorage("HideRecommendations") private var hideRecommendations: Bool = false
     @AppStorage("HideJournal") private var hideJournal: Bool = false
-    
-    @Binding var navigateToAddEntry: Bool
     
     enum ActiveSheet: Identifiable {
         case settings, fullTrickList, onboarding
@@ -106,6 +107,8 @@ struct MainView: View {
     let iPad = UIDevice.current.userInterfaceIdiom == .pad
     
     var body: some View {
+        @Bindable var navigationModel = navigationModel
+
         NavigationStack {
             ZStack(alignment: .bottom) {
                 ScrollView {
@@ -253,7 +256,6 @@ struct MainView: View {
                             selectedType: $selectedType
                         )
                         .presentationCornerRadius(24)
-                        .presentationBackground(.ultraThickMaterial)
                         .onDisappear {
                             updateNextTrickInAppStorage()
                             inProgressTricks = computeInProgressTricks()
@@ -284,32 +286,34 @@ struct MainView: View {
                 }
             }
             .onOpenURL { url in
-                if let trick = decodeTrick(from: url) {
+               if let trick = decodeTrick(from: url) {
                     self.trick = trick
-                    linkActive = true
+                    showTrickDetail = true
+                } else if let sessionId = decodeSessionReference(from: url) {
+                    if let session = skateSessions.first(where: { $0.id == sessionId }) {
+                        self.session = session
+                        showSessionDetail = true
+                    }
                 }
             }
-            .navigationDestination(isPresented: $linkActive) {
+            .navigationDestination(isPresented: $showTrickDetail) {
                 if let trick = trick {
                     TrickDetailView(trick: trick)
+                        .onDisappear {
+                            showTrickDetail = false
+                        }
                 }
             }
-            .onOpenURL { url in
-                if let session = decodeJournalEntry(from: url) {
-                    self.session = session
-                    sessionLinkActive = true
-                }
-            }
-            .fullScreenCover(isPresented: $sessionLinkActive) {
+            .sheet(isPresented: $showSessionDetail) {
                 if let session = session {
                     SessionDetailView(session: session, mediaState: mediaState)
                         .presentationCornerRadius(24)
-                        .navigationTransition(.zoom(sourceID: session.id, in: detailView))
                 }
             }
-            .sheet(isPresented: $navigateToAddEntry) {
+            .sheet(isPresented: $navigationModel.showAddSession) {
                 AddSessionView()
                     .presentationCornerRadius(24)
+                    .modelContext(modelContext)
             }
             .navigationDestination(for: Trick.self) { trick in
                 TrickDetailView(trick: trick)
@@ -334,6 +338,22 @@ struct MainView: View {
             filteredTricks = computeFilteredTricks()
             inProgressTricks = computeInProgressTricks()
             WidgetCenter.shared.reloadAllTimelines()
+            NotificationCenter.default.addObserver(
+                forName: .addJournalEntry,
+                object: nil,
+                queue: .main
+            ) { notification in
+                if let note = notification.userInfo?["note"] as? String,
+                    let title = notification.userInfo?["title"] as? String {
+                    let session = SkateSession()
+                    session.note = note
+                    session.title = title
+                    session.date = Date()
+                    
+                    modelContext.insert(session)
+                    try? modelContext.save()
+                }
+            }
         }
         .onChange(of: nextCombinationTricks) { refreshView.toggle() }
         .onChange(of: filteredTricks) { refreshView.toggle() }
@@ -360,7 +380,7 @@ struct MainView: View {
     }
     
     private func decodeTrick(from url: URL) -> Trick? {
-        guard url.scheme == "shredNotes" else {
+        guard url.scheme == "shrednotes" else {
             return nil
         }
         let trickString = url.path.replacingOccurrences(of: "/trickDetail/", with: "")
@@ -376,8 +396,8 @@ struct MainView: View {
         }
     }
     
-    private func decodeJournalEntry(from url: URL) -> SkateSession? {
-        guard url.scheme == "shredNotes" else {
+    private func decodeSessionReference(from url: URL) -> UUID? {
+        guard url.scheme == "shrednotes" else {
             return nil
         }
         let journalString = url.path.replacingOccurrences(of: "/sessionDetail/", with: "")
@@ -386,9 +406,10 @@ struct MainView: View {
             return nil
         }
         do {
-            let session = try JSONDecoder().decode(SkateSession.self, from: journalData)
-            return session
+            let reference = try JSONDecoder().decode(SessionReference.self, from: journalData)
+            return reference.id
         } catch {
+            print("Failed to decode session reference: \(error)")
             return nil
         }
     }
@@ -851,4 +872,8 @@ struct MainView: View {
             }
         }
     }
+}
+
+extension Notification.Name {
+    static let showAddSession = Notification.Name("showAddSession")
 }

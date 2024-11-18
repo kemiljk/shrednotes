@@ -1,87 +1,53 @@
-//
-//  WatchWidgetExtension.swift
-//  WatchWidgetExtension
-//
-//  Created by Karl Koch on 18/11/2024.
-//
-
 import WidgetKit
 import SwiftUI
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), emoji: "😀")
+        SimpleEntry(date: Date())
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), emoji: "😀")
+        let entry = SimpleEntry(date: Date())
         completion(entry)
     }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        var entries: [SimpleEntry] = []
-
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, emoji: "😀")
-            entries.append(entry)
-        }
-
-        let timeline = Timeline(entries: entries, policy: .atEnd)
+    
+    func getTimeline(in context: Context, completion: @escaping (Timeline<SimpleEntry>) -> ()) {
+        let entry = SimpleEntry(date: Date())
+        let timeline = Timeline(entries: [entry], policy: .never)
         completion(timeline)
     }
-
-//    func relevances() async -> WidgetRelevances<Void> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
 }
 
 struct SimpleEntry: TimelineEntry {
     let date: Date
-    let emoji: String
 }
 
-struct WatchWidgetExtensionEntryView : View {
-    var entry: Provider.Entry
+struct WatchComplicationEntryView : View {
+    var entry: SimpleEntry
 
     var body: some View {
-        VStack {
-            HStack {
-                Text("Time:")
-                Text(entry.date, style: .time)
-            }
-
-            Text("Emoji:")
-            Text(entry.emoji)
+        ZStack(alignment: .center) {
+            AccessoryWidgetBackground()
+            Image(systemName: "waveform.badge.plus")
+                .resizable()
+                .scaledToFit()
+                .padding()
         }
     }
 }
 
 @main
-struct WatchWidgetExtension: Widget {
-    let kind: String = "WatchWidgetExtension"
+struct WatchComplication: Widget {
+    let kind: String = "WatchComplication"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            if #available(watchOS 10.0, *) {
-                WatchWidgetExtensionEntryView(entry: entry)
-                    .containerBackground(.fill.tertiary, for: .widget)
-            } else {
-                WatchWidgetExtensionEntryView(entry: entry)
-                    .padding()
-                    .background()
-            }
+            WatchComplicationEntryView(entry: entry)
+                .containerBackground(.background, for: .widget)
+                .widgetAccentable()
         }
-        .configurationDisplayName("My Widget")
-        .description("This is an example widget.")
+        .configurationDisplayName("App Launcher")
+        .description("Quick launch the app")
+        .supportedFamilies([.accessoryCircular])
     }
-}
-
-#Preview(as: .accessoryRectangular) {
-    WatchWidgetExtension()
-} timeline: {
-    SimpleEntry(date: .now, emoji: "😀")
-    SimpleEntry(date: .now, emoji: "🤩")
 }

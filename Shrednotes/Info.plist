@@ -2,50 +2,32 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.kejk.shredNotes</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>shrednotes</string>
+			</array>
+		</dict>
+	</array>
+	<key>CLKComplicationSupportedFamilies</key>
+	<array>
+		<string>CLKComplicationFamilyModularSmall</string>
+		<string>CLKComplicationFamilyCircularSmall</string>
+		<string>CLKComplicationFamilyUtilitarianSmall</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>shredNotes</string>
 	</array>
-    
-    <key>CFBundleURLTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleURLName</key>
-            <string>com.kejk.shredNotes</string>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <string>shredNotes</string>
-            </array>
-        </dict>
-    </array>
-    
-    <!-- Notification Permissions -->
 	<key>NSUserNotificationUsageDescription</key>
 	<string>Notifications remind you to log your skating sessions.</string>
-    
-    <!-- HealthKit Permissions -->
-    <key>NSHealthShareUsageDescription</key>
-    <string>We need access to your health data to track your skating activities and workouts</string>
-    <key>NSHealthUpdateUsageDescription</key>
-    <string>We need permission to save your skating workouts and activities to Apple Health</string>
-    
-    <!-- Location Permissions -->
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Your location is used to track your skating routes and sessions</string>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Your location is used to track your skating routes and sessions, even when the app is in the background</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>Your location is used to track your skating routes and sessions in the background</string>
-    
-    <!-- Photo Library Permission -->
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>Photo library access is needed to save your skating photos and videos</string>
-    
-    <key>CLKComplicationSupportedFamilies</key>
-    <array>
-        <string>CLKComplicationFamilyModularSmall</string>
-        <string>CLKComplicationFamilyCircularSmall</string>
-        <string>CLKComplicationFamilyUtilitarianSmall</string>
-    </array>
 </dict>
 </plist>

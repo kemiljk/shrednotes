@@ -5,6 +5,7 @@
 //  Created by Karl Koch on 18/11/2024.
 //
 import SwiftUI
+import Observation
 import AppIntents
 
 struct AddJournalEntryIntent: AppIntent {
@@ -56,7 +57,25 @@ struct OpenAddSessionIntent: AppIntent {
     static var openAppWhenRun: Bool = true
     
     @MainActor
-    func perform() async throws -> some IntentResult & OpensIntent {
-        return .result(value: <#T##_IntentValue#>, dialog: <#T##IntentDialog#>, view: AddSessionView())
+    func perform() async throws -> some IntentResult {
+        navigationModel.showAddSession = true
+        navigationModel.selectedView = .addSession
+        return .result()
     }
+    
+    @Dependency
+    private var navigationModel: NavigationModel
+}
+
+@MainActor
+@Observable class NavigationModel: @unchecked Sendable {
+    static let shared = NavigationModel()
+    
+    var showAddSession: Bool = false
+    var selectedView: ViewType = .home
+}
+
+enum ViewType {
+    case home
+    case addSession
 }

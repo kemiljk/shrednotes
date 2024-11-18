@@ -110,7 +110,7 @@ struct QuickGlanceView: View {
         if let latestSession = sessions.first {
             let sessionData = try? JSONEncoder().encode(latestSession)
             let sessionString = sessionData?.base64EncodedString() ?? ""
-            let deepLinkURL = URL(string: "shredNotes://sessionDetail/\(sessionString)")!
+            let deepLinkURL = URL(string: "shrednotes://sessionDetail/\(sessionString)")!
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("LATEST SESSION")
@@ -159,9 +159,10 @@ struct LatestSessionView: View {
     
     var body: some View {
         if let latestSession = sessions.first {
-            let sessionData = try? JSONEncoder().encode(latestSession)
+            let reference = SessionReference(latestSession)
+            let sessionData = try? JSONEncoder().encode(reference)
             let sessionString = sessionData?.base64EncodedString() ?? ""
-            let deepLinkURL = URL(string: "shredNotes://sessionDetail/\(sessionString)")!
+            let deepLinkURL = URL(string: "shrednotes://sessionDetail/\(sessionString)")!
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(latestSession.title ?? "Latest Session")
@@ -304,7 +305,7 @@ struct LearnNextView: View {
             if let trick = nextTrick {
                 let trickData = try? JSONEncoder().encode(trick)
                 let trickString = trickData?.base64EncodedString() ?? ""
-                let deepLinkURL = URL(string: "shredNotes://trickDetail/\(trickString)")!
+                let deepLinkURL = URL(string: "shrednotes://trickDetail/\(trickString)")!
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Image(systemName: "skateboard")
@@ -345,7 +346,7 @@ struct LearnNextView: View {
             if let trick = nextTrick {
                 let trickData = try? JSONEncoder().encode(trick)
                 let trickString = trickData?.base64EncodedString() ?? ""
-                let deepLinkURL = URL(string: "shredNotes://trickDetail/\(trickString)")!
+                let deepLinkURL = URL(string: "shrednotes://trickDetail/\(trickString)")!
                 VStack(alignment: .leading, spacing: 4) {
                     Text("LEARN NEXT")
                         .font(.caption)
@@ -378,12 +379,12 @@ struct LearnNextView: View {
     }
 }
 
-struct AddSessionButton: ControlWidget {
+struct JournalControlWidget: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(
             kind: "AddSessionControlWidget"
         ) {
-            ControlWidgetButton(action: JournalControlWidgetIntent()) {
+            ControlWidgetButton(action: OpenAddSessionIntent()) {
                 Label("Add Session", systemImage: "widget.large.badge.plus")
             }
         }
@@ -392,14 +393,14 @@ struct AddSessionButton: ControlWidget {
     }
 }
 
-struct JournalControlWidget: ControlWidget {
+struct OpenAppWidget: ControlWidget {
     var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "JournalWidget") {
-            ControlWidgetButton(action: JournalControlWidgetIntent()) {
-                Label("Journal Quick Add", systemImage: "widget.large.badge.plus")
+        StaticControlConfiguration(kind: "OpenWidget") {
+            ControlWidgetButton(action: OpenAppWidgetIntent()) {
+                Label("Open Shrednotes", systemImage: "skateboard")
             }
         }
-        .displayName("Journal Quick Add")
-        .description("Quickly add a new journal entry.")
+        .displayName("Open Shrednotes")
+        .description("Quickly open the app.")
     }
 }

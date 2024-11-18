@@ -78,6 +78,14 @@ final class SkateSession: Codable {
     }
 }
 
+struct SessionReference: Codable {
+    let id: UUID
+    
+    init(_ session: SkateSession) {
+        self.id = session.id ?? UUID()
+    }
+}
+
 @Model
 final class Trick: ObservableObject, Identifiable, Codable {
     var id: UUID?
