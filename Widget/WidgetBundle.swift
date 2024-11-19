@@ -16,7 +16,10 @@ struct SkateWidgetBundle: WidgetBundle {
         LatestSessionWidget()
         SessionStatsWidget()
         LearnNextWidget()
+        InsightsWidget()
         JournalControlWidget()
         OpenAppWidget()
+        ViewJournalControlWidget()
+        PracticeTricksControlWidget()
     }
 }

@@ -7,6 +7,7 @@
 import SwiftUI
 import Observation
 import AppIntents
+import CoreLocation
 
 struct AddJournalEntryIntent: AppIntent {
     static var title: LocalizedStringResource = "Add Session"
@@ -67,15 +68,51 @@ struct OpenAddSessionIntent: AppIntent {
     private var navigationModel: NavigationModel
 }
 
+struct OpenViewJournalIntent: AppIntent {
+    static var title: LocalizedStringResource = "View Journal"
+    static var description = IntentDescription("Opens the app and shows the skate journal.")
+    static var openAppWhenRun: Bool = true
+    
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        navigationModel.showViewJournal = true
+        navigationModel.selectedView = .journal
+        return .result()
+    }
+    
+    @Dependency
+    private var navigationModel: NavigationModel
+}
+
+struct OpenPracticeTricksIntent: AppIntent {
+    static var title: LocalizedStringResource = "Practice Tricks"
+    static var description = IntentDescription("Opens the app and shows the trick practice mode.")
+    static var openAppWhenRun: Bool = true
+    
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        navigationModel.showPracticeTricks = true
+        navigationModel.selectedView = .practice
+        return .result()
+    }
+    
+    @Dependency
+    private var navigationModel: NavigationModel
+}
+
 @MainActor
 @Observable class NavigationModel: @unchecked Sendable {
     static let shared = NavigationModel()
     
     var showAddSession: Bool = false
+    var showViewJournal: Bool = false
+    var showPracticeTricks: Bool = false
     var selectedView: ViewType = .home
 }
 
 enum ViewType {
     case home
     case addSession
+    case journal
+    case practice
 }

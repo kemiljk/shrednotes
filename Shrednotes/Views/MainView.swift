@@ -9,6 +9,7 @@ struct MainView: View {
     @Namespace private var detailView: Namespace.ID
     @Environment(\.modelContext) private var modelContext: ModelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var mediaState: MediaState
     
@@ -196,7 +197,7 @@ struct MainView: View {
                         Button(action: {
                             activeSheet = .fullTrickList
                         }) {
-                            Image(systemName: "figure.skateboarding")
+                            Image(systemName: "list.bullet")
                                 .symbolVariant(.circle.fill)
                                 .symbolRenderingMode(.hierarchical)
                                 .font(.title3)
@@ -209,7 +210,7 @@ struct MainView: View {
                                 self.isShowingJournal = true
                             } label: {
                                 HStack {
-                                    Image(systemName: "book")
+                                    Image(systemName: "book.pages")
                                         .symbolVariant(.fill)
                                     Text("Journal")
                                 }
@@ -314,6 +315,14 @@ struct MainView: View {
                 AddSessionView()
                     .presentationCornerRadius(24)
                     .modelContext(modelContext)
+            }
+            .sheet(isPresented: $navigationModel.showViewJournal) {
+                JournalView()
+                    .presentationCornerRadius(24)
+            }
+            .sheet(isPresented: $navigationModel.showPracticeTricks) {
+                TrickPracticeView()
+                    .presentationCornerRadius(24)
             }
             .navigationDestination(for: Trick.self) { trick in
                 TrickDetailView(trick: trick)

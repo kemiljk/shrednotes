@@ -136,6 +136,7 @@ struct JournalView: View {
                     .buttonBorderShape(.capsule)
                     .buttonStyle(.bordered)
                     .tint(.accentColor)
+                    .sensoryFeedback(.increase, trigger: showingInsightView)
                 }
             }
             .sheet(isPresented: $showingAddSession) {

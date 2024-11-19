@@ -6,14 +6,15 @@ struct TrickPracticeView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(filter: #Predicate<Trick> { $0.isLearning }) private var learningTricks: [Trick]
     @State private var shuffledTricks: [Trick] = []
-    @State private var currentTrickIndex = 0
-    @State private var landedAttempts = 0
-    @State private var failedAttempts = 0
-    @State private var showCheckmark = false
-    @State private var oldConsistency = 0
-    @State private var newConsistency = 0
-    @State private var showConsistencyChange = false
-    @State private var showCompletionSheet = false
+    @State private var currentTrickIndex: Int = 0
+    @State private var landedAttempts: Int = 0
+    @State private var failedAttempts: Int = 0
+    @State private var showCheckmark: Bool = false
+    @State private var oldConsistency: Int = 0
+    @State private var newConsistency: Int = 0
+    @State private var showConsistencyChange: Bool = false
+    @State private var showCompletionSheet: Bool = false
+    @State private var showInfoPanel: Bool = false
     
     let singleTrick: Trick?
     
@@ -30,11 +31,23 @@ struct TrickPracticeView: View {
             }
         }
         .navigationTitle(singleTrick != nil ? "Practice \(singleTrick!.name)" : "Practice Mode")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showInfoPanel.toggle()
+                } label: {
+                    Image(systemName: "info.circle")
+                }
+            }
+        }
         .onAppear {
             setupInitialState()
         }
         .sheet(isPresented: $showCompletionSheet, content: {
             completionSheet
+        })
+        .sheet(isPresented: $showInfoPanel, content: {
+            infoPanel
         })
     }
     
@@ -59,45 +72,15 @@ struct TrickPracticeView: View {
                 .padding(.horizontal)
             
             HStack {
-                GroupBox {
-                    Text("Landed")
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
+                Gauge(value: Double(landedAttempts) / 10.0) {
+                    Text("Lands")
                 }
-                .backgroundStyle(.clear)
-                .overlay {
-                    Capsule(style: .continuous)
-                        .stroke(.teal.opacity(0.3), lineWidth: 2)
-                }
-                .overlay(
-                    GeometryReader { geometry in
-                        Rectangle()
-                            .fill(Color.teal.opacity(0.2))
-                            .frame(width: geometry.size.width * CGFloat(landedAttempts) / 10)
-                    }
-                )
-                .clipShape(.capsule)
-                .foregroundStyle(.teal)
+                .tint(.teal)
                 
-                GroupBox {
-                    Text("Bailed")
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
+                Gauge(value: Double(failedAttempts) / 10.0) {
+                    Text("Bails")
                 }
-                .backgroundStyle(.clear)
-                .overlay {
-                    Capsule(style: .continuous)
-                        .stroke(.red.opacity(0.3), lineWidth: 2)
-                }
-                .overlay(
-                    GeometryReader { geometry in
-                        Rectangle()
-                            .fill(Color.red.opacity(0.2))
-                            .frame(width: geometry.size.width * CGFloat(failedAttempts) / 10)
-                    }
-                )
-                .clipShape(.capsule)
-                .foregroundStyle(.red)
+                .tint(.red)
             }
             .font(.subheadline)
             .padding(.top, 24)
@@ -120,6 +103,7 @@ struct TrickPracticeView: View {
                 .controlSize(.large)
                 .opacity(showCheckmark ? 0.5 : 1)
                 .disabled(showCheckmark)
+                .sensoryFeedback(.success, trigger: landedAttempts)
                 
                 Button {
                     failedAttempts += 1
@@ -133,12 +117,13 @@ struct TrickPracticeView: View {
                 .controlSize(.large)
                 .opacity(showCheckmark ? 0.5 : 1)
                 .disabled(showCheckmark)
+                .sensoryFeedback(.error, trigger: failedAttempts)
             }
             .padding()
             
             if learningTricks.count > 1 {
                 Button {
-                        moveToNextTrick()
+                    moveToNextTrick()
                 } label: {
                     Label("Next Trick", systemImage: "arrow.2.circlepath.circle")
                         .frame(maxWidth: .infinity)
@@ -159,16 +144,22 @@ struct TrickPracticeView: View {
             
             if showConsistencyChange {
                 VStack {
-                    Text("Consistency Change")
-                        .font(.headline)
-                    HStack {
-                        Text("\(oldConsistency)")
-                            .strikethrough()
-                        Image(systemName: "arrow.right")
-                        Text("\(newConsistency)")
+                    if oldConsistency == newConsistency {
+                        Text("No change")
+                            .font(.title)
                             .fontWeight(.bold)
+                    } else {
+                        Text("Consistency Change")
+                            .font(.headline)
+                        HStack {
+                            Text("\(oldConsistency)")
+                                .strikethrough()
+                            Image(systemName: "arrow.right")
+                            Text("\(newConsistency)")
+                                .fontWeight(.bold)
+                        }
+                        .font(.title)
                     }
-                    .font(.title)
                 }
                 .padding()
                 .background(RoundedRectangle(cornerRadius: 16).fill(.thinMaterial))
@@ -179,8 +170,49 @@ struct TrickPracticeView: View {
         .animation(.smooth, value: showConsistencyChange)
     }
     
+    private var infoPanel: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "info.circle")
+                .font(.title)
+                .symbolRenderingMode(.hierarchical)
+            Text("How it works")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .fontWidth(.expanded)
+                .multilineTextAlignment(.center)
+            
+            Text("""
+                 Regular reps help you to get tricks nailed and maintain or improve consistency. The minute you stop practicing a trick, you start to lose it gradually unless you've developed strong connections in your brain (muscle memory). 
+                 
+                 Think of this mode like sports drill practice. You get **10** attempts to land a trick before you have to move on to the next trick (if practicing multiple).
+                 
+                 Tap Landed or Bailed to capture each attempt and see the gauges fill up with your progress.
+                 """)
+                .font(.subheadline)
+            
+            Spacer()
+            
+            GradientButton<Any, Bool, Never>(
+                label: "Got it!",
+                action: {
+                    showInfoPanel = false
+                },
+                hapticTrigger: showInfoPanel
+            )
+        }
+        .padding()
+        .presentationCornerRadius(24)
+        .presentationDetents([.fraction(0.6)])
+    }
+    
     private var completionSheet: some View {
         VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "figure.skateboarding.circle")
+                .font(.largeTitle)
+                .imageScale(.large)
+                .symbolRenderingMode(.hierarchical)
             Text(singleTrick != nil ? "Practice Complete!" : "All Tricks Practiced!")
                 .font(.largeTitle)
                 .fontWeight(.bold)
@@ -203,7 +235,7 @@ struct TrickPracticeView: View {
         }
         .padding()
         .presentationCornerRadius(24)
-        .presentationDetents([.medium])
+        .presentationDetents([.fraction(0.3)])
     }
     
     private func setupInitialState() {
