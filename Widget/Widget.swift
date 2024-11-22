@@ -419,19 +419,25 @@ struct LearnNextView: View {
                 let trickData = try? JSONEncoder().encode(trick)
                 let trickString = trickData?.base64EncodedString() ?? ""
                 let deepLinkURL = URL(string: "shrednotes://trickDetail/\(trickString)")!
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("LEARN NEXT")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    
-                    Text(trick.name)
-                        .font(.headline)
-                        .fontWidth(family == .accessoryRectangular ? .standard : .expanded)
-                        .lineLimit(1)
-                    
-                    Text(trick.type.displayName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Learn Next")
+                                .textCase(.uppercase)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                            Text(trick.name)
+                                .font(.headline)
+                                .font(.body)
+                                .fontWeight(.semibold)
+                            
+                            
+                            Text(trick.type.displayName)
+                                .font(.subheadline)
+                        }
+                    }
+                    Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .containerBackground(.clear, for: .widget)
