@@ -9,6 +9,7 @@ struct ComboElementPickerView: View {
     
     @State private var selectedType: ElementType = .direction
     @State private var searchText: String = ""
+    @State private var elementSelected: Bool = true
     @FocusState private var searchIsFocused: Bool
     
     let onElementSelected: (ComboElement) -> Void
@@ -80,7 +81,7 @@ struct ComboElementPickerView: View {
                                     .padding(.vertical, 8)
                                     .background(
                                         selectedType == type ?
-                                            Color.indigo : Color.indigo.opacity(0.1)
+                                        Color.indigo : Color.indigo.opacity(0.1)
                                     )
                                     .foregroundColor(
                                         selectedType == type ?
@@ -109,6 +110,13 @@ struct ComboElementPickerView: View {
                 )
                 .padding(.horizontal)
                 .focused($searchIsFocused)
+                .onChange(of: selectedType) {
+                    searchText = ""
+                }
+                .onChange(of: elementSelected) {
+                    searchText = ""
+                    $searchIsFocused.wrappedValue = false
+                }
                 
                 // Element Values
                 ScrollView {
@@ -123,6 +131,7 @@ struct ComboElementPickerView: View {
                                     displayValue: value
                                 )
                                 onElementSelected(element)
+                                elementSelected.toggle()
                             }) {
                                 Text(value)
                                     .padding(.horizontal, 16)
@@ -146,6 +155,7 @@ struct ComboElementPickerView: View {
                         isBreak: true
                     )
                     onElementSelected(breakElement)
+                    elementSelected.toggle()
                 }) {
                     Label("Break", systemImage: "plus")
                         .frame(maxWidth: .infinity)

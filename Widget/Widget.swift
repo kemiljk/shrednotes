@@ -184,33 +184,38 @@ struct QuickGlanceView: View {
             let sessionString = sessionData?.base64EncodedString() ?? ""
             let deepLinkURL = URL(string: "shrednotes://sessionDetail/\(sessionString)")!
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text("LATEST SESSION")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                
-                Text(latestSession.title ?? "Untitled Session")
-                    .font(.headline)
-                    .fontWidth(family == .accessoryRectangular ? .standard : .expanded)
-                    .lineLimit(1)
-                
-                if family != .accessoryRectangular {
-                    let summarizer = TextSummarizer(tricks: latestSession.tricks ?? [])
-                    let summary = summarizer.summarizeSession(
-                        notes: latestSession.note ?? "",
-                        landedTricks: latestSession.tricks ?? [],
-                        date: latestSession.date ?? .now
-                    )
-                    
-                    Text(summary)
-                        .font(.caption)
+            VStack(alignment: .leading) {
+                HStack {
+                    VStack(alignment: .leading, spacing: family != .accessoryRectangular ? 0 : 8) {
+                        Text("Latest Session")
+                            .textCase(.uppercase)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        Text(latestSession.title ?? "Untitled Session")
+                            .font(.headline)
+                            .fontWidth(family == .accessoryRectangular ? .standard : .expanded)
+                            .lineLimit(1)
+                        
+                        if family != .accessoryRectangular {
+                            let summarizer = TextSummarizer(tricks: latestSession.tricks ?? [])
+                            let summary = summarizer.summarizeSession(
+                                notes: latestSession.note ?? "",
+                                landedTricks: latestSession.tricks ?? [],
+                                date: latestSession.date ?? .now
+                            )
+                            
+                            Text(summary)
+                                .font(.caption)
+                        }
+                        
+                        Text(latestSession.date?.timeAgo() ?? "")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
                 }
-                
-                Text(latestSession.date?.timeAgo() ?? "")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .containerBackground(.background, for: .widget)
             .widgetURL(deepLinkURL)
         } else {
@@ -385,7 +390,8 @@ struct LearnNextView: View {
                         Spacer()
                     }
                     
-                    Text("LEARN NEXT")
+                    Text("Learn Next")
+                        .textCase(.uppercase)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     
@@ -436,10 +442,9 @@ struct LearnNextView: View {
                             Text(trick.type.displayName)
                                 .font(.subheadline)
                         }
+                        Spacer()
                     }
-                    Spacer()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .containerBackground(.clear, for: .widget)
                 .widgetURL(deepLinkURL)
             }

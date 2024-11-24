@@ -98,7 +98,7 @@ struct FullTrickListView: View {
                         HStack {
                             Button(action: {
                                 selectedType = nil
-                                expandedGroups = [:] // Close all groups when "All" is selected
+                                expandedGroups = [:]
                             }) {
                                 Text("All")
                                     .padding(.vertical, 8)
@@ -114,10 +114,12 @@ struct FullTrickListView: View {
                                     .offset(y: phase.isIdentity ? 0 : 10)
                             }
                             
-                            ForEach(TrickType.allCases.sorted(by: { $0.rawValue < $1.rawValue }), id: \.self) { type in
+                            ForEach(TrickType.allCases
+                                .sorted(by: { $0.rawValue < $1.rawValue })
+                                .filter { visibleTrickTypes.contains($0) }, id: \.self) { type in
                                 Button(action: {
                                     selectedType = type
-                                    expandedGroups = [type.rawValue: true] // Open the selected group and hide others
+                                    expandedGroups = [type.rawValue: true]
                                 }) {
                                     Text(type.rawValue == "Shuvit" ? type.displayName : type.rawValue)
                                         .padding(.vertical, 8)
@@ -126,8 +128,6 @@ struct FullTrickListView: View {
                                         .foregroundColor(selectedType == type ? Color.white : Color.primary)
                                         .cornerRadius(20)
                                 }
-                                .disabled(groupedFilteredTricks(by: type).isEmpty)
-                                .opacity(groupedFilteredTricks(by: type).isEmpty ? 0.5 : 1)
                                 .scrollTransition { content, phase in
                                     content
                                         .opacity(phase.isIdentity ? 1 : 0)
