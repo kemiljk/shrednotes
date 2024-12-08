@@ -248,8 +248,30 @@ struct LatestSessionView: View {
                     .padding(.bottom, 4)
                 
                 HStack(spacing: 8) {
-                    ForEach(feelings, id: \.self) { feeling in
-                        Text(feeling.rawValue.capitalized)
+                    let maxDisplayed = 3
+
+                    if feelings.count <= maxDisplayed {
+                        // Show all feelings if 3 or fewer
+                        ForEach(feelings, id: \.self) { feeling in
+                            Text(feeling.rawValue.capitalized)
+                                .font(.caption)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(.secondary.opacity(0.2))
+                                .clipShape(Capsule())
+                        }
+                    } else {
+                        // Show first 3 feelings plus the +n indicator
+                        ForEach(feelings.prefix(maxDisplayed), id: \.self) { feeling in
+                            Text(feeling.rawValue.capitalized)
+                                .font(.caption)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(.secondary.opacity(0.2))
+                                .clipShape(Capsule())
+                        }
+                        
+                        Text("+\(feelings.count - maxDisplayed)")
                             .font(.caption)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -395,23 +417,18 @@ struct LearnNextView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     
+                    Spacer()
+
                     Text(trick.name)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .multilineTextAlignment(.leading)
                         .fontWeight(.semibold)
                         .fontWidth(.expanded)
-                        .padding(.top, 2)
-                    
-                    Spacer()
-                    
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(trick.type.displayName)
-                            .font(.caption)
-                        Spacer()
-                        difficultyStars(count: trick.difficulty)
-                    }
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                        .font(.headline)
+                        .lineLimit(3)
                 }
                 .containerBackground(.background, for: .widget)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .widgetURL(deepLinkURL)
             } else {
                 Text("No trick selected")

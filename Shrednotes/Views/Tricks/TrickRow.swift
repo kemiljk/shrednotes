@@ -18,6 +18,7 @@ struct TrickRow: View {
                 VStack(alignment: .leading) {
                     Text(trick.name)
                         .fontWidth(.expanded)
+                        .multilineTextAlignment(.leading)
                     HStack {
                         Text(trick.type.displayName)
                             .foregroundStyle(.secondary)

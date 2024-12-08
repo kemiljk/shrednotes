@@ -204,7 +204,7 @@ struct SessionDetailView: View {
             refreshMediaState()
         }
         .onChange(of: healthKitManager.allSkateboardingWorkouts) {
-            findMatchingWorkout()
+                findMatchingWorkout()
         }
         .sheet(isPresented: $isEditingSession) {
             EditSessionView(session: session)

@@ -572,7 +572,14 @@ struct MainView: View {
     @ViewBuilder
     private func latestSkateView(latestSessionDate: Date) -> some View {
         if let latestSession = skateSessions.first {
-            StoredWorkoutView(session: latestSession)
+                StoredWorkoutView(session: latestSession)
+                .onTapGesture {
+                    self.showSessionDetail = true
+                }
+                .fullScreenCover(isPresented: $showSessionDetail) {
+                    SessionDetailView(session: latestSession, mediaState: mediaState)
+                        .navigationTransition(.zoom(sourceID: latestSession.id, in: detailView))
+                }
         }
     }
     
