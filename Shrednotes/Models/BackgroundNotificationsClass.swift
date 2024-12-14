@@ -37,15 +37,14 @@ class SkateSessionMonitor {
             }
         }
         
-        let minuteAgo = calendar.date(byAdding: .minute, value: -1, to: Date())! // For testing
-        // let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date())! // Production version
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: Date())!
         
         if let lastSession = sessions.first,
            let lastSessionDate = lastSession.date {
             print("Last session date: \(lastSessionDate)")
-            print("One minute ago: \(minuteAgo)")
+            print("One minute ago: \(weekAgo)")
             
-            if lastSessionDate < minuteAgo {
+            if lastSessionDate < weekAgo {
                 print("No skating activity detected in the last minute, scheduling reminder...")
                 scheduleSkateReminder()
             } else {
