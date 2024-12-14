@@ -262,8 +262,22 @@ final class MediaItem: Identifiable, Codable, Hashable {
 class MediaState: ObservableObject {
     @Published var imageCache: [UUID: UIImage] = [:]
     @Published var videoThumbnails: [UUID: UIImage] = [:]
+    @Published var failedThumbnails: Set<UUID> = []  // Track failed thumbnails
+    
+    func markAsFailed(_ id: UUID) {
+        DispatchQueue.main.async {
+            self.failedThumbnails.insert(id)
+            self.imageCache.removeValue(forKey: id)
+            self.videoThumbnails.removeValue(forKey: id)
+        }
+    }
+    
+    func clearFailed(_ id: UUID) {
+        DispatchQueue.main.async {
+            self.failedThumbnails.remove(id)
+        }
+    }
 }
-
 
 @Model
 final class ComboTrick: Identifiable, Codable {

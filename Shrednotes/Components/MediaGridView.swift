@@ -28,7 +28,7 @@ struct MediaGridView: View {
                 if let uiImage = UIImage(data: item.data) {
                     Image(uiImage: uiImage)
                         .resizable()
-                        .aspectRatio(1, contentMode: .fill) // Keep only this one
+                        .aspectRatio(contentMode: .fill)
                         .frame(minWidth: 0, maxWidth: .infinity)
                         .clipped()
                         .cornerRadius(8)
@@ -37,25 +37,28 @@ struct MediaGridView: View {
                         }
                         
                 } else if let thumbnail = mediaState.videoThumbnails[item.id ?? UUID()] {
-                    Image(uiImage: thumbnail)
-                        .resizable()
-                        .aspectRatio(1, contentMode: .fill) // Keep only this one
-                        .frame(minWidth: 0, maxWidth: .infinity)
-                        .clipped()
-                        .cornerRadius(8)
-                        .onTapGesture {
-                            onTap(item)
-                        }
-                        .overlay(
-                            Image(systemName: "play.circle.fill")
-                                .foregroundColor(.white)
-                                .font(.title3)
-                        )
+                    GeometryReader { geometry in
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width, height: geometry.size.width)
+                            .clipped()
+                            .cornerRadius(8)
+                            .overlay(
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.white)
+                                    .font(.title3)
+                            )
+                            .onTapGesture {
+                                onTap(item)
+                            }
+                    }
+                    .aspectRatio(1, contentMode: .fit)
                 } else {
                     ZStack {
                         Rectangle()
                             .fill(Color.gray.opacity(0.2))
-                            .aspectRatio(1, contentMode: .fill)
+                            .aspectRatio(contentMode: .fill)
                             .frame(minWidth: 0, maxWidth: .infinity)
                             .clipped()
                             .cornerRadius(8)

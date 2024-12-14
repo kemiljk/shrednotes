@@ -194,6 +194,7 @@ struct SessionDetailView: View {
             }
         }
         .onAppear {
+            cleanupInvalidMedia()
             preGenerateVideoThumbnailsAndPreloadPlayers()
             refreshMediaState()
             healthKitManager.fetchLatestWorkout()
@@ -322,21 +323,77 @@ struct SessionDetailView: View {
     }
     
     private func refreshMediaState() {
+        // Clear any thumbnails for media items that no longer exist
+        let currentMediaIds = Set(session.media?.compactMap { $0.id } ?? [])
+        mediaState.imageCache = mediaState.imageCache.filter { currentMediaIds.contains($0.key) }
+        mediaState.videoThumbnails = mediaState.videoThumbnails.filter { currentMediaIds.contains($0.key) }
+        
         for mediaItem in session.media ?? [] {
+            let mediaId = mediaItem.id ?? UUID()
+            
+            // Skip if this media item has previously failed
+            guard !mediaState.failedThumbnails.contains(mediaId) else { continue }
+            
+            // Check if the data is valid
+            guard !mediaItem.data.isEmpty else {
+                mediaState.markAsFailed(mediaId)
+                continue
+            }
+            
             if let uiImage = UIImage(data: mediaItem.data) {
-                mediaState.imageCache[mediaItem.id ?? UUID()] = uiImage
-            } else if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
-                generateThumbnail(for: videoURL) { thumbnail in
-                    if let thumbnail = thumbnail {
-                        DispatchQueue.main.async {
-                            mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
+                mediaState.clearFailed(mediaId)
+                mediaState.imageCache[mediaId] = uiImage
+            } else {
+                // Try to handle as video
+                if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
+                    let thumbnailGenerationTimeout = DispatchWorkItem {
+                        mediaState.markAsFailed(mediaId)
+                    }
+                    
+                    // Set a timeout for thumbnail generation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: thumbnailGenerationTimeout)
+                    
+                    generateThumbnail(for: videoURL) { thumbnail in
+                        thumbnailGenerationTimeout.cancel()
+                        if let thumbnail = thumbnail {
+                            DispatchQueue.main.async {
+                                mediaState.clearFailed(mediaId)
+                                mediaState.videoThumbnails[mediaId] = thumbnail
+                            }
+                        } else {
+                            mediaState.markAsFailed(mediaId)
                         }
                     }
+                } else {
+                    mediaState.markAsFailed(mediaId)
                 }
+            }
+        }
+        
+        // Clean up any media items with invalid data
+        if let media = session.media {
+            session.media = media.filter { mediaItem in
+                let mediaId = mediaItem.id ?? UUID()
+                return !mediaState.failedThumbnails.contains(mediaId)
             }
         }
     }
     
+    // Add this function to SessionDetailView
+    private func cleanupInvalidMedia() {
+        if let media = session.media {
+            let validMedia = media.filter { mediaItem in
+                let mediaId = mediaItem.id ?? UUID()
+                return !mediaState.failedThumbnails.contains(mediaId) && !mediaItem.data.isEmpty
+            }
+            
+            if validMedia.count != media.count {
+                session.media = validMedia
+                try? modelContext.save()
+            }
+        }
+    }
+
     private func findMatchingWorkout() {
         guard let date = session.date else { return }
         matchingWorkout = healthKitManager.allSkateboardingWorkouts.first { workout in

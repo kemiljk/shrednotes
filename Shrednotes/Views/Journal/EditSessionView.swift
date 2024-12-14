@@ -557,7 +557,9 @@ struct EditSessionView: View {
                 } else if let videoURL = saveVideoToTemporaryDirectory(data: data) {
                     generateThumbnail(for: videoURL) { thumbnail in
                         if let thumbnail = thumbnail {
-                            mediaState.videoThumbnails[newMediaItem.id ?? UUID()] = thumbnail
+                            DispatchQueue.main.async {
+                                mediaState.videoThumbnails[newMediaItem.id ?? UUID()] = thumbnail
+                            }
                         }
                     }
                 }
@@ -573,7 +575,9 @@ struct EditSessionView: View {
             } else if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
                 generateThumbnail(for: videoURL) { thumbnail in
                     if let thumbnail = thumbnail {
-                        mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
+                        DispatchQueue.main.async {
+                            mediaState.imageCache[mediaItem.id ?? UUID()] = thumbnail
+                        }
                     }
                 }
             }
