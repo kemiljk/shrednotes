@@ -1,10 +1,12 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct TrickPracticeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(filter: #Predicate<Trick> { $0.isLearning }) private var learningTricks: [Trick]
+    @Query(sort: \SkateSession.date, order: .reverse) private var sessions: [SkateSession]
     @State private var shuffledTricks: [Trick] = []
     @State private var currentTrickIndex: Int = 0
     @State private var landedAttempts: Int = 0
@@ -189,7 +191,7 @@ struct TrickPracticeView: View {
                  
                  Tap Landed or Bailed to capture each attempt and see the gauges fill up with your progress.
                  """)
-                .font(.subheadline)
+            .font(.subheadline)
             
             Spacer()
             
@@ -214,10 +216,11 @@ struct TrickPracticeView: View {
                 .imageScale(.large)
                 .symbolRenderingMode(.hierarchical)
             Text(singleTrick != nil ? "Practice Complete!" : "All Tricks Practiced!")
-                .font(.largeTitle)
+                .font(.title)
                 .fontWeight(.bold)
                 .fontWidth(.expanded)
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
             
             Text(singleTrick != nil ? "You've completed practicing this trick." : "You've practiced all your learning tricks.")
                 .font(.subheadline)
@@ -227,11 +230,20 @@ struct TrickPracticeView: View {
             GradientButton<Any, Bool, Never>(
                 label: "Finish",
                 action: {
+                    let calendar = Calendar.current
+                    let _ = calendar.startOfDay(for: Date())
+                    
+                    let todaysEntries = sessions
+                    
+                    if todaysEntries.isEmpty {
+                        scheduleJournalReminder()
+                    }
                     showCompletionSheet = false
                     dismiss()
                 },
                 hapticTrigger: showCompletionSheet
             )
+            .padding(.bottom)
         }
         .padding()
         .presentationCornerRadius(24)
@@ -294,6 +306,33 @@ struct TrickPracticeView: View {
                 showCompletionSheet = true
             } else {
                 currentTrickIndex += 1
+            }
+        }
+    }
+    
+    private func scheduleJournalReminder() {
+        // Check if most recent session is from today
+        if let mostRecent = sessions.first,
+           let sessionDate = mostRecent.date,
+           Calendar.current.isDateInToday(sessionDate) {
+            // Already have a session today, don't schedule notification
+            return
+        }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Time to Journal"
+        content.body = "Record today's skateboarding progress in your journal"
+        content.sound = .default
+        
+        // Schedule for 30 minutes from now
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1 * 60, repeats: false)
+        
+        let identifier = "journal-reminder-\(Date().timeIntervalSince1970)"
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
             }
         }
     }

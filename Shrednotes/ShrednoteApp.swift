@@ -32,6 +32,7 @@ struct SkateboardTrickApp: App {
     var body: some Scene {
         WindowGroup {
             MainView()
+                .learnedTrickPrompt()
                 .environmentObject(healthKitManager)
                 .environmentObject(mediaState)
                 .environmentObject(sessionManager)
@@ -42,6 +43,7 @@ struct SkateboardTrickApp: App {
                         .datastoreLocation(.applicationDefault)
                     ])
                 }
+                .checkSkateInactivity()
                 .onAppear {
                     WidgetCenter.shared.reloadAllTimelines()
                 }

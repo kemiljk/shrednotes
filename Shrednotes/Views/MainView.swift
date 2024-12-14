@@ -168,19 +168,40 @@ struct MainView: View {
                     WidgetCenter.shared.reloadAllTimelines()
                 }
                 .safeAreaInset(edge: .bottom) {
-                    VStack(alignment: .trailing) {
-                        HStack {
-                            Spacer()
-                            if !hideJournal {
-                                GradientButton<Bool, Bool, Never>(label: "Session", hasImage: true, image: "plus.circle.fill", binding: $showingAddSession, value: true, hapticTrigger: showingAddSession)
+                    ZStack {
+                        VariableBlurView(maxBlurRadius: 4, direction: .blurredBottomClearTop)
+                            .frame(height: 120)
+                            .ignoresSafeArea(edges: .bottom)
+                            .padding(.bottom, -44)
+                        VStack(alignment: .trailing) {
+                            HStack {
+                                Spacer()
+                                if !hideJournal {
+                                    GradientButton<Bool, Bool, Never>(
+                                        label: "Session",
+                                        hasImage: true,
+                                        image: "plus.circle.fill",
+                                        binding: $showingAddSession,
+                                        value: true,
+                                        hapticTrigger: showingAddSession
+                                    )
                                     .frame(maxHeight: 44)
-                            }
-                            GradientButton<Bool, Bool, Never>(label: "Combo", hasImage: true, image: "plus.circle.fill", binding: $showingComboBuilder, value: true, hapticTrigger: showingComboBuilder, variant: .secondary)
+                                }
+                                GradientButton<Bool, Bool, Never>(
+                                    label: "Combo",
+                                    hasImage: true,
+                                    image: "plus.circle.fill",
+                                    binding: $showingComboBuilder,
+                                    value: true,
+                                    hapticTrigger: showingComboBuilder,
+                                    variant: .secondary
+                                )
                                 .frame(maxHeight: 44)
+                            }
                         }
+                        .padding(.horizontal)
+                        .padding(.bottom)
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom)
                 }
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -487,6 +508,7 @@ struct MainView: View {
                                 nextCombinationTricks = computeNextCombinationTricks()
                                 updateNextTrickInAppStorage()
                             }
+                            LearnedTrickManager.shared.trickLearned(easiestTrick)
                             WidgetCenter.shared.reloadAllTimelines()
                         } label: {
                             Label("Learned", systemImage: easiestTrick.isLearned ? "xmark.circle" : "checkmark.circle")
@@ -626,6 +648,7 @@ struct MainView: View {
                             nextCombinationTricks = computeNextCombinationTricks()
                             updateNextTrickInAppStorage()
                         }
+                        LearnedTrickManager.shared.trickLearned(trick)
                         WidgetCenter.shared.reloadAllTimelines()
                     } label: {
                         Label("Learned", systemImage: trick.isLearned ? "xmark.circle" : "checkmark.circle")

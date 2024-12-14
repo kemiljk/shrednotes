@@ -397,6 +397,7 @@ struct AddSessionView: View {
         suggestedTricks = scoredTricks.prefix(maxSuggestions).map { $0.trick }
     }
     
+    // Update the findMatchingWorkouts function
     private func findMatchingWorkouts(for date: Date) {
         healthKitManager.fetchWorkoutsForDate(date) { workouts in
             DispatchQueue.main.async {
@@ -406,11 +407,44 @@ struct AddSessionView: View {
                         DispatchQueue.main.async {
                             self.totalDuration = duration
                             self.totalEnergyBurned = energyBurned
+                            
+                            // Set the duration picker if we have HealthKit data
+                            if duration > 0 {
+                                let calendar = Calendar.current
+                                let reference = Date(timeIntervalSinceReferenceDate: 0)
+                                let hours = Int(duration) / 3600
+                                let minutes = (Int(duration) % 3600) / 60
+                                
+                                self.duration = calendar.date(bySettingHour: hours,
+                                                            minute: minutes,
+                                                            second: 0,
+                                                            of: reference) ?? reference
+                                self.hasDuration = true
+                            } else {
+                                // Enable manual duration entry if no HealthKit duration
+                                self.hasDuration = false
+                                // Reset to 0 duration
+                                let calendar = Calendar.current
+                                let reference = Date(timeIntervalSinceReferenceDate: 0)
+                                self.duration = calendar.date(bySettingHour: 0,
+                                                            minute: 0,
+                                                            second: 0,
+                                                            of: reference) ?? reference
+                            }
                         }
                     }
                 } else {
                     self.totalDuration = 0
                     self.totalEnergyBurned = 0
+                    // Enable manual duration entry if no HealthKit data
+                    self.hasDuration = false
+                    // Reset to 0 duration
+                    let calendar = Calendar.current
+                    let reference = Date(timeIntervalSinceReferenceDate: 0)
+                    self.duration = calendar.date(bySettingHour: 0,
+                                                minute: 0,
+                                                second: 0,
+                                                of: reference) ?? reference
                 }
             }
         }

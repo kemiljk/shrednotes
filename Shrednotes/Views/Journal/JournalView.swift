@@ -82,18 +82,28 @@ struct JournalView: View {
                     }
                     .listStyle(.plain)
                     .safeAreaInset(edge: .bottom) {
-                        GradientButton<Bool, Bool, Never>(
-                            label: "Add Session",
-                            hasImage: true,
-                            image: "plus.circle.fill",
-                            binding: $showingAddSession,
-                            value: true,
-                            fullWidth: false,
-                            hapticTrigger: showingAddSession,
-                            hapticFeedbackType: .impact
-                        )
-                        .padding(.bottom)
-                        .frame(maxHeight: 44)
+                        ZStack {
+                            VariableBlurView(maxBlurRadius: 4, direction: .blurredBottomClearTop)
+                                .frame(height: 120)
+                                .ignoresSafeArea(edges: .bottom)
+                                .padding(.bottom, -44)
+                            HStack {
+                                Spacer()
+                                GradientButton<Bool, Bool, Never>(
+                                    label: "Add Session",
+                                    hasImage: true,
+                                    image: "plus.circle.fill",
+                                    binding: $showingAddSession,
+                                    value: true,
+                                    fullWidth: false,
+                                    hapticTrigger: showingAddSession,
+                                    hapticFeedbackType: .impact
+                                )
+                                .frame(maxHeight: 44)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding([.bottom, .horizontal])
+                        }
                     }
                 }
             }

@@ -178,3 +178,24 @@ func addMediaButton() -> some View {
         .background(Color.secondary.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 }
+
+struct ProgressiveBlur: ViewModifier {
+    var blurRadius: CGFloat
+    
+    func body(content: Content) -> some View {
+        ZStack {
+            content
+            
+            // Blurred background rectangle
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.regularMaterial)
+                .frame(height: 64) // Adjust height as needed
+                .overlay(
+                    LinearGradient(gradient: Gradient(colors: [.clear, .black.opacity(0.1)]),
+                                 startPoint: .top,
+                                 endPoint: .bottom)
+                )
+        }
+    }
+}
+

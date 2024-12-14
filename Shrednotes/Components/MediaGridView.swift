@@ -28,9 +28,8 @@ struct MediaGridView: View {
                 if let uiImage = UIImage(data: item.data) {
                     Image(uiImage: uiImage)
                         .resizable()
-                        .aspectRatio(1, contentMode: .fill)
+                        .aspectRatio(1, contentMode: .fill) // Keep only this one
                         .frame(minWidth: 0, maxWidth: .infinity)
-                        .aspectRatio(1, contentMode: .fit)
                         .clipped()
                         .cornerRadius(8)
                         .onTapGesture {
@@ -40,9 +39,8 @@ struct MediaGridView: View {
                 } else if let thumbnail = mediaState.videoThumbnails[item.id ?? UUID()] {
                     Image(uiImage: thumbnail)
                         .resizable()
-                        .aspectRatio(1, contentMode: .fill)
+                        .aspectRatio(1, contentMode: .fill) // Keep only this one
                         .frame(minWidth: 0, maxWidth: .infinity)
-                        .aspectRatio(1, contentMode: .fit)
                         .clipped()
                         .cornerRadius(8)
                         .onTapGesture {
@@ -59,7 +57,6 @@ struct MediaGridView: View {
                             .fill(Color.gray.opacity(0.2))
                             .aspectRatio(1, contentMode: .fill)
                             .frame(minWidth: 0, maxWidth: .infinity)
-                            .aspectRatio(1, contentMode: .fit)
                             .clipped()
                             .cornerRadius(8)
                         

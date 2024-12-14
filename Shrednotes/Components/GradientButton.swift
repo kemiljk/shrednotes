@@ -127,7 +127,6 @@ struct GradientButton<T, HapticTrigger, Destination>: View where Destination: Vi
                 .background(gradientColors)
                 .foregroundStyle(textColor)
                 .clipShape(Capsule())
-                .shadow(radius: 4)
         } else {
             Text(label)
                 .font(.headline)
@@ -135,7 +134,6 @@ struct GradientButton<T, HapticTrigger, Destination>: View where Destination: Vi
                 .background(gradientColors)
                 .foregroundStyle(textColor)
                 .clipShape(Capsule())
-                .shadow(radius: 4)
         }
     }
 

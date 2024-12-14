@@ -123,6 +123,7 @@ struct TrickDetailView: View {
                 Button("Cancel", role: .cancel) { }
             }
         }
+        .learnedTrickPrompt()
 //        .sheet(isPresented: $showEditTrickView) {
 //            EditTrickView(trick: trick)
 //                .presentationCornerRadius(24)
@@ -203,6 +204,7 @@ struct TrickDetailView: View {
                  trick.isLearning = (newValue == .learning)
                  if newValue == .learned, trick.isLearnedDate == nil {
                      trick.isLearnedDate = Date()
+                     LearnedTrickManager.shared.trickLearned(trick)
                  } else if newValue != .learned {
                      trick.isLearnedDate = nil
                  }
@@ -551,6 +553,7 @@ struct TrickDetailView: View {
      private func trickIsLearned(trick: Trick, date: Date?) {
          trick.isLearnedDate = date
          saveContext(modelContext: modelContext)
+         LearnedTrickManager.shared.trickLearned(trick)
      }
      
      private func trickIsLearning(trick: Trick) {

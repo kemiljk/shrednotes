@@ -169,6 +169,7 @@ struct FullTrickListView: View {
                                                             trick.isLearning = false
                                                             trick.wantToLearn = false
                                                             trick.wantToLearnDate = nil
+                                                            LearnedTrickManager.shared.trickLearned(trick)
                                                         } label: {
                                                             Label("Learned", systemImage: trick.isLearned ? "xmark.circle" : "checkmark.circle")
                                                         }
@@ -261,6 +262,7 @@ struct FullTrickListView: View {
                     .tint(.secondary)
                 }
             }
+            .learnedTrickPrompt()
             .onAppear {
                 loadVisibleTrickTypes()
             }
