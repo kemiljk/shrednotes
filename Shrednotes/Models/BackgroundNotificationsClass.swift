@@ -28,8 +28,7 @@ class SkateSessionMonitor {
         
         // Check when we last sent a notification
         if let lastNotificationDate = defaults.object(forKey: lastNotificationKey) as? Date {
-            let minimumInterval = calendar.date(byAdding: .minute, value: -2, to: Date())! // For testing (2 minutes)
-            // let minimumInterval = calendar.date(byAdding: .day, value: -7, to: Date())! // For production (7 days)
+            let minimumInterval = calendar.date(byAdding: .day, value: -7, to: Date())!
             
             if lastNotificationDate > minimumInterval {
                 print("Too soon since last notification (\(lastNotificationDate)), skipping check")
@@ -42,10 +41,10 @@ class SkateSessionMonitor {
         if let lastSession = sessions.first,
            let lastSessionDate = lastSession.date {
             print("Last session date: \(lastSessionDate)")
-            print("One minute ago: \(weekAgo)")
+            print("Week ago: \(weekAgo)")
             
             if lastSessionDate < weekAgo {
-                print("No skating activity detected in the last minute, scheduling reminder...")
+                print("No skating activity detected in the last week, scheduling reminder...")
                 scheduleSkateReminder()
             } else {
                 print("Recent skating activity found, no reminder needed")
@@ -59,12 +58,15 @@ class SkateSessionMonitor {
     
     private func scheduleSkateReminder() {
         let content = UNMutableNotificationContent()
-        content.title = "Missing Your Skateboard?"
-        content.body = "It's been a while since you last skated. A quick session today could help maintain your progress!"
+        content.title = "Time to Skate!"
+        content.body = "It's been a week since your last skate session."
         content.sound = .default
         
-        // For testing, schedule 5 seconds from now
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        // Schedule for 10 AM tomorrow
+        var components = DateComponents()
+        components.hour = 10
+        components.minute = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         
         let identifier = "skate-reminder-\(Date().timeIntervalSince1970)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
