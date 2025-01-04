@@ -287,18 +287,29 @@ final class ComboTrick: Identifiable, Codable {
     var isLearned: Bool?
     var isLearning: Bool?
     var isSkipped: Bool?
-    var comboElements: [ComboElement]?
+    var indentation: Int?
     var tricks: [Trick]?
     
     @Relationship(inverse: \SkateSession.combos) var sessions: [SkateSession]?
+    @Relationship(deleteRule: .cascade) var comboElements: [ComboElement]?
     
-init(id: UUID = UUID(), name: String, difficulty: Int, isLearned: Bool = false, isLearning: Bool = false, isSkipped: Bool = false, comboElements: [ComboElement] = [], tricks: [Trick] = [], sessions: [SkateSession] = []) {
+    init(id: UUID = UUID(),
+         name: String,
+         difficulty: Int,
+         isLearned: Bool = false,
+         isLearning: Bool = false,
+         isSkipped: Bool = false,
+         indentation: Int = 0,
+         comboElements: [ComboElement] = [],
+         tricks: [Trick] = [],
+         sessions: [SkateSession] = []) {
         self.id = id
         self.name = name
         self.difficulty = difficulty
         self.isLearned = isLearned
         self.isLearning = isLearning
         self.isSkipped = isSkipped
+        self.indentation = indentation
         self.comboElements = comboElements
         self.tricks = tricks
         self.sessions = sessions
@@ -311,6 +322,7 @@ init(id: UUID = UUID(), name: String, difficulty: Int, isLearned: Bool = false, 
         case isLearned
         case isLearning
         case isSkipped
+        case indentation
         case comboElements
         case tricks
         case sessions
@@ -318,41 +330,67 @@ init(id: UUID = UUID(), name: String, difficulty: Int, isLearned: Bool = false, 
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(name, forKey: .name)
-        try container.encode(difficulty, forKey: .difficulty)
-        try container.encode(isLearned, forKey: .isLearned)
-        try container.encode(isLearning, forKey: .isLearning)
-        try container.encode(isSkipped, forKey: .isSkipped)
-        
+        try container.encodeIfPresent(id, forKey: .id)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(difficulty, forKey: .difficulty)
+        try container.encodeIfPresent(isLearned, forKey: .isLearned)
+        try container.encodeIfPresent(isLearning, forKey: .isLearning)
+        try container.encodeIfPresent(isSkipped, forKey: .isSkipped)
+        try container.encodeIfPresent(indentation, forKey: .indentation)
+        try container.encodeIfPresent(comboElements, forKey: .comboElements)
+        try container.encodeIfPresent(tricks, forKey: .tricks)
+        try container.encodeIfPresent(sessions, forKey: .sessions)
     }
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-        difficulty = try container.decode(Int.self, forKey: .difficulty)
-        isLearned = try container.decode(Bool.self, forKey: .isLearned)
-        isLearning = try container.decode(Bool.self, forKey: .isLearning)
-        isSkipped = try container.decode(Bool.self, forKey: .isSkipped)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        difficulty = try container.decodeIfPresent(Int.self, forKey: .difficulty)
+        isLearned = try container.decodeIfPresent(Bool.self, forKey: .isLearned)
+        isLearning = try container.decodeIfPresent(Bool.self, forKey: .isLearning)
+        isSkipped = try container.decodeIfPresent(Bool.self, forKey: .isSkipped)
+        indentation = try container.decodeIfPresent(Int.self, forKey: .indentation) ?? 0
+        comboElements = try container.decodeIfPresent([ComboElement].self, forKey: .comboElements) ?? []
+        tricks = try container.decodeIfPresent([Trick].self, forKey: .tricks) ?? []
+        sessions = try container.decodeIfPresent([SkateSession].self, forKey: .sessions) ?? []
     }
 }
 
-struct ComboElement: Identifiable, Codable, Equatable {
+@Model
+final class ComboElement: Identifiable, Codable {
     var id: UUID?
     var type: ElementType?
     var value: String?
     var displayValue: String?
-    var isBreak: Bool = false
-    var indentation: Int? = nil
+    var isBreak: Bool?
+    var indentation: Int?
+    var order: Int?
     
-    init(id: UUID = UUID(), type: ElementType = .baseTrick, value: String = "", displayValue: String = "", isBreak: Bool = false, indentation: Int? = nil) {
+    @Relationship(inverse: \ComboTrick.comboElements) var combo: ComboTrick?
+    
+    init() {
+        self.id = UUID()
+        self.isBreak = false
+        self.order = 0
+    }
+    
+    init(id: UUID = UUID(),
+         type: ElementType = .baseTrick,
+         value: String = "",
+         displayValue: String = "",
+         isBreak: Bool = false,
+         indentation: Int? = nil,
+         order: Int = 0,
+         combo: ComboTrick? = nil) {
         self.id = id
         self.type = type
         self.value = value
         self.displayValue = displayValue
         self.isBreak = isBreak
         self.indentation = indentation
+        self.order = order
+        self.combo = combo
     }
     
     enum CodingKeys: String, CodingKey {
@@ -362,26 +400,29 @@ struct ComboElement: Identifiable, Codable, Equatable {
         case displayValue
         case isBreak = "break"
         case indentation
+        case order
     }
     
-    init(from decoder: Decoder) throws {
+    required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        type = try container.decode(ElementType.self, forKey: .type)
-        value = try container.decode(String.self, forKey: .value)
-        displayValue = try container.decode(String.self, forKey: .displayValue)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id)
+        type = try container.decodeIfPresent(ElementType.self, forKey: .type)
+        value = try container.decodeIfPresent(String.self, forKey: .value)
+        displayValue = try container.decodeIfPresent(String.self, forKey: .displayValue)
         isBreak = try container.decodeIfPresent(Bool.self, forKey: .isBreak) ?? false
-        indentation = try container.decode(Int.self, forKey: .indentation)
+        indentation = try container.decodeIfPresent(Int.self, forKey: .indentation)
+        order = try container.decodeIfPresent(Int.self, forKey: .order) ?? 0
     }
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(type, forKey: .type)
-        try container.encode(value, forKey: .value)
-        try container.encode(displayValue, forKey: .displayValue)
+        try container.encodeIfPresent(id, forKey: .id)
+        try container.encodeIfPresent(type, forKey: .type)
+        try container.encodeIfPresent(value, forKey: .value)
+        try container.encodeIfPresent(displayValue, forKey: .displayValue)
         try container.encodeIfPresent(isBreak, forKey: .isBreak)
         try container.encodeIfPresent(indentation, forKey: .indentation)
+        try container.encodeIfPresent(order, forKey: .order)
     }
 }
 

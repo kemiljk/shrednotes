@@ -30,7 +30,14 @@ struct LocationPickerView: View {
     private func getRecentLocations() {
         let recentLocations = recentSessions.compactMap { $0.location }
             .filter { locationMatchesSearch($0) }
-        let uniqueRecentLocations = Array(Set(recentLocations)).sorted { $0.name < $1.name }
+        
+        // Deduplicate based on coordinate and name using Dictionary grouping
+        let uniqueRecentLocations = Dictionary(
+            grouping: recentLocations,
+            by: { "\($0.coordinate.latitude),\($0.coordinate.longitude),\($0.name)" }
+        ).values.compactMap { $0.first }
+        .sorted { $0.name < $1.name }
+        
         searchResults = uniqueRecentLocations.map { location in
             let placemark = MKPlacemark(coordinate: location.coordinate)
             let item = MKMapItem(placemark: placemark)
@@ -67,7 +74,9 @@ struct LocationPickerView: View {
                         Text(item.name ?? "Unknown location")
                             .fontWidth(.expanded)
                     }
+                    .listRowSeparator(.hidden)
                 }
+                .listStyle(.plain)
             } else {
                 Spacer()
             }

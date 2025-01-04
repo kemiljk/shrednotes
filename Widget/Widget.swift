@@ -381,6 +381,7 @@ struct LearnNextWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             LearnNextView()
+                .containerBackground(.background, for: .widget)
                 .modelContainer(sharedModelContainer)
         }
         .configurationDisplayName("Learn Next")
@@ -427,14 +428,25 @@ struct LearnNextView: View {
                         .font(.headline)
                         .lineLimit(3)
                 }
-                .containerBackground(.background, for: .widget)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .widgetURL(deepLinkURL)
             } else {
-                Text("No trick selected")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "skateboard")
+                            .imageScale(.small)
+                        Spacer()
+                    }
+                    Text("Learn Next")
+                        .textCase(.uppercase)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    Spacer()
+                    
+                    Text("Select a trick to learn next")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                }
             }
         }
         if family == .accessoryRectangular {
@@ -462,7 +474,6 @@ struct LearnNextView: View {
                         Spacer()
                     }
                 }
-                .containerBackground(.clear, for: .widget)
                 .widgetURL(deepLinkURL)
             }
         }

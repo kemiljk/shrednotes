@@ -20,7 +20,9 @@ struct ComboBuilderView: View {
         self.isPresentedInNavigationStack = isPresentedInNavigationStack
         if let combo = existingCombo {
             _comboName = State(initialValue: combo.name ?? "")
-            _comboElements = State(initialValue: combo.comboElements ?? [])
+            // Sort elements by order when loading
+            let sortedElements = (combo.comboElements ?? []).sorted { ($0.order ?? 0) < ($1.order ?? 0) }
+            _comboElements = State(initialValue: sortedElements)
             self.existingComboId = combo.persistentModelID
         } else {
             self.existingComboId = nil
@@ -221,15 +223,40 @@ struct ComboBuilderView: View {
         if let id = existingComboId,
            let existingCombo = try? modelContext.fetch(FetchDescriptor<ComboTrick>(predicate: #Predicate { $0.persistentModelID == id })).first {
             existingCombo.name = comboName
-            existingCombo.comboElements = comboElements
+            // Create new ComboElement instances with order
+            let newElements = comboElements.enumerated().map { index, element in
+                let comboElement = ComboElement()
+                comboElement.type = element.type
+                comboElement.value = element.value
+                comboElement.displayValue = element.displayValue
+                comboElement.isBreak = element.isBreak
+                comboElement.indentation = element.indentation
+                comboElement.order = index  // Set the order
+                comboElement.combo = existingCombo
+                return comboElement
+            }
+            existingCombo.comboElements = newElements
             existingCombo.difficulty = comboElements.count
             try? modelContext.save()
         } else {
             let newCombo = ComboTrick(
                 name: comboName,
-                difficulty: comboElements.count,
-                comboElements: comboElements
+                difficulty: comboElements.count
             )
+            
+            // Create new ComboElement instances with order
+            let newElements = comboElements.enumerated().map { index, element in
+                let comboElement = ComboElement()
+                comboElement.type = element.type
+                comboElement.value = element.value
+                comboElement.displayValue = element.displayValue
+                comboElement.isBreak = element.isBreak
+                comboElement.indentation = element.indentation
+                comboElement.order = index  // Set the order
+                comboElement.combo = newCombo
+                return comboElement
+            }
+            newCombo.comboElements = newElements
             modelContext.insert(newCombo)
         }
     }

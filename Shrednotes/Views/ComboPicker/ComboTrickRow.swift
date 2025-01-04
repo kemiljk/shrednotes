@@ -18,10 +18,22 @@ struct ComboTrickRow: View {
                     .multilineTextAlignment(.leading)
             }
             Spacer()
-            if let elements = combo.comboElements {
+            if let elements = combo.comboElements?.sorted(by: { ($0.order ?? 0) < ($1.order ?? 0) }) {
                 HStack {
-                    let totalTricks = elements.filter { $0.type == .baseTrick || $0.type == .landing }.count
-                    let totalObstacles = elements.filter { $0.type == .obstacle }.count
+                    let totalTricks = elements.filter { element in
+                        if let type = element.type {
+                            return type == .baseTrick || type == .landing
+                        }
+                        return false
+                    }.count
+                    
+                    let totalObstacles = elements.filter { element in
+                        if let type = element.type {
+                            return type == .obstacle
+                        }
+                        return false
+                    }.count
+                    
                     if totalTricks != 0 {
                         Text("^[\(totalTricks) trick](inflect: true)")
                     }
@@ -35,4 +47,4 @@ struct ComboTrickRow: View {
             }
         }
     }
-} 
+}

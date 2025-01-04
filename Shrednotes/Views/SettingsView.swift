@@ -187,6 +187,14 @@ struct SettingsView: View {
                         Link(destination: URL(string: "mailto:karl+shrednotes@kejk.tech?subject=Feedback%20from%20Shrednotes%20app%20link")!) {
                             Label("Get in Touch", systemImage: "envelope")
                         }
+                        Divider()
+                        Button {
+                            Task {
+                                await cleanUpTricks()
+                            }
+                        } label: {
+                            Label("Remove duplicate tricks", systemImage: "trash")
+                        }
                     }
                     .listRowSeparator(.hidden)
     

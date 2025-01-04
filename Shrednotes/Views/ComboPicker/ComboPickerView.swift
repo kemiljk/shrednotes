@@ -64,9 +64,12 @@ struct ComboPicker: View {
                 .padding(.bottom)
             }
             .sheet(isPresented: $showingAddCombo) {
-                ComboBuilderView()
-                    .presentationDragIndicator(.visible)
-                    .presentationCornerRadius(24)
+                NavigationStack {
+                    ComboBuilderView()
+                        .presentationDragIndicator(.visible)
+                        .presentationCornerRadius(24)
+                        .modelContext(modelContext)
+                }
             }
         }
     }

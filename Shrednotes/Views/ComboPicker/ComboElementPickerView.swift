@@ -31,9 +31,11 @@ struct ComboElementPickerView: View {
             ["FS", "BS"]
         case .baseTrick:
             tricks.filter { trick in
+                trick.type == .basic ||
                 trick.type == .air ||
                 trick.type == .flip ||
-                trick.type == .shuvit
+                trick.type == .shuvit ||
+                trick.type == .misc
             }.map(\.name)
         case .landing:
             tricks.filter { trick in
