@@ -59,10 +59,24 @@ struct AddSessionView: View {
                             of: reference) ?? reference
     }()
     
-    init(mediaItems: [MediaItem] = [], title: String = "", note: String = "") {
+    init(mediaItems: [MediaItem] = [], title: String = "", note: String = "", date: Date? = nil, duration: TimeInterval? = nil, energyBurned: Double? = nil, workoutUUID: UUID? = nil) {
         self._mediaItems = State(initialValue: mediaItems)
         self._title = State(initialValue: title)
         self._note = State(initialValue: note)
+        if let date = date {
+            self._date = State(initialValue: date)
+        }
+        if let duration = duration {
+            let calendar = Calendar.current
+            let reference = Date(timeIntervalSinceReferenceDate: 0)
+            let hours = Int(duration) / 3600
+            let minutes = (Int(duration) % 3600) / 60
+            self._duration = State(initialValue: calendar.date(bySettingHour: hours, minute: minutes, second: 0, of: reference) ?? reference)
+            self._hasDuration = State(initialValue: true)
+        }
+        if let energyBurned = energyBurned {
+            self._totalEnergyBurned = State(initialValue: energyBurned)
+        }
     }
     
     var body: some View {

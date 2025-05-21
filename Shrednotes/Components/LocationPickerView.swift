@@ -54,14 +54,14 @@ struct LocationPickerView: View {
     var body: some View {
         VStack(spacing: 16) {
             // Map View - Always visible
-            MapReader { proxy in
-                Map(initialPosition: .camera(MapCamera(
+                MapReader { proxy in
+                    Map(initialPosition: .camera(MapCamera(
                     centerCoordinate: selectedLocation?.coordinate ?? region.center,
-                    distance: 1000,
-                    heading: 0,
-                    pitch: 0
-                ))) {
-                    UserAnnotation()
+                        distance: 1000,
+                        heading: 0,
+                        pitch: 0
+                    ))) {
+                        UserAnnotation()
                     if let selectedLocation = selectedLocation {
                         Annotation(selectedLocation.name, coordinate: selectedLocation.coordinate) {
                             Image(systemName: "mappin.circle.fill")
@@ -70,21 +70,21 @@ struct LocationPickerView: View {
                                 .background(Circle().fill(Color.indigo))
                                 .clipShape(Circle())
                         }
+                        }
                     }
-                }
-                .mapStyle(.standard)
-                .mapControls {
-                    MapUserLocationButton()
-                    MapCompass()
-                    MapScaleView()
-                }
-                .frame(maxHeight: .infinity)
-                .cornerRadius(16)
-                .onTapGesture { screenCoord in
-                    if let coordinate = proxy.convert(screenCoord, from: .local) {
+                    .mapStyle(.standard)
+                    .mapControls {
+                        MapUserLocationButton()
+                        MapCompass()
+                        MapScaleView()
+                    }
+                    .frame(maxHeight: .infinity)
+                    .cornerRadius(16)
+                    .onTapGesture { screenCoord in
+                        if let coordinate = proxy.convert(screenCoord, from: .local) {
                         // Create a new location with a default name
                         let newLocation = IdentifiableLocation(
-                            coordinate: coordinate,
+                                coordinate: coordinate,
                             name: "Selected Location"
                         )
                         selectedLocation = newLocation
@@ -108,9 +108,9 @@ struct LocationPickerView: View {
                             }
                         }
                     }
+                    }
                 }
-            }
-            
+                
             // Search UI - Overlay on top of map when searching
             if isSearching {
                 VStack(spacing: 8) {
