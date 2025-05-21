@@ -26,15 +26,18 @@ struct MediaGridView: View {
         LazyVGrid(columns: columns, spacing: gridSpacing) {
             ForEach(media, id: \.id) { item in
                 if let uiImage = UIImage(data: item.data) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(minWidth: 0, maxWidth: .infinity)
-                        .clipped()
-                        .cornerRadius(8)
-                        .onTapGesture {
-                            onTap(item)
-                        }
+                    GeometryReader { geometry in
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width, height: geometry.size.width)
+                            .clipped()
+                            .cornerRadius(8)
+                            .onTapGesture {
+                                onTap(item)
+                            }
+                    }
+                    .aspectRatio(1, contentMode: .fit)
                         
                 } else if let thumbnail = mediaState.videoThumbnails[item.id ?? UUID()] {
                     GeometryReader { geometry in

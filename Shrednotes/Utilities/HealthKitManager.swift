@@ -37,7 +37,7 @@ class HealthKitManager: ObservableObject {
         }
 
         let typesToShare: Set = [HKObjectType.workoutType()]
-        let typesToRead: Set = [HKObjectType.workoutType()]
+        let typesToRead: Set = [HKObjectType.workoutType(), HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!]
 
         healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead) { (success, error) in
             if let error = error {

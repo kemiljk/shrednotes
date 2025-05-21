@@ -606,12 +606,21 @@ struct EditSessionView: View {
         session.title = debouncedTitle
         session.note = debouncedNote
         session.media = mediaItems
+        
+        // Update location information
         if let selectedLocation = selectedLocation {
             session.latitude = selectedLocation.coordinate.latitude
             session.longitude = selectedLocation.coordinate.longitude
+            session.location = selectedLocation
+        } else {
+            // Clear location if none selected
+            session.latitude = nil
+            session.longitude = nil
+            session.location = nil
         }
+        
         session.workoutEnergyBurned = energyBurned
-        session.location = selectedLocation
+        
         try? modelContext.save()
         print("Session saved with duration: \(session.workoutDuration ?? 0)")
         isSaved = true

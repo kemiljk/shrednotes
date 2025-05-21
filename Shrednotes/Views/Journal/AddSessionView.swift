@@ -400,10 +400,12 @@ struct AddSessionView: View {
     // Update the findMatchingWorkouts function
     private func findMatchingWorkouts(for date: Date) {
         healthKitManager.fetchWorkoutsForDate(date) { workouts in
+            // Only include skating sports workouts
+            let skatingWorkouts = workouts.filter { $0.workoutActivityType == .skatingSports }
             DispatchQueue.main.async {
-                self.matchingWorkouts = workouts
-                if !workouts.isEmpty {
-                    healthKitManager.sumWorkoutData(workouts: workouts) { duration, energyBurned in
+                self.matchingWorkouts = skatingWorkouts
+                if !skatingWorkouts.isEmpty {
+                    healthKitManager.sumWorkoutData(workouts: skatingWorkouts) { duration, energyBurned in
                         DispatchQueue.main.async {
                             self.totalDuration = duration
                             self.totalEnergyBurned = energyBurned

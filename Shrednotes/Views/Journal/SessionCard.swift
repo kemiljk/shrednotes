@@ -19,6 +19,12 @@ struct SessionCard: View {
     
     @State private var mediaData: Data?
 
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM yy"
+        return formatter
+    }()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if let media = session.media, !media.isEmpty {
@@ -84,9 +90,10 @@ struct SessionCard: View {
             Divider()
             HStack {
                 if let date = session.date {
-                    Text(date, style: .date)
+                    Text(dateFormatter.string(from: date))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 if let locationName = session.location?.name {
                     Text("•")
@@ -95,6 +102,7 @@ struct SessionCard: View {
                     Text(locationName)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 Spacer()
                 if let tricks = session.tricks {

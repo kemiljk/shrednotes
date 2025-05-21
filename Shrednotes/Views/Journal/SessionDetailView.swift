@@ -32,166 +32,225 @@ struct SessionDetailView: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
 
     var body: some View {
-        NavigationStack {
+        ZStack(alignment: .top) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    HStack(alignment: .firstTextBaseline) {
-                        if let title = session.title {
-                            Text(title)
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .fontWidth(.expanded)
-                                .multilineTextAlignment(.leading)
-                        }
-                        
-                        Spacer()
-                    }
-                    
-                    if let feelings = session.feeling {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
-                                ForEach(feelings, id: \.self) { feeling in
-                                    Text(feeling.rawValue.capitalized)
-                                        .font(.caption)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(Color.indigo.opacity(0.2))
-                                        .cornerRadius(10)
-                                }
-                                .scrollTransition { content, phase in
-                                    content
-                                        .opacity(phase.isIdentity ? 1 : 0)
-                                        .scaleEffect(phase.isIdentity ? 1 : 0.8)
-                                        .offset(y: phase.isIdentity ? 0 : 10)
-                                }
-                            }
-                            .scrollTargetBehavior(.viewAligned)
-                        }
-                    }
-                    
-                    if let note = session.note, !note.isEmpty {
-                        Text(note)
-                            .font(.body)
-                            .textSelection(.enabled)
-                            .onLongPressGesture {
-                                UIPasteboard.general.string = note
-                            }
-                    }
-                    
-                    if let media = session.media, !media.isEmpty {
-                        MediaGridView(media: media, mediaState: mediaState, onTap: { mediaItem in
-                            selectedMediaItem = mediaItem
-                        })
-                    }
-                    
-                    if let tricks = session.tricks, !tricks.isEmpty {
-                        Text("Tricks Practiced")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .fontWidth(.expanded)
-                            .padding(.top, 16)
-                        ForEach(tricks) { trick in
-                            NavigationLink(destination: TrickDetailView(trick: trick)) {
-                                TrickRow(trick: trick, padless: true)
-                            }
-                            .foregroundStyle(.primary)
-                        }
-                    }
-                    
-                    if let combos = session.combos, !combos.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Combos Practiced")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                                .fontWidth(.expanded)
-                                .padding(.top, 16)
-                            ForEach(combos) { combo in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    ComboTrickRow(combo: combo)
-                                }
-                            }
-                        }
-                    }
-                    
-                    if session.date != nil {
-                        StoredWorkoutView(session: session, condensed: true)
+                VStack(spacing: 0) {
+                    // Hero Section
+                    if let firstMedia = session.media?.first {
+                        heroMediaView(mediaItem: firstMedia)
+                    } else if let latitude = session.latitude, let longitude = session.longitude {
+                        heroMapView(latitude: latitude, longitude: longitude)
                     } else {
-                        Text("No date available for this session")
+                        // Default hero view when no media or location
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.1))
+                            .frame(height: 300)
+                            .overlay {
+                                Image(systemName: "figure.skateboarding")
+                                    .font(.system(size: 60))
+                                    .foregroundStyle(.secondary)
+                            }
                     }
                     
-                    if let latitude = session.latitude, let longitude = session.longitude {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if let locationName = session.location?.name {
-                                Text(locationName)
-                                    .font(.headline)
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Session Header
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text(session.date?.formatted(date: .abbreviated, time: .omitted) ?? "")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                if let duration = session.workoutDuration {
+                                    Label(formatDuration(duration), systemImage: "clock")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            
+                            if let title = session.title {
+                                Text(title)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
                                     .fontWidth(.expanded)
                             }
                             
-                            Map(initialPosition: .camera(MapCamera(
-                                centerCoordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                                distance: 1000, // Distance in meters - increase this value to zoom out more
-                                heading: 0,
-                                pitch: 0
-                            ))) {
-                                UserAnnotation()
-                                Annotation(session.location?.name ?? "Session Location",
-                                          coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) {
-                                    Image(systemName: "mappin.circle.fill")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .background(Circle().fill(Color.indigo))
-                                        .clipShape(Circle())
+                            if let feelings = session.feeling {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack {
+                                        ForEach(feelings, id: \.self) { feeling in
+                                            Text(feeling.rawValue.capitalized)
+                                                .font(.caption)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color.indigo.opacity(0.2))
+                                                .cornerRadius(10)
+                                        }
+                                    }
                                 }
                             }
-                            .mapStyle(.standard)
-                            .mapControls {
-                                MapCompass()
-                                MapScaleView()
-                                
-                            }
-                            .frame(height: 200)
-                            .cornerRadius(16)
                         }
-                        .padding(.top, 16)
+                        
+                        // Session Stats Card
+                        if session.date != nil {
+                            StoredWorkoutView(session: session, condensed: true)
+                        }
+                        
+                        // Notes Section
+                        if let note = session.note, !note.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Notes")
+                                    .font(.headline)
+                                    .fontWidth(.expanded)
+                                Text(note)
+                                    .font(.body)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        
+                        // Media Grid (excluding hero image)
+                        if let media = session.media, media.count > 1 {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Media")
+                                    .font(.headline)
+                                    .fontWidth(.expanded)
+                                MediaGridView(media: Array(media.dropFirst()), mediaState: mediaState, onTap: { mediaItem in
+                                    selectedMediaItem = mediaItem
+                                })
+                            }
+                        }
+                        
+                        // Tricks Section with improved layout
+                        if let tricks = session.tricks, !tricks.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text("Tricks")
+                                        .font(.headline)
+                                        .fontWidth(.expanded)
+                                    Spacer()
+                                    Text("\(tricks.count)")
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible(), spacing: 8),
+                                    GridItem(.flexible(), spacing: 8)
+                                ], spacing: 8) {
+                                    ForEach(tricks) { trick in
+                                        NavigationLink(destination: TrickDetailView(trick: trick)) {
+                                            TrickCard(trick: trick)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Combos Section
+                        if let combos = session.combos, !combos.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Combos")
+                                    .font(.headline)
+                                    .fontWidth(.expanded)
+                                
+                                ForEach(combos) { combo in
+                                    ComboCard(combo: combo)
+                                }
+                            }
+                        }
+                        
+                        // Location Section (if not shown as hero)
+                        if session.media != nil,
+                           let latitude = session.latitude,
+                           let longitude = session.longitude {
+                            locationSection(latitude: latitude, longitude: longitude)
+                        }
                     }
-
+                    .padding()
                 }
-                .padding()
             }
-            .navigationTitle(session.date?.formatted(date: .abbreviated, time: .omitted) ?? "Session Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+            .ignoresSafeArea(.container, edges: .top)
+            
+            // Gradient overlay and buttons on top
+            VStack {
+                // Gradient and blur
+                ZStack {
+                    LinearGradient(
+                        colors: [.black.opacity(0.6), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 160)
+                    .ignoresSafeArea(.all, edges: .top)
+                    
+                    VariableBlurView(maxBlurRadius: 2, direction: .blurredTopClearBottom)
+                        .frame(height: 160)
+                }
+                
+                Spacer()
+            }
+            
+            // Floating Action Buttons at the very top
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.monochrome)
+                }
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+                
+                Spacer()
+                
+                Menu {
                     Button {
+                        isEditingSession = true
+                    } label: {
+                        Label("Edit", systemImage: "pencil.circle")
+                    }
+                    Divider()
+                    Button(role: .destructive) {
+                        modelContext.delete(session)
                         dismiss()
                     } label: {
-                        Image(systemName: "chevron.left.circle")
-                            .symbolRenderingMode(.hierarchical)
-                            .symbolVariant(.fill)
+                        Label("Delete", systemImage: "trash")
                     }
+                } label: {
+                    Image(systemName: "ellipsis.circle.fill")
+                        .font(.title2)
+                        .symbolRenderingMode(.monochrome)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            isEditingSession = true
-                        } label: {
-                            Label("Edit", systemImage: "pencil.circle")
-                        }
-                        Divider()
-                        Button(role: .destructive) {
-                            print("Deleting session and dismissing view")
-                            modelContext.delete(session)
-                            dismiss()
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle.fill")
-                            .symbolRenderingMode(.hierarchical)
-                            .symbolVariant(.fill)
-                    }
-                }
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
             }
+            .padding(.horizontal)
+            .padding(.top, 60)
+        }
+        .ignoresSafeArea(.all, edges: .top)
+        .navigationBarHidden(true)
+        .sheet(isPresented: $isEditingSession, onDismiss: {
+            if let latitude = session.latitude,
+               let longitude = session.longitude {
+                cameraPosition = .camera(MapCamera(
+                    centerCoordinate: CLLocationCoordinate2D(
+                        latitude: latitude,
+                        longitude: longitude
+                    ),
+                    distance: 5000,
+                    heading: 0,
+                    pitch: 0
+                ))
+            }
+        }) {
+            EditSessionView(session: session)
+                .presentationCornerRadius(24)
+        }
+        .fullScreenCover(item: $selectedMediaItem, onDismiss: {
+            currentZoom = 0.0
+            totalZoom = 1.0
+        }) { mediaItem in
+            fullscreenMediaView(for: mediaItem)
+                .navigationTransition(.zoom(sourceID: mediaItem.id ?? UUID(), in: sessionPicture))
         }
         .onAppear {
             cleanupInvalidMedia()
@@ -206,17 +265,6 @@ struct SessionDetailView: View {
         }
         .onChange(of: healthKitManager.allSkateboardingWorkouts) {
                 findMatchingWorkout()
-        }
-        .sheet(isPresented: $isEditingSession) {
-            EditSessionView(session: session)
-                .presentationCornerRadius(24)
-        }
-        .fullScreenCover(item: $selectedMediaItem, onDismiss: {
-            currentZoom = 0.0
-            totalZoom = 1.0
-        }) { mediaItem in
-            fullscreenMediaView(for: mediaItem)
-                .navigationTransition(.zoom(sourceID: mediaItem.id ?? UUID(), in: sessionPicture))
         }
     }
     
@@ -400,5 +448,165 @@ struct SessionDetailView: View {
             let isMatch = Calendar.current.isDate(workout.startDate, inSameDayAs: date)
             return isMatch
         }
+    }
+    
+    // Helper Views
+    @ViewBuilder
+    private func heroMediaView(mediaItem: MediaItem) -> some View {
+        GeometryReader { geometry in
+            Group {
+                if let uiImage = mediaState.imageCache[mediaItem.id ?? UUID()] {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: 300)
+                        .clipped()
+                        .overlay(alignment: .bottom) {
+                            LinearGradient(
+                                colors: [.clear, .black.opacity(0.3)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                } else if let thumbnail = mediaState.videoThumbnails[mediaItem.id ?? UUID()] {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: 300)
+                        .clipped()
+                        .overlay(alignment: .center) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.largeTitle)
+                                .foregroundStyle(.white)
+                        }
+                }
+            }
+        }
+        .frame(height: 300)
+        .ignoresSafeArea(.all, edges: .top)
+        .onTapGesture {
+            selectedMediaItem = mediaItem
+        }
+    }
+    
+    @ViewBuilder
+    private func heroMapView(latitude: Double, longitude: Double) -> some View {
+        Map(position: $cameraPosition) {
+            Annotation(session.location?.name ?? "Session Location",
+                      coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) {
+                Image(systemName: "mappin.circle.fill")
+                    .foregroundColor(.white)
+                    .padding()
+                    .background(Circle().fill(Color.indigo))
+                    .clipShape(Circle())
+            }
+        }
+        .onAppear {
+            cameraPosition = .camera(MapCamera(
+                centerCoordinate: CLLocationCoordinate2D(
+                    latitude: latitude,
+                    longitude: longitude
+                ),
+                distance: 1000,
+                heading: 0,
+                pitch: 0
+            ))
+        }
+        .frame(height: 300)
+        .ignoresSafeArea(.all, edges: .top)
+        .allowsHitTesting(false)
+    }
+    
+    private func locationSection(latitude: Double, longitude: Double) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let locationName = session.location?.name {
+                Text(locationName)
+                    .font(.headline)
+                    .fontWidth(.expanded)
+            }
+            
+            Map(position: $cameraPosition) {
+                Annotation(session.location?.name ?? "Session Location",
+                          coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) {
+                    Image(systemName: "mappin.circle.fill")
+                        .foregroundColor(.white)
+                        .padding()
+                        .background(Circle().fill(Color.indigo))
+                        .clipShape(Circle())
+                }
+            }
+            .onAppear {
+                cameraPosition = .camera(MapCamera(
+                    centerCoordinate: CLLocationCoordinate2D(
+                        latitude: latitude,
+                        longitude: longitude
+                    ),
+                    distance: 5000,
+                    heading: 0,
+                    pitch: 0
+                ))
+            }
+            .frame(height: 200)
+            .cornerRadius(16)
+            .allowsHitTesting(false)
+        }
+    }
+    
+    // Add this helper function
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let hours = Int(seconds) / 3600
+        let minutes = Int(seconds) % 3600 / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+}
+
+// New supporting views
+struct TrickCard: View {
+    let trick: Trick
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(trick.name)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .fontWidth(.expanded)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding()
+        .background(.secondary.quinary, in: .rect(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct ComboCard: View {
+    let combo: ComboTrick
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let name = combo.name {
+                Text(name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .fontWidth(.expanded)
+            }
+            
+            if let tricks = combo.tricks {
+                Text(tricks.map { $0.name }.joined(separator: " → "))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.secondary.opacity(0.1))
+        .cornerRadius(12)
     }
 }

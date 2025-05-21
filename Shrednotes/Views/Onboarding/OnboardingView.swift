@@ -88,7 +88,7 @@ struct OnboardingView: View {
                 currentStep += 1
             }
         }
-        .onChange(of: locationAccessGranted) { _, granted in
+        .onReceive(locationManager.$locationAccessGranted) { granted in
             if granted {
                 locationAccessGranted = true
                 currentStep += 1
@@ -205,7 +205,7 @@ struct OnboardingView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack {
-                if locationManager.locationAccessGranted {
+                if locationManager.authorizationStatus == .authorizedWhenInUse || locationManager.authorizationStatus == .authorizedAlways {
                     GradientButton<Any, Bool, Never>(
                         label: "Next",
                         hasImage: true,
@@ -213,7 +213,7 @@ struct OnboardingView: View {
                         action: {
                             currentStep += 1
                         },
-                        hapticTrigger: locationManager.locationAccessGranted
+                        hapticTrigger: locationManager.authorizationStatus == .authorizedWhenInUse || locationManager.authorizationStatus == .authorizedAlways
                     )
                     .padding(.horizontal)
                 } else {
@@ -224,7 +224,7 @@ struct OnboardingView: View {
                         action: {
                             locationManager.requestLocationAuthorization()
                         },
-                        hapticTrigger: locationManager.locationAccessGranted
+                        hapticTrigger: false
                     )
                     .padding(.horizontal)
                 }
