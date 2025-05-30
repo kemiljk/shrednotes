@@ -161,20 +161,35 @@ struct AddTrickView: View {
         var newMediaItems: [MediaItem] = []
         
         for item in selectedItems {
-            if let data = try? await item.loadTransferable(type: Data.self) {
-                let newMediaItem = MediaItem(id: UUID(), data: data)
-                newMediaItems.append(newMediaItem)
+            if let mediaItem = await item.toMediaItem() {
+                newMediaItems.append(mediaItem)
                 
-                loadingMedia.insert(newMediaItem.id ?? UUID())
-                
-                if let uiImage = UIImage(data: data) {
-                    mediaState.imageCache[newMediaItem.id ?? UUID()] = uiImage
-                    loadingMedia.remove(newMediaItem.id ?? UUID())
-                } else if let videoURL = saveVideoToTemporaryDirectory(data: data) {
-                    generateThumbnail(for: videoURL) { thumbnail in
-                        if let thumbnail = thumbnail {
-                            mediaState.videoThumbnails[newMediaItem.id ?? UUID()] = thumbnail
-                            loadingMedia.remove(newMediaItem.id ?? UUID())
+                // Pre-generate thumbnails for videos
+                if mediaItem.isVideo {
+                    loadingMedia.insert(mediaItem.id ?? UUID())
+                    
+                    PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                        if let url = url {
+                            generateThumbnail(for: url) { thumbnail in
+                                if let thumbnail = thumbnail {
+                                    DispatchQueue.main.async {
+                                        self.mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
+                                        self.loadingMedia.remove(mediaItem.id ?? UUID())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if let identifier = mediaItem.assetIdentifier,
+                          let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) {
+                    // Pre-cache images
+                    loadingMedia.insert(mediaItem.id ?? UUID())
+                    PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
+                        DispatchQueue.main.async {
+                            if let image = image {
+                                self.mediaState.imageCache[mediaItem.id ?? UUID()] = image
+                            }
+                            self.loadingMedia.remove(mediaItem.id ?? UUID())
                         }
                     }
                 }

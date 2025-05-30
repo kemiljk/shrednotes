@@ -229,18 +229,22 @@ final class MediaItem: Identifiable, Codable, Hashable {
     
     var id: UUID?
     var data: Data = Data()
+    var assetIdentifier: String? // PHAsset localIdentifier for Photos library items
+    var isFromPhotosLibrary: Bool = false
     
     enum CodingKeys: String, CodingKey {
-        case id, data
+        case id, data, assetIdentifier, isFromPhotosLibrary
     }
     
     @Relationship(inverse: \Trick.media) var trick: Trick?
     @Relationship(inverse: \Entry.media) var entry: Entry?
     @Relationship(inverse: \SkateSession.media) var session: SkateSession?
     
-    init(id: UUID = UUID(), data: Data = Data(), trick: Trick? = nil, entry: Entry? = nil, session: SkateSession? = nil) {
+    init(id: UUID = UUID(), data: Data = Data(), assetIdentifier: String? = nil, isFromPhotosLibrary: Bool = false, trick: Trick? = nil, entry: Entry? = nil, session: SkateSession? = nil) {
         self.id = id
         self.data = data
+        self.assetIdentifier = assetIdentifier
+        self.isFromPhotosLibrary = isFromPhotosLibrary
         self.trick = trick
         self.entry = entry
         self.session = session
@@ -250,12 +254,16 @@ final class MediaItem: Identifiable, Codable, Hashable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         data = try container.decode(Data.self, forKey: .data)
+        assetIdentifier = try container.decodeIfPresent(String.self, forKey: .assetIdentifier)
+        isFromPhotosLibrary = try container.decodeIfPresent(Bool.self, forKey: .isFromPhotosLibrary) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(data, forKey: .data)
+        try container.encodeIfPresent(assetIdentifier, forKey: .assetIdentifier)
+        try container.encode(isFromPhotosLibrary, forKey: .isFromPhotosLibrary)
     }
 }
 

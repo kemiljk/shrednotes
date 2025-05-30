@@ -25,73 +25,132 @@ struct MediaGridView: View {
         
         LazyVGrid(columns: columns, spacing: gridSpacing) {
             ForEach(media, id: \.id) { item in
-                if let uiImage = UIImage(data: item.data) {
-                    GeometryReader { geometry in
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geometry.size.width, height: geometry.size.width)
-                            .clipped()
-                            .cornerRadius(8)
-                            .onTapGesture {
-                                onTap(item)
-                            }
-                    }
+                MediaGridItemView(item: item, mediaState: mediaState, onTap: onTap)
                     .aspectRatio(1, contentMode: .fit)
-                        
+            }
+        }
+    }
+}
+
+struct MediaGridItemView: View {
+    let item: MediaItem
+    @ObservedObject var mediaState: MediaState
+    let onTap: (MediaItem) -> Void
+    @State private var loadedImage: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        GeometryReader { geometry in
+            Group {
+                if let image = loadedImage ?? mediaState.imageCache[item.id ?? UUID()] {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .clipped()
+                        .cornerRadius(8)
+                        .onTapGesture {
+                            onTap(item)
+                        }
                 } else if let thumbnail = mediaState.videoThumbnails[item.id ?? UUID()] {
-                    GeometryReader { geometry in
+                    ZStack {
                         Image(uiImage: thumbnail)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: geometry.size.width, height: geometry.size.width)
                             .clipped()
                             .cornerRadius(8)
-                            .overlay(
-                                Image(systemName: "play.circle.fill")
-                                    .foregroundColor(.white)
-                                    .font(.title3)
-                            )
-                            .onTapGesture {
-                                onTap(item)
-                            }
-                    }
-                    .aspectRatio(1, contentMode: .fit)
-                } else {
-                    ZStack {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .aspectRatio(contentMode: .fill)
-                            .frame(minWidth: 0, maxWidth: .infinity)
-                            .clipped()
-                            .cornerRadius(8)
                         
-                        ProgressView()
+                        Image(systemName: "play.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
                     }
-                    .onAppear {
-                        loadThumbnail(for: item)
+                    .onTapGesture {
+                        onTap(item)
                     }
+                } else if isLoading {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .cornerRadius(8)
+                        .overlay(
+                            ProgressView()
+                        )
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .cornerRadius(8)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundColor(.gray)
+                        )
                 }
             }
         }
+        .onAppear {
+            loadMedia()
+        }
     }
-    private func loadThumbnail(for item: MediaItem) {
-        guard let id = item.id else { return }
-        guard !loadingThumbnails.contains(id) else { return }
-        
-        loadingThumbnails.insert(id)
-        
-        if let videoURL = saveVideoToTemporaryDirectory(data: item.data) {
-            generateThumbnail(for: videoURL) { thumbnail in
-                DispatchQueue.main.async {
-                    if let thumbnail = thumbnail {
-                        mediaState.videoThumbnails[id] = thumbnail
+    
+    private func loadMedia() {
+        if item.isFromPhotosLibrary, let identifier = item.assetIdentifier {
+            // Load from Photos library
+            guard let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) else {
+                isLoading = false
+                return
+            }
+            
+            if asset.mediaType == .image {
+                PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 300, height: 300)) { image in
+                    DispatchQueue.main.async {
+                        self.loadedImage = image
+                        if let image = image, let id = item.id {
+                            self.mediaState.imageCache[id] = image
+                        }
+                        self.isLoading = false
                     }
-                    loadingThumbnails.remove(id)
+                }
+            } else if asset.mediaType == .video {
+                PhotosHelper.shared.getVideoURL(for: item) { url in
+                    if let url = url {
+                        generateThumbnail(for: url) { thumbnail in
+                            DispatchQueue.main.async {
+                                if let thumbnail = thumbnail, let id = item.id {
+                                    self.mediaState.videoThumbnails[id] = thumbnail
+                                }
+                                self.isLoading = false
+                            }
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self.isLoading = false
+                        }
+                    }
                 }
             }
+        } else if !item.data.isEmpty {
+            // Legacy data-based loading
+            if let uiImage = UIImage(data: item.data) {
+                loadedImage = uiImage
+                if let id = item.id {
+                    mediaState.imageCache[id] = uiImage
+                }
+            } else if let videoURL = saveVideoToTemporaryDirectory(data: item.data) {
+                generateThumbnail(for: videoURL) { thumbnail in
+                    DispatchQueue.main.async {
+                        if let thumbnail = thumbnail, let id = item.id {
+                            self.mediaState.videoThumbnails[id] = thumbnail
+                        }
+                        self.isLoading = false
+                    }
+                }
+                return
+            }
+            isLoading = false
         } else {
-            loadingThumbnails.remove(id)
+            isLoading = false
         }
     }
 }

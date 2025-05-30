@@ -557,53 +557,16 @@ struct AddSessionView: View {
     @ViewBuilder
     private func mediaItemView(for mediaItem: MediaItem) -> some View {
         GeometryReader { geometry in
-            Group {
-                if let uiImage = mediaState.imageCache[mediaItem.id ?? UUID()] {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: geometry.size.width, height: geometry.size.width) // Makes it square
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(selectionOverlay(for: mediaItem))
-                        .onTapGesture {
-                            handleMediaItemTap(mediaItem)
-                        }
-                } else if let thumbnail = mediaState.videoThumbnails[mediaItem.id ?? UUID()] {
-                    Image(uiImage: thumbnail)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: geometry.size.width, height: geometry.size.width) // Makes it square
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(selectionOverlay(for: mediaItem))
-                        .onTapGesture {
-                            handleMediaItemTap(mediaItem)
-                        }
-                } else {
-                    ProgressView()
-                        .frame(width: geometry.size.width, height: geometry.size.width) // Makes it square
-                        .background(Color.secondary.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .shadow(radius: 5)
-                }
-            }
+            MediaItemThumbnailView(
+                mediaItem: mediaItem,
+                mediaState: mediaState,
+                size: geometry.size.width,
+                isEditMode: isEditMode,
+                isSelected: selectedMediaIds.contains(mediaItem.id ?? UUID()),
+                onTap: { handleMediaItemTap(mediaItem) }
+            )
         }
         .aspectRatio(1, contentMode: .fit) // This ensures the GeometryReader itself maintains a square aspect ratio
-    }
-    
-    private func selectionOverlay(for mediaItem: MediaItem) -> some View {
-        ZStack {
-            if isEditMode {
-                Color.black.opacity(0.3)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                if selectedMediaIds.contains(mediaItem.id ?? UUID()) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.white)
-                        .font(.title)
-                }
-            }
-        }
     }
     
     private func handleMediaItemTap(_ mediaItem: MediaItem) {
@@ -620,27 +583,40 @@ struct AddSessionView: View {
     
     @MainActor
     private func processSelectedItems() async {
-        let newMediaItems = selectedItems.map { PhotosPickerItem in
-            MediaItem(id: UUID(), data: Data())
-        }
-        mediaItems.append(contentsOf: newMediaItems)
+        var newMediaItems: [MediaItem] = []
         
-        for (index, item) in selectedItems.enumerated() {
-            if let data = try? await item.loadTransferable(type: Data.self) {
-                let newMediaItem = newMediaItems[index]
-                newMediaItem.data = data
+        for item in selectedItems {
+            if let mediaItem = await item.toMediaItem() {
+                newMediaItems.append(mediaItem)
                 
-                if let uiImage = UIImage(data: data) {
-                    mediaState.imageCache[newMediaItem.id ?? UUID()] = uiImage
-                } else if let videoURL = saveVideoToTemporaryDirectory(data: data) {
-                    generateThumbnail(for: videoURL) { thumbnail in
-                        if let thumbnail = thumbnail {
-                            mediaState.videoThumbnails[newMediaItem.id ?? UUID()] = thumbnail
+                // Pre-generate thumbnails for videos
+                if mediaItem.isVideo {
+                    PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                        if let url = url {
+                            generateThumbnail(for: url) { thumbnail in
+                                if let thumbnail = thumbnail, let id = mediaItem.id {
+                                    DispatchQueue.main.async {
+                                        self.mediaState.videoThumbnails[id] = thumbnail
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if let identifier = mediaItem.assetIdentifier,
+                          let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) {
+                    // Pre-cache images
+                    PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
+                        if let image = image, let id = mediaItem.id {
+                            DispatchQueue.main.async {
+                                self.mediaState.imageCache[id] = image
+                            }
                         }
                     }
                 }
             }
         }
+        
+        mediaItems.append(contentsOf: newMediaItems)
         selectedItems.removeAll()
     }
     
@@ -654,5 +630,148 @@ struct AddSessionView: View {
         }
         selectedMediaIds.removeAll()
         isEditMode = false
+    }
+}
+
+// Helper view for media thumbnails
+struct MediaItemThumbnailView: View {
+    let mediaItem: MediaItem
+    @ObservedObject var mediaState: MediaState
+    let size: CGFloat
+    let isEditMode: Bool
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    @State private var loadedImage: UIImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        Group {
+            if let image = loadedImage ?? mediaState.imageCache[mediaItem.id ?? UUID()] {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(selectionOverlay)
+                    .onTapGesture(perform: onTap)
+            } else if let thumbnail = mediaState.videoThumbnails[mediaItem.id ?? UUID()] {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(selectionOverlay)
+                    .overlay(
+                        Image(systemName: "play.circle.fill")
+                            .foregroundColor(.white)
+                            .font(.title2)
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                    )
+                    .onTapGesture(perform: onTap)
+            } else if isLoading {
+                ProgressView()
+                    .frame(width: size, height: size)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(radius: 5)
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        Image(systemName: "photo")
+                            .foregroundColor(.gray)
+                    )
+            }
+        }
+        .onAppear {
+            loadMediaIfNeeded()
+        }
+    }
+    
+    private var selectionOverlay: some View {
+        ZStack {
+            if isEditMode {
+                Color.black.opacity(0.3)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.white)
+                        .font(.title)
+                }
+            }
+        }
+    }
+    
+    private func loadMediaIfNeeded() {
+        // Skip if already loaded
+        if loadedImage != nil || 
+           mediaState.imageCache[mediaItem.id ?? UUID()] != nil ||
+           mediaState.videoThumbnails[mediaItem.id ?? UUID()] != nil {
+            isLoading = false
+            return
+        }
+        
+        if mediaItem.isFromPhotosLibrary, let identifier = mediaItem.assetIdentifier {
+            // Load from Photos library
+            guard let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) else {
+                isLoading = false
+                return
+            }
+            
+            if asset.mediaType == .image {
+                PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: size * 2, height: size * 2)) { image in
+                    DispatchQueue.main.async {
+                        self.loadedImage = image
+                        if let image = image, let id = mediaItem.id {
+                            self.mediaState.imageCache[id] = image
+                        }
+                        self.isLoading = false
+                    }
+                }
+            } else if asset.mediaType == .video {
+                PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                    if let url = url {
+                        generateThumbnail(for: url) { thumbnail in
+                            DispatchQueue.main.async {
+                                if let thumbnail = thumbnail, let id = mediaItem.id {
+                                    self.mediaState.videoThumbnails[id] = thumbnail
+                                }
+                                self.isLoading = false
+                            }
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self.isLoading = false
+                        }
+                    }
+                }
+            }
+        } else if !mediaItem.data.isEmpty {
+            // Legacy data-based loading
+            if let uiImage = UIImage(data: mediaItem.data) {
+                loadedImage = uiImage
+                if let id = mediaItem.id {
+                    mediaState.imageCache[id] = uiImage
+                }
+            } else if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
+                generateThumbnail(for: videoURL) { thumbnail in
+                    DispatchQueue.main.async {
+                        if let thumbnail = thumbnail, let id = mediaItem.id {
+                            self.mediaState.videoThumbnails[id] = thumbnail
+                        }
+                        self.isLoading = false
+                    }
+                }
+                return
+            }
+            isLoading = false
+        } else {
+            isLoading = false
+        }
     }
 }

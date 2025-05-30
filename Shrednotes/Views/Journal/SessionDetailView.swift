@@ -256,8 +256,13 @@ struct SessionDetailView: View {
             currentZoom = 0.0
             totalZoom = 1.0
         }) { mediaItem in
-            fullscreenMediaView(for: mediaItem)
-                .navigationTransition(.zoom(sourceID: mediaItem.id ?? UUID(), in: sessionPicture))
+            if let media = session.media, !media.isEmpty {
+                MediaGalleryView(
+                    mediaItems: media,
+                    initialItem: mediaItem,
+                    mediaState: mediaState
+                )
+            }
         }
         .onAppear {
             cleanupInvalidMedia()
@@ -272,52 +277,6 @@ struct SessionDetailView: View {
         }
         .onChange(of: healthKitManager.allSkateboardingWorkouts) {
                 findMatchingWorkout()
-        }
-    }
-    
-    private func fullscreenMediaView(for mediaItem: MediaItem) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
-            
-            if let uiImage = UIImage(data: mediaItem.data) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .scaleEffect(currentZoom + totalZoom)
-                    .gesture(
-                        MagnifyGesture()
-                            .onChanged { value in
-                                currentZoom = value.magnification - 1
-                            }
-                            .onEnded { value in
-                                totalZoom += currentZoom
-                                currentZoom = 0
-                            }
-                    )
-                    .accessibilityZoomAction { action in
-                        if action.direction == .zoomIn {
-                            totalZoom += 1
-                        } else {
-                            totalZoom -= 1
-                        }
-                    }
-            } else if let player = preloadedPlayers[mediaItem.id ?? UUID()] {
-                VideoPlayer(player: player)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .onAppear {
-                        player.play()
-                    }
-            }
-            
-            Button(action: {
-                selectedMediaItem = nil
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
-                    .foregroundColor(.white)
-                    .padding()
-            }
         }
     }
     

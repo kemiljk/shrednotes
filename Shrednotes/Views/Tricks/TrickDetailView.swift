@@ -109,9 +109,6 @@ struct TrickDetailView: View {
             .onAppear {
                 setupInitialState()
             }
-            .onChange(of: selectedItems) {
-                handleSelectedItemsChange()
-            }
             .onChange(of: trick.isLearning) {
                 updateProgressState()
             }
@@ -139,48 +136,16 @@ struct TrickDetailView: View {
             currentZoom = 0.0
             totalZoom = 1.0
         }) { mediaItem in
-            fullscreenMediaView(for: mediaItem)
-                .navigationTransition(.zoom(sourceID: mediaItem.id ?? UUID(), in: trickPicture))
+            if let media = trick.media, !media.isEmpty {
+                MediaGalleryView(
+                    mediaItems: media,
+                    initialItem: mediaItem,
+                    mediaState: mediaState
+                )
+            }
         }
     }
 
-     private func fullscreenMediaView(for mediaItem: MediaItem) -> some View {
-         ZStack(alignment: .topTrailing) {
-             Color.black.ignoresSafeArea()
-             
-             if let uiImage = UIImage(data: mediaItem.data) {
-                 Image(uiImage: uiImage)
-                     .resizable()
-                     .aspectRatio(contentMode: .fit)
-                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                     .scaleEffect(currentZoom + totalZoom)
-                         .gesture(
-                             MagnifyGesture()
-                                 .onChanged { value in
-                                     currentZoom = value.magnification - 1
-                                 }
-                                 .onEnded { value in
-                                     totalZoom += currentZoom
-                                     currentZoom = 0
-                                 }
-                         )
-                         .accessibilityZoomAction { action in
-                             if action.direction == .zoomIn {
-                                 totalZoom += 1
-                             } else {
-                                 totalZoom -= 1
-                             }
-                         }
-             } else if let player = preloadedPlayers[mediaItem.id ?? UUID()] {
-                 VideoPlayer(player: player)
-                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                     .onAppear {
-                         player.play()
-                     }
-             }
-         }
-     }
-     
      private var trickDetailsSection: some View {
          Section(header: Text("Trick Details")) {
              HStack {
@@ -420,27 +385,41 @@ struct TrickDetailView: View {
              // Skip if we've already processed this item
              guard !processedItemIdentifiers.contains(identifier) else { continue }
              
-             if let data = try? await item.loadTransferable(type: Data.self) {
-                 let newMediaItem = MediaItem(id: UUID(), data: data)
-                 
+             if let mediaItem = await item.toMediaItem() {
                  // Check if this item already exists in trick.media
-                 if !(trick.media?.contains(where: { $0.id == newMediaItem.id }) ?? false) {
-                     loadingMedia.insert(newMediaItem.id ?? UUID())
+                 if !(trick.media?.contains(where: { $0.id == mediaItem.id }) ?? false) {
+                     newMediaItems.append(mediaItem)
+                     processedItemIdentifiers.insert(identifier)
                      
-                     if let uiImage = UIImage(data: data) {
-                         mediaState.imageCache[newMediaItem.id ?? UUID()] = uiImage
-                         loadingMedia.remove(newMediaItem.id ?? UUID())
-                     } else if let videoURL = saveVideoToTemporaryDirectory(data: data) {
-                         generateThumbnail(for: videoURL) { thumbnail in
-                             if let thumbnail = thumbnail {
-                                 mediaState.videoThumbnails[newMediaItem.id ?? UUID()] = thumbnail
-                                 loadingMedia.remove(newMediaItem.id ?? UUID())
+                     // Pre-generate thumbnails for videos
+                     if mediaItem.isVideo {
+                         loadingMedia.insert(mediaItem.id ?? UUID())
+                         
+                         PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                             if let url = url {
+                                 generateThumbnail(for: url) { thumbnail in
+                                     if let thumbnail = thumbnail {
+                                         DispatchQueue.main.async {
+                                             self.mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
+                                             self.loadingMedia.remove(mediaItem.id ?? UUID())
+                                         }
+                                     }
+                                 }
+                             }
+                         }
+                     } else if let assetId = mediaItem.assetIdentifier,
+                               let asset = PhotosHelper.shared.fetchAsset(identifier: assetId) {
+                         // Pre-cache images
+                         loadingMedia.insert(mediaItem.id ?? UUID())
+                         PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
+                             DispatchQueue.main.async {
+                                 if let image = image {
+                                     self.mediaState.imageCache[mediaItem.id ?? UUID()] = image
+                                 }
+                                 self.loadingMedia.remove(mediaItem.id ?? UUID())
                              }
                          }
                      }
-                     
-                     newMediaItems.append(newMediaItem)
-                     processedItemIdentifiers.insert(identifier)
                  }
              }
          }
@@ -451,7 +430,8 @@ struct TrickDetailView: View {
      private func mediaItemView(for mediaItem: MediaItem) -> some View {
          let size = UIScreen.main.bounds.width / 3 - 16
          return Group {
-             if let uiImage = UIImage(data: mediaItem.data) {
+             if let uiImage = mediaState.imageCache[mediaItem.id ?? UUID()] {
+                 // Already cached image
                  Image(uiImage: uiImage)
                      .resizable()
                      .aspectRatio(contentMode: .fill)
@@ -462,8 +442,8 @@ struct TrickDetailView: View {
                      .onTapGesture {
                          handleMediaItemTap(mediaItem)
                      }
-             } else if let _ = saveVideoToTemporaryDirectory(data: mediaItem.data),
-                       let thumbnail = mediaState.videoThumbnails[mediaItem.id ?? UUID()] {
+             } else if let thumbnail = mediaState.videoThumbnails[mediaItem.id ?? UUID()] {
+                 // Video thumbnail
                  Image(uiImage: thumbnail)
                      .resizable()
                      .aspectRatio(contentMode: .fill)
@@ -480,6 +460,7 @@ struct TrickDetailView: View {
                          handleMediaItemTap(mediaItem)
                      }
              } else {
+                 // Loading state
                  ProgressView()
                      .frame(width: size, height: size)
                      .background(Color.secondary.opacity(0.1))
@@ -516,6 +497,7 @@ struct TrickDetailView: View {
                  }
              }
          } else {
+             print("DEBUG: Tapping media item - setting selectedMediaItem")
              withAnimation(.easeInOut) {
                  selectedMediaItem = mediaItem
              }
@@ -536,17 +518,54 @@ struct TrickDetailView: View {
      }
 
      private func loadMediaItem(_ mediaItem: MediaItem) {
-         if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
-             generateThumbnail(for: videoURL) { thumbnail in
-                 if let thumbnail = thumbnail {
-                     mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
-                     loadingMedia.remove(mediaItem.id ?? UUID())
-                     saveContext(modelContext: modelContext)
+         guard let id = mediaItem.id else { return }
+         
+         if mediaItem.isFromPhotosLibrary, let identifier = mediaItem.assetIdentifier {
+             // Load from Photos library
+             guard let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) else { return }
+             
+             if asset.mediaType == .video {
+                 PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                     if let url = url {
+                         generateThumbnail(for: url) { thumbnail in
+                             if let thumbnail = thumbnail {
+                                 DispatchQueue.main.async {
+                                     self.mediaState.videoThumbnails[id] = thumbnail
+                                     self.loadingMedia.remove(id)
+                                 }
+                             }
+                         }
+                     }
+                 }
+             } else {
+                 // Load image
+                 PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
+                     DispatchQueue.main.async {
+                         if let image = image {
+                             self.mediaState.imageCache[id] = image
+                         }
+                         self.loadingMedia.remove(id)
+                     }
                  }
              }
-         } else {
-             loadImage(for: mediaItem)
+         } else if !mediaItem.data.isEmpty {
+             // Load from data (backwards compatibility)
+             if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
+                 generateThumbnail(for: videoURL) { thumbnail in
+                     if let thumbnail = thumbnail {
+                         DispatchQueue.main.async {
+                             self.mediaState.videoThumbnails[id] = thumbnail
+                             self.loadingMedia.remove(id)
+                         }
+                     }
+                 }
+             } else if let image = UIImage(data: mediaItem.data) {
+                 mediaState.imageCache[id] = image
+                 loadingMedia.remove(id)
+             }
          }
+         
+         saveContext(modelContext: modelContext)
      }
 
      private func setupInitialState() {
@@ -563,59 +582,26 @@ struct TrickDetailView: View {
          }
      }
      
-     private func handleSelectedItemsChange() {
-         Task {
-             for item in selectedItems {
-                 if let data = try? await item.loadTransferable(type: Data.self) {
-                     let newMediaItem = MediaItem(id: UUID(), data: data)
-                     
-                     // Ensure trick.media is initialized
-                     if trick.media == nil {
-                         trick.media = []
-                     }
-                     
-                     trick.media?.append(newMediaItem)
-                     loadingMedia.insert(newMediaItem.id ?? UUID())
-                     
-                     // Start loading the image or video thumbnail
-                     if let _ = UIImage(data: data) {
-                         loadImage(for: newMediaItem)
-                     } else {
-                         if let videoURL = saveVideoToTemporaryDirectory(data: data) {
-                             generateThumbnail(for: videoURL) { thumbnail in
-                                 if let thumbnail = thumbnail {
-                                     mediaState.videoThumbnails[newMediaItem.id ?? UUID()] = thumbnail
-                                     loadingMedia.remove(newMediaItem.id ?? UUID())
-                                 }
+     private func preGenerateVideoThumbnailsAndPreloadPlayers(for media: [MediaItem]) {
+         for mediaItem in media {
+             // Handle PHAsset media
+             if mediaItem.isFromPhotosLibrary {
+                 loadMediaItem(mediaItem)
+             } else if !mediaItem.data.isEmpty {
+                 // Handle legacy data-based media
+                 if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
+                     generateThumbnail(for: videoURL) { thumbnail in
+                         if let thumbnail = thumbnail {
+                             DispatchQueue.main.async {
+                                 self.mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
+                                 self.loadingMedia.remove(mediaItem.id ?? UUID())
                              }
                          }
                      }
-                     saveContext(modelContext: modelContext)
+                     preloadVideoPlayer(for: mediaItem, url: videoURL)
+                 } else if let image = UIImage(data: mediaItem.data) {
+                     mediaState.imageCache[mediaItem.id ?? UUID()] = image
                  }
-             }
-             selectedItems.removeAll()
-         }
-     }
-     
-     private func loadImage(for mediaItem: MediaItem) {
-         if let uiImage = UIImage(data: mediaItem.data) {
-             mediaState.imageCache[mediaItem.id ?? UUID()] = uiImage
-             loadingMedia.remove(mediaItem.id ?? UUID())
-             saveContext(modelContext: modelContext)
-         }
-     }
-     
-     private func preGenerateVideoThumbnailsAndPreloadPlayers(for media: [MediaItem]) {
-         for mediaItem in media {
-             if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
-                 generateThumbnail(for: videoURL) { thumbnail in
-                     if let thumbnail = thumbnail {
-                         mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
-                         loadingMedia.remove(mediaItem.id ?? UUID())
-                         saveContext(modelContext: modelContext)
-                     }
-                 }
-                 preloadVideoPlayer(for: mediaItem, url: videoURL)
              }
          }
      }

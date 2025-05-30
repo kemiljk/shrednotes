@@ -46,6 +46,19 @@ struct SkateboardTrickApp: App {
                 .checkSkateInactivity()
                 .onAppear {
                     WidgetCenter.shared.reloadAllTimelines()
+                    
+                    // Clean up old temporary video files
+                    Task {
+                        TempFileCleanup.shared.cleanupOldVideoFiles()
+                        
+                        // Log current temp directory size
+                        let tempSize = TempFileCleanup.shared.getTempDirectorySize()
+                        print("Temp directory size: \(TempFileCleanup.shared.formatBytes(tempSize))")
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                    // Clean up when app goes to background
+                    TempFileCleanup.shared.cleanupOldVideoFiles()
                 }
         }
         .modelContainer(sharedModelContainer)

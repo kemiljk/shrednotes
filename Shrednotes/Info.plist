@@ -25,6 +25,10 @@
 	<array>
 		<string>shredNotes</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Shrednotes needs access to your photos to add media to your skating sessions and tricks.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Shrednotes needs permission to save captured photos and videos to your photo library.</string>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>Notifications remind you to log your skating sessions.</string>
 	<key>UIBackgroundModes</key>
