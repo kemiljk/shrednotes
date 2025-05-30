@@ -36,12 +36,15 @@ struct TrickDetailView: View {
     @State private var showPracticeView = false
     
     @FocusState private var noteIsFocused: Bool
+    
+    @Query(sort: [SortDescriptor(\SkateSession.date, order: .reverse)]) private var sessions: [SkateSession]
 
     var body: some View {
         ZStack {
             List {
                 trickDetailsSection
                 consistencySection
+                practiceHistorySection
                 notesSection
                 mediaSection
                 
@@ -236,6 +239,79 @@ struct TrickDetailView: View {
                          }
                      }
                  }
+         }
+         .listRowSeparator(.hidden)
+     }
+     
+     private var practiceHistorySection: some View {
+         Section(header: Text("Practice History")) {
+             let trickStreak = trick.calculateStreak(from: sessions)
+             
+             VStack(alignment: .leading, spacing: 16) {
+                 // Streak and session stats
+                 HStack(spacing: 20) {
+                     VStack(alignment: .leading) {
+                         Text("Current Streak")
+                             .font(.caption)
+                             .foregroundStyle(.secondary)
+                         HStack(spacing: 4) {
+                             Image(systemName: "flame.fill")
+                                 .foregroundColor(.orange)
+                             Text("\(trickStreak.currentStreak)")
+                                 .font(.title3)
+                                 .fontWeight(.semibold)
+                             Text(trickStreak.currentStreak == 1 ? "day" : "days")
+                                 .font(.caption)
+                                 .foregroundStyle(.secondary)
+                         }
+                     }
+                     
+                     Spacer()
+                     
+                     VStack(alignment: .leading) {
+                         Text("Total Sessions")
+                             .font(.caption)
+                             .foregroundStyle(.secondary)
+                         Text("\(trickStreak.totalSessions)")
+                             .font(.title3)
+                             .fontWeight(.semibold)
+                     }
+                     
+                     Spacer()
+                     
+                     VStack(alignment: .leading) {
+                         Text("Longest Streak")
+                             .font(.caption)
+                             .foregroundStyle(.secondary)
+                         Text("\(trickStreak.longestStreak)")
+                             .font(.title3)
+                             .fontWeight(.semibold)
+                     }
+                 }
+                 .padding(.vertical, 8)
+                 
+                 // Heat map
+                 VStack(alignment: .leading, spacing: 8) {
+                     Text("Last 12 Weeks")
+                         .font(.caption)
+                         .foregroundStyle(.secondary)
+                     
+                     HeatMapView(trick: trick, sessions: sessions, weeks: 12)
+                         .frame(maxWidth: .infinity)
+                 }
+                 
+                 if let lastPracticed = trickStreak.lastPracticed {
+                     HStack {
+                         Image(systemName: "clock")
+                             .font(.caption)
+                             .foregroundStyle(.secondary)
+                         Text("Last practiced \(lastPracticed.formatted(.relative(presentation: .named)))")
+                             .font(.caption)
+                             .foregroundStyle(.secondary)
+                     }
+                 }
+             }
+             .padding(.vertical, 4)
          }
          .listRowSeparator(.hidden)
      }
