@@ -59,24 +59,10 @@ struct AddSessionView: View {
                             of: reference) ?? reference
     }()
     
-    init(mediaItems: [MediaItem] = [], title: String = "", note: String = "", date: Date? = nil, duration: TimeInterval? = nil, energyBurned: Double? = nil, workoutUUID: UUID? = nil) {
+    init(mediaItems: [MediaItem] = [], title: String = "", note: String = "") {
         self._mediaItems = State(initialValue: mediaItems)
         self._title = State(initialValue: title)
         self._note = State(initialValue: note)
-        if let date = date {
-            self._date = State(initialValue: date)
-        }
-        if let duration = duration {
-            let calendar = Calendar.current
-            let reference = Date(timeIntervalSinceReferenceDate: 0)
-            let hours = Int(duration) / 3600
-            let minutes = (Int(duration) % 3600) / 60
-            self._duration = State(initialValue: calendar.date(bySettingHour: hours, minute: minutes, second: 0, of: reference) ?? reference)
-            self._hasDuration = State(initialValue: true)
-        }
-        if let energyBurned = energyBurned {
-            self._totalEnergyBurned = State(initialValue: energyBurned)
-        }
     }
     
     var body: some View {
@@ -414,12 +400,10 @@ struct AddSessionView: View {
     // Update the findMatchingWorkouts function
     private func findMatchingWorkouts(for date: Date) {
         healthKitManager.fetchWorkoutsForDate(date) { workouts in
-            // Only include skating sports workouts
-            let skatingWorkouts = workouts.filter { $0.workoutActivityType == .skatingSports }
             DispatchQueue.main.async {
-                self.matchingWorkouts = skatingWorkouts
-                if !skatingWorkouts.isEmpty {
-                    healthKitManager.sumWorkoutData(workouts: skatingWorkouts) { duration, energyBurned in
+                self.matchingWorkouts = workouts
+                if !workouts.isEmpty {
+                    healthKitManager.sumWorkoutData(workouts: workouts) { duration, energyBurned in
                         DispatchQueue.main.async {
                             self.totalDuration = duration
                             self.totalEnergyBurned = energyBurned

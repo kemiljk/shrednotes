@@ -37,8 +37,6 @@ struct MainView: View {
     @State private var isInProgressExpanded = false
     @State private var isComboExpanded = false
     @State private var latestWorkoutRefreshTrigger = UUID()
-    @State private var selectedQuickAddWorkout: HKWorkout? = nil
-    @State private var showingQuickAddSession = false
     
     @Environment(NavigationModel.self) private var navigationModel
 
@@ -109,20 +107,6 @@ struct MainView: View {
     
     let iPad = UIDevice.current.userInterfaceIdiom == .pad
     
-    var untrackedSkatingWorkouts: [HKWorkout] {
-        healthKitManager.allSkateboardingWorkouts.filter { workout in
-            !skateSessions.contains(where: { session in
-                // Prefer matching by workoutUUID if available, else by date
-                if let uuid = session.workoutUUID {
-                    return uuid == workout.uuid
-                } else if let date = session.date {
-                    return Calendar.current.isDate(date, inSameDayAs: workout.startDate)
-                }
-                return false
-            })
-        }
-    }
-    
     var body: some View {
         @Bindable var navigationModel = navigationModel
 
@@ -130,17 +114,6 @@ struct MainView: View {
             ZStack(alignment: .bottom) {
                 ScrollView {
                     VStack(alignment: .leading) {
-                        if !untrackedSkatingWorkouts.isEmpty {
-                            QuickAddSkateSessionBanner(
-                                workouts: untrackedSkatingWorkouts,
-                                onQuickAdd: { workout in
-                                    selectedQuickAddWorkout = workout
-                                    showingQuickAddSession = true
-                                }
-                            )
-                            .padding(.horizontal)
-                            .padding(.top)
-                        }
                         HStack(spacing: 16) {
                             if !hideRecommendations {
                                 recommendationSection
@@ -382,21 +355,6 @@ struct MainView: View {
                         WidgetCenter.shared.reloadAllTimelines()
                 }
             }
-            .sheet(isPresented: $showingQuickAddSession) {
-                if let workout = selectedQuickAddWorkout {
-                    AddSessionView(
-                        mediaItems: [],
-                        title: "Session",
-                        note: "",
-                        date: workout.startDate,
-                        duration: workout.duration,
-                        energyBurned: workout.totalEnergyBurned,
-                        workoutUUID: workout.uuid
-                    )
-                    .presentationCornerRadius(24)
-                    .modelContext(modelContext)
-                }
-            }
         }
         .id(inProgressTricksCount)
         .onAppear {
@@ -588,8 +546,8 @@ struct MainView: View {
                             easiestTrick.isSkipped.toggle()
                             easiestTrick.isLearned = false
                             easiestTrick.isLearning = false
-                            trick?.wantToLearn = false
-                            trick?.wantToLearnDate = nil
+                            easiestTrick.wantToLearn = false
+                            easiestTrick.wantToLearnDate = nil
                             DispatchQueue.main.async {
                                 inProgressTricks = computeInProgressTricks()
                                 nextCombinationTricks = computeNextCombinationTricks()
@@ -957,82 +915,4 @@ struct MainView: View {
 
 extension Notification.Name {
     static let showAddSession = Notification.Name("showAddSession")
-}
-
-struct QuickAddSkateSessionBanner: View {
-    let workouts: [HKWorkout]
-    let onQuickAdd: (HKWorkout) -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Untracked Skating Workouts")
-                .font(.headline)
-                .fontWidth(.expanded)
-                .padding(.bottom, 2)
-            if workouts.count == 1, let workout = workouts.first {
-                Button(action: { onQuickAdd(workout) }) {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.indigo)
-                        Text(formattedDate(workout.startDate))
-                            .fontWeight(.medium)
-                        Spacer()
-                        Text(formatDuration(workout.duration))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(12)
-                    .background(Color.indigo.opacity(0.08))
-                    .cornerRadius(12)
-                }
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(workouts, id: \.uuid) { (workout: HKWorkout) in
-                            quickAddButton(for: workout)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(12)
-        .background(Color.indigo.opacity(0.12))
-        .cornerRadius(16)
-    }
-    
-    @ViewBuilder
-    private func quickAddButton(for workout: HKWorkout) -> some View {
-        Button(action: { onQuickAdd(workout) }) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.indigo)
-                    Text(formattedDate(workout.startDate))
-                        .fontWeight(.medium)
-                }
-                Text(formatDuration(workout.duration))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(12)
-            .background(Color.indigo.opacity(0.08))
-            .cornerRadius(12)
-        }
-    }
-    
-    private func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-    
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let hours = Int(seconds) / 3600
-        let minutes = Int(seconds) % 3600 / 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        } else {
-            return "\(minutes)m"
-        }
-    }
 }

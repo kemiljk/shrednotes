@@ -193,9 +193,12 @@ struct SessionDetailView: View {
                 Button {
                     dismiss()
                 } label: {
-                    Image(systemName: "chevron.left.circle.fill")
-                        .font(.title2)
-                        .symbolRenderingMode(.monochrome)
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.indigo)
+                        .frame(width: 24, height: 24)
+                        .background(Color(.systemGray5))
+                        .clipShape(Circle())
                 }
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
@@ -216,13 +219,17 @@ struct SessionDetailView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle.fill")
-                        .font(.title2)
-                        .symbolRenderingMode(.monochrome)
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.indigo)
+                        .frame(width: 24, height: 24)
+                        .background(Color(.systemGray5))
+                        .clipShape(Circle())
                 }
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
             }
+            .zIndex(2)
             .padding(.horizontal)
             .padding(.top, 60)
         }
