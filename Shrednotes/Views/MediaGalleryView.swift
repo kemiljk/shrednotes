@@ -11,7 +11,6 @@ struct MediaGalleryView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var currentIndex: Int
-    @State private var showControls = true
     
     init(mediaItems: [MediaItem], initialItem: MediaItem, mediaState: MediaState) {
         self.mediaItems = mediaItems
@@ -32,59 +31,33 @@ struct MediaGalleryView: View {
                     MediaItemView(
                         item: item,
                         mediaState: mediaState,
-                        showControls: $showControls
                     )
                     .tag(index)
                 }
             }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
             .ignoresSafeArea()
             
-            // Simple overlay
-            if showControls {
-                VStack {
-                    // Top bar
-                    HStack {
-                        Button(action: { dismiss() }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.white)
-                                .background(Circle().fill(.black.opacity(0.5)))
-                        }
-                        
-                        Spacer()
-                        
-                        Text("\(currentIndex + 1) / \(mediaItems.count)")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(.black.opacity(0.5)))
-                        
-                        Spacer()
-                    }
-                    .padding()
-                    
+            // Persistent dismiss button - always visible in top right
+            VStack {
+                HStack {
                     Spacer()
                     
-                    // Page dots at bottom
-                    HStack(spacing: 8) {
-                        ForEach(0..<mediaItems.count, id: \.self) { index in
-                            Circle()
-                                .fill(index == currentIndex ? Color.white : Color.white.opacity(0.5))
-                                .frame(width: 8, height: 8)
-                                .onTapGesture {
-                                    withAnimation {
-                                        currentIndex = index
-                                    }
-                                }
-                        }
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title)
+                            .foregroundStyle(.white)
+                            .background(Circle().fill(.black.opacity(0.6)))
+                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                     }
-                    .padding(.bottom, 40)
+                    .padding(.trailing, 16)
+                    .padding(.top, 48)
                 }
+                
+                Spacer()
             }
+            .ignoresSafeArea() // This ensures it goes into the safe area
         }
-        .statusBarHidden(!showControls)
     }
 }
 
@@ -92,7 +65,6 @@ struct MediaGalleryView: View {
 struct MediaItemView: View {
     let item: MediaItem
     @ObservedObject var mediaState: MediaState
-    @Binding var showControls: Bool
     
     @State private var loadedImage: UIImage?
     @State private var videoURL: URL?
@@ -105,20 +77,10 @@ struct MediaItemView: View {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .onTapGesture {
-                        withAnimation {
-                            showControls.toggle()
-                        }
-                    }
             } else if let url = videoURL {
                 // Display video
                 VideoPlayer(player: AVPlayer(url: url)) {
                     // Video overlay content
-                }
-                .onTapGesture {
-                    withAnimation {
-                        showControls.toggle()
-                    }
                 }
             } else if isLoading {
                 // Loading state

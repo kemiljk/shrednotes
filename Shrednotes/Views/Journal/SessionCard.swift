@@ -77,8 +77,8 @@ struct SessionCard: View {
                         ForEach(media.dropFirst().prefix(3), id: \.id) { item in
                             mediaItemView(for: item)
                         }
-                        if media.count > 3 {
-                            Text("+\(media.count - 3)")
+                        if media.count > 4 {
+                            Text("+\(media.count - 4)")
                                 .font(.caption)
                                 .frame(width: 60, height: 60)
                                 .background(Color.secondary.opacity(0.2))
