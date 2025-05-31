@@ -44,6 +44,8 @@ struct ShareView: View {
     private func loadImageAttachment(_ attachment: NSItemProvider) {
         attachment.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { data, error in
             if let url = data as? URL, let imageData = try? Data(contentsOf: url) {
+                // Note: Share Extensions must copy data because they receive temporary URLs
+                // from external apps, not PHAsset references that we can access later
                 let mediaItem = MediaItem(data: imageData)
                 DispatchQueue.main.async {
                     print("Loaded image: \(String(describing: mediaItem.id))")
@@ -59,6 +61,8 @@ struct ShareView: View {
     private func loadVideoAttachment(_ attachment: NSItemProvider) {
         attachment.loadItem(forTypeIdentifier: UTType.movie.identifier, options: nil) { data, error in
             if let url = data as? URL {
+                // Note: Share Extensions must copy data because they receive temporary URLs
+                // from external apps, not PHAsset references that we can access later
                 let mediaItem = MediaItem(data: try! Data(contentsOf: url))
                 DispatchQueue.main.async {
                     print("Loaded video: \(String(describing: mediaItem.id))")

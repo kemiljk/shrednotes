@@ -542,41 +542,82 @@ struct EditSessionView: View {
     
     @MainActor
     private func processSelectedItems() async {
-        let newMediaItems = selectedItems.map { PhotosPickerItem in
-            MediaItem(id: UUID(), data: Data(), session: session)
-        }
-        mediaItems.append(contentsOf: newMediaItems)
+        var newMediaItems: [MediaItem] = []
         
-        for (index, item) in selectedItems.enumerated() {
-            if let data = try? await item.loadTransferable(type: Data.self) {
-                let newMediaItem = newMediaItems[index]
-                newMediaItem.data = data
+        for item in selectedItems {
+            if let mediaItem = await item.toMediaItem() {
+                // Assign the session relationship
+                mediaItem.session = session
+                newMediaItems.append(mediaItem)
                 
-                if let uiImage = UIImage(data: data) {
-                    mediaState.imageCache[newMediaItem.id ?? UUID()] = uiImage
-                } else if let videoURL = saveVideoToTemporaryDirectory(data: data) {
-                    generateThumbnail(for: videoURL) { thumbnail in
-                        if let thumbnail = thumbnail {
+                // Pre-generate thumbnails for videos
+                if mediaItem.isVideo {
+                    PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                        if let url = url {
+                            generateThumbnail(for: url) { thumbnail in
+                                if let thumbnail = thumbnail, let id = mediaItem.id {
+                                    DispatchQueue.main.async {
+                                        self.mediaState.videoThumbnails[id] = thumbnail
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if let identifier = mediaItem.assetIdentifier,
+                          let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) {
+                    // Pre-cache images
+                    PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
+                        if let image = image, let id = mediaItem.id {
                             DispatchQueue.main.async {
-                                mediaState.videoThumbnails[newMediaItem.id ?? UUID()] = thumbnail
+                                self.mediaState.imageCache[id] = image
                             }
                         }
                     }
                 }
             }
         }
+        
+        mediaItems.append(contentsOf: newMediaItems)
         selectedItems.removeAll()
     }
     
     private func loadExistingMedia() {
         for mediaItem in mediaItems {
-            if let uiImage = UIImage(data: mediaItem.data) {
-                mediaState.imageCache[mediaItem.id ?? UUID()] = uiImage
-            } else if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
-                generateThumbnail(for: videoURL) { thumbnail in
-                    if let thumbnail = thumbnail {
-                        DispatchQueue.main.async {
-                            mediaState.imageCache[mediaItem.id ?? UUID()] = thumbnail
+            if mediaItem.isFromPhotosLibrary, let identifier = mediaItem.assetIdentifier {
+                // Load from Photos library
+                if let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) {
+                    if asset.mediaType == .image {
+                        PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
+                            if let image = image, let id = mediaItem.id {
+                                DispatchQueue.main.async {
+                                    self.mediaState.imageCache[id] = image
+                                }
+                            }
+                        }
+                    } else if asset.mediaType == .video {
+                        PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                            if let url = url {
+                                generateThumbnail(for: url) { thumbnail in
+                                    if let thumbnail = thumbnail, let id = mediaItem.id {
+                                        DispatchQueue.main.async {
+                                            self.mediaState.videoThumbnails[id] = thumbnail
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if !mediaItem.data.isEmpty {
+                // Legacy data-based media
+                if let uiImage = UIImage(data: mediaItem.data) {
+                    mediaState.imageCache[mediaItem.id ?? UUID()] = uiImage
+                } else if let videoURL = saveVideoToTemporaryDirectory(data: mediaItem.data) {
+                    generateThumbnail(for: videoURL) { thumbnail in
+                        if let thumbnail = thumbnail {
+                            DispatchQueue.main.async {
+                                self.mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
+                            }
                         }
                     }
                 }

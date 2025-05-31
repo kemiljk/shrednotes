@@ -175,6 +175,10 @@ struct TrickRow: View {
                     }
                 }
             }
+        } preview: {
+            TrickPreviewCard(trick: trick, streak: trickStreak, sessions: sessions)
+                .frame(width: 320)
+                .preferredColorScheme(onDark ? .dark : nil)
         }
     }
     
@@ -196,6 +200,7 @@ struct TrickRow: View {
 struct TrickPreviewCard: View {
     let trick: Trick
     let streak: TrickStreak
+    let sessions: [SkateSession]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -232,6 +237,18 @@ struct TrickPreviewCard: View {
                 }
             }
             
+            // Notes/Description if available
+            if let notes = trick.notes, !notes.isEmpty {
+                let combinedNotes = notes.map { $0.text }.joined(separator: " ")
+                if !combinedNotes.isEmpty {
+                    Text(combinedNotes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .padding(.vertical, 4)
+                }
+            }
+            
             // Progress Section
             if trick.isLearned || trick.isLearning {
                 VStack(alignment: .leading, spacing: 8) {
@@ -257,7 +274,7 @@ struct TrickPreviewCard: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     
-                    CompactHeatMapView(trick: trick, sessions: [])
+                    CompactHeatMapView(trick: trick, sessions: sessions)
                         .frame(height: 20)
                 }
             }

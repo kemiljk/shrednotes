@@ -31,7 +31,6 @@ struct TrickDetailView: View {
     @State private var currentZoom = 0.0
     @State private var totalZoom = 1.0
     @State private var selectedMediaIds: Set<UUID> = []
-    @State private var processedItemIdentifiers = Set<String>()
     @State private var isEditMode: Bool = false
     @State private var showPracticeView = false
     
@@ -380,44 +379,35 @@ struct TrickDetailView: View {
          var newMediaItems: [MediaItem] = []
          
          for item in selectedItems {
-             guard let identifier = item.itemIdentifier else { continue }
-             
-             // Skip if we've already processed this item
-             guard !processedItemIdentifiers.contains(identifier) else { continue }
-             
              if let mediaItem = await item.toMediaItem() {
-                 // Check if this item already exists in trick.media
-                 if !(trick.media?.contains(where: { $0.id == mediaItem.id }) ?? false) {
-                     newMediaItems.append(mediaItem)
-                     processedItemIdentifiers.insert(identifier)
+                 newMediaItems.append(mediaItem)
+                 
+                 // Pre-generate thumbnails for videos
+                 if mediaItem.isVideo {
+                     loadingMedia.insert(mediaItem.id ?? UUID())
                      
-                     // Pre-generate thumbnails for videos
-                     if mediaItem.isVideo {
-                         loadingMedia.insert(mediaItem.id ?? UUID())
-                         
-                         PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
-                             if let url = url {
-                                 generateThumbnail(for: url) { thumbnail in
-                                     if let thumbnail = thumbnail {
-                                         DispatchQueue.main.async {
-                                             self.mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
-                                             self.loadingMedia.remove(mediaItem.id ?? UUID())
-                                         }
+                     PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
+                         if let url = url {
+                             generateThumbnail(for: url) { thumbnail in
+                                 if let thumbnail = thumbnail {
+                                     DispatchQueue.main.async {
+                                         self.mediaState.videoThumbnails[mediaItem.id ?? UUID()] = thumbnail
+                                         self.loadingMedia.remove(mediaItem.id ?? UUID())
                                      }
                                  }
                              }
                          }
-                     } else if let assetId = mediaItem.assetIdentifier,
-                               let asset = PhotosHelper.shared.fetchAsset(identifier: assetId) {
-                         // Pre-cache images
-                         loadingMedia.insert(mediaItem.id ?? UUID())
-                         PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
-                             DispatchQueue.main.async {
-                                 if let image = image {
-                                     self.mediaState.imageCache[mediaItem.id ?? UUID()] = image
-                                 }
-                                 self.loadingMedia.remove(mediaItem.id ?? UUID())
+                     }
+                 } else if let identifier = mediaItem.assetIdentifier,
+                           let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) {
+                     // Pre-cache images
+                     loadingMedia.insert(mediaItem.id ?? UUID())
+                     PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
+                         DispatchQueue.main.async {
+                             if let image = image {
+                                 self.mediaState.imageCache[mediaItem.id ?? UUID()] = image
                              }
+                             self.loadingMedia.remove(mediaItem.id ?? UUID())
                          }
                      }
                  }
