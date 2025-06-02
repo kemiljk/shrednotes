@@ -37,6 +37,12 @@ struct MainView: View {
     @State private var isInProgressExpanded = false
     @State private var isComboExpanded = false
     @State private var latestWorkoutRefreshTrigger = UUID()
+    @State private var showingAddMenu = false
+    @State private var showingAddTrick = false
+    @State private var showFirstItem = false
+    @State private var showSecondItem = false
+    @State private var showThirdItem = false
+    @State private var showBackground = false
     
     @Environment(NavigationModel.self) private var navigationModel
 
@@ -107,254 +113,15 @@ struct MainView: View {
     
     let iPad = UIDevice.current.userInterfaceIdiom == .pad
     
+    private var firstItemVisible: Bool { showingAddMenu && showFirstItem }
+    private var secondItemVisible: Bool { showingAddMenu && showSecondItem }
+    private var thirdItemVisible: Bool { showingAddMenu && showThirdItem }
+    
     var body: some View {
         @Bindable var navigationModel = navigationModel
 
         NavigationStack {
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading) {
-                        HStack(spacing: 16) {
-                            if !hideRecommendations {
-                                recommendationSection
-                            }
-
-                            if let latestSessionDate = skateSessions.first?.date {
-                                latestSkateView(latestSessionDate: latestSessionDate)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 24)
-                        .padding(.bottom, !hideRecommendations ? 16 : 0)
-                        
-                        if iPad {
-                            LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
-                                if !inProgressTricks.isEmpty {
-                                    inProgressSection
-                                }
-                                
-                                if !combos.isEmpty {
-                                    comboTricksSection
-                                        .frame(maxHeight: .infinity, alignment: .top)
-                                }
-                                
-                                if !hideRecommendations {
-                                    basedOnTricksYouKnowSection
-                                }
-                            }
-                            .padding(.horizontal)
-                        } else {
-                            VStack(alignment: .leading, spacing: 0) {
-                                if !inProgressTricks.isEmpty {
-                                    inProgressSection
-                                }
-                                
-                                if !combos.isEmpty {
-                                    comboTricksSection
-                                }
-                                
-                                if !hideRecommendations {
-                                    basedOnTricksYouKnowSection
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                    }
-                }
-                .refreshable {
-                    inProgressTricks = computeInProgressTricks()
-                    nextCombinationTricks = computeNextCombinationTricks()
-                    filteredTricks = computeFilteredTricks()
-                    WidgetCenter.shared.reloadAllTimelines()
-                }
-                .safeAreaInset(edge: .bottom) {
-                    ZStack {
-                        VariableBlurView(maxBlurRadius: 4, direction: .blurredBottomClearTop)
-                            .frame(height: 120)
-                            .ignoresSafeArea(edges: .bottom)
-                            .padding(.bottom, -44)
-                        VStack(alignment: .trailing) {
-                            HStack {
-                                Spacer()
-                                if !hideJournal {
-                                    GradientButton<Bool, Bool, Never>(
-                                        label: "Session",
-                                        hasImage: true,
-                                        image: "plus.circle.fill",
-                                        binding: $showingAddSession,
-                                        value: true,
-                                        hapticTrigger: showingAddSession
-                                    )
-                                    .frame(maxHeight: 44)
-                                }
-                                GradientButton<Bool, Bool, Never>(
-                                    label: "Combo",
-                                    hasImage: true,
-                                    image: "plus.circle.fill",
-                                    binding: $showingComboBuilder,
-                                    value: true,
-                                    hapticTrigger: showingComboBuilder,
-                                    variant: .secondary
-                                )
-                                .frame(maxHeight: 44)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom)
-                    }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(action: {
-                            activeSheet = .settings
-                        }) {
-                            Image(systemName: "gearshape.circle.fill")
-                                .symbolRenderingMode(.hierarchical)
-                                .font(.title3)
-                        }
-                        .sensoryFeedback(.increase, trigger: activeSheet)
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(action: {
-                            activeSheet = .fullTrickList
-                        }) {
-                            Image(systemName: "list.bullet")
-                                .symbolVariant(.circle.fill)
-                                .symbolRenderingMode(.hierarchical)
-                                .font(.title3)
-                        }
-                        .sensoryFeedback(.increase, trigger: activeSheet)
-                    }
-                    if !hideJournal {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button {
-                                self.isShowingJournal = true
-                            } label: {
-                                HStack {
-                                    Image(systemName: "book.pages")
-                                        .symbolVariant(.fill)
-                                    Text("Journal")
-                                }
-                            }
-                            .controlSize(.mini)
-                            .buttonBorderShape(.capsule)
-                            .buttonStyle(.bordered)
-                            .tint(.accentColor)
-                            .sensoryFeedback(.increase, trigger: isShowingJournal)
-                        }
-                    }
-                }
-                .fullScreenCover(isPresented: $isShowingJournal) {
-                    JournalView()
-                        .environmentObject(SessionManager.shared)
-                }
-                .fullScreenCover(isPresented: $showingComboBuilder, content: {
-                    NavigationStack {
-                        ComboBuilderView()
-                            .modelContext(modelContext)
-                    }
-                    .sensoryFeedback(.increase, trigger: showingComboBuilder)
-                })
-                .sheet(item: $activeSheet, onDismiss: {
-                    do {
-                        try modelContext.save()
-                    } catch {
-                        print("Error saving context: \(error)")
-                    }
-                }) { item in
-                    switch item {
-                    case .settings:
-                        SettingsView(visibleTrickTypes: $visibleTrickTypes)
-                            .presentationCornerRadius(24)
-                            .environmentObject(healthKitManager)
-                            .onDisappear {
-                                loadVisibleTrickTypes()
-                            }
-                    case .fullTrickList:
-                        FullTrickListView(
-                            visibleTrickTypes: $visibleTrickTypes,
-                            searchText: $searchText,
-                            expandedGroups: $expandedGroups,
-                            selectedType: $selectedType
-                        )
-                        .presentationCornerRadius(24)
-                        .onDisappear {
-                            updateNextTrickInAppStorage()
-                            inProgressTricks = computeInProgressTricks()
-                            nextCombinationTricks = computeNextCombinationTricks()
-                            filteredTricks = computeFilteredTricks()
-                            WidgetCenter.shared.reloadAllTimelines()
-                        }
-                    case .onboarding:
-                        OnboardingView(isOnboardingComplete: $isOnboardingComplete)
-                            .presentationCornerRadius(24)
-                            .presentationDetents([.medium, .large])
-                            .environmentObject(healthKitManager)
-                            .interactiveDismissDisabled(!isOnboardingComplete)
-                    }
-                }
-                .sheet(isPresented: $showingAddSession) {
-                    AddSessionView()
-                        .presentationCornerRadius(24)
-                        .modelContext(modelContext)
-                }
-                .onChange(of: isOnboardingComplete) { _, newValue in
-                    if newValue {
-                        activeSheet = nil
-                        UserDefaults.standard.set(true, forKey: "isOnboardingComplete")
-                        inProgressTricks = computeInProgressTricks()
-                        nextCombinationTricks = computeNextCombinationTricks()
-                    }
-                }
-            }
-            .onOpenURL { url in
-               if let trick = decodeTrick(from: url) {
-                    self.trick = trick
-                    showTrickDetail = true
-                } else if let sessionId = decodeSessionReference(from: url) {
-                    if let session = skateSessions.first(where: { $0.id == sessionId }) {
-                        self.session = session
-                        showSessionDetail = true
-                    }
-                }
-            }
-            .navigationDestination(isPresented: $showTrickDetail) {
-                if let trick = trick {
-                    TrickDetailView(trick: trick)
-                        .onDisappear {
-                            showTrickDetail = false
-                        }
-                }
-            }
-            .sheet(isPresented: $showSessionDetail) {
-                if let session = session {
-                    SessionDetailView(session: session, mediaState: mediaState)
-                        .presentationCornerRadius(24)
-                }
-            }
-            .sheet(isPresented: $navigationModel.showAddSession) {
-                AddSessionView()
-                    .presentationCornerRadius(24)
-                    .modelContext(modelContext)
-            }
-            .sheet(isPresented: $navigationModel.showViewJournal) {
-                JournalView()
-                    .presentationCornerRadius(24)
-            }
-            .sheet(isPresented: $navigationModel.showPracticeTricks) {
-                TrickPracticeView()
-                    .presentationCornerRadius(24)
-            }
-            .navigationDestination(for: Trick.self) { trick in
-                TrickDetailView(trick: trick)
-                    .onDisappear {
-                        updateNextTrickInAppStorage()
-                        inProgressTricks = computeInProgressTricks()
-                        nextCombinationTricks = computeNextCombinationTricks()
-                        filteredTricks = computeFilteredTricks()
-                        WidgetCenter.shared.reloadAllTimelines()
-                }
-            }
+            mainContent
         }
         .id(inProgressTricksCount)
         .onAppear {
@@ -395,6 +162,253 @@ struct MainView: View {
         }
         .onChange(of: hasTricksToLearnOrLearned) {
             WidgetCenter.shared.reloadAllTimelines()
+        }
+        .sheet(isPresented: $navigationModel.showAddSession) {
+            AddSessionView()
+                .presentationCornerRadius(24)
+                .modelContext(modelContext)
+        }
+        .sheet(isPresented: $navigationModel.showViewJournal) {
+            JournalView()
+                .presentationCornerRadius(24)
+        }
+        .sheet(isPresented: $navigationModel.showPracticeTricks) {
+            TrickPracticeView()
+                .presentationCornerRadius(24)
+        }
+    }
+    
+    @ViewBuilder
+    private var mainContent: some View {
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(alignment: .leading) {
+                    HStack(spacing: 16) {
+                        if !hideRecommendations {
+                            recommendationSection
+                        }
+
+                        if let latestSessionDate = skateSessions.first?.date {
+                            latestSkateView(latestSessionDate: latestSessionDate)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 24)
+                    .padding(.bottom, !hideRecommendations ? 16 : 0)
+                    
+                    if iPad {
+                        LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
+                            if !inProgressTricks.isEmpty {
+                                inProgressSection
+                            }
+                            
+                            if !combos.isEmpty {
+                                comboTricksSection
+                                    .frame(maxHeight: .infinity, alignment: .top)
+                            }
+                            
+                            if !hideRecommendations {
+                                basedOnTricksYouKnowSection
+                            }
+                        }
+                        .padding(.horizontal)
+                    } else {
+                        VStack(alignment: .leading, spacing: 0) {
+                            if !inProgressTricks.isEmpty {
+                                inProgressSection
+                            }
+                            
+                            if !combos.isEmpty {
+                                comboTricksSection
+                            }
+                            
+                            if !hideRecommendations {
+                                basedOnTricksYouKnowSection
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+            }
+            .refreshable {
+                inProgressTricks = computeInProgressTricks()
+                nextCombinationTricks = computeNextCombinationTricks()
+                filteredTricks = computeFilteredTricks()
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 80)
+            }
+            
+            // Menu overlay
+            if showBackground {
+                menuOverlay
+            }
+            
+            // Floating button on top
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    floatingButtonOnly
+                }
+                .padding(.horizontal)
+                .padding(.bottom)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: {
+                    activeSheet = .settings
+                }) {
+                    Image(systemName: "gearshape.circle.fill")
+                        .symbolRenderingMode(.hierarchical)
+                        .font(.title3)
+                }
+                .sensoryFeedback(.increase, trigger: activeSheet)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: {
+                    activeSheet = .fullTrickList
+                }) {
+                    Image(systemName: "list.bullet")
+                        .symbolVariant(.circle.fill)
+                        .symbolRenderingMode(.hierarchical)
+                        .font(.title3)
+                }
+                .sensoryFeedback(.increase, trigger: activeSheet)
+            }
+            if !hideJournal {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        self.isShowingJournal = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "book.pages")
+                                .symbolVariant(.fill)
+                            Text("Journal")
+                        }
+                    }
+                    .controlSize(.mini)
+                    .buttonBorderShape(.capsule)
+                    .buttonStyle(.bordered)
+                    .tint(.accentColor)
+                    .sensoryFeedback(.increase, trigger: isShowingJournal)
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $isShowingJournal) {
+            JournalView()
+                .environmentObject(SessionManager.shared)
+        }
+        .fullScreenCover(isPresented: $showingComboBuilder, content: {
+            NavigationStack {
+                ComboBuilderView()
+                    .modelContext(modelContext)
+            }
+            .sensoryFeedback(.increase, trigger: showingComboBuilder)
+        })
+        .sheet(item: $activeSheet, onDismiss: {
+            do {
+                try modelContext.save()
+            } catch {
+                print("Error saving context: \(error)")
+            }
+        }) { item in
+            switch item {
+            case .settings:
+                SettingsView(visibleTrickTypes: $visibleTrickTypes)
+                    .presentationCornerRadius(24)
+                    .environmentObject(healthKitManager)
+                    .onDisappear {
+                        loadVisibleTrickTypes()
+                    }
+            case .fullTrickList:
+                FullTrickListView(
+                    visibleTrickTypes: $visibleTrickTypes,
+                    searchText: $searchText,
+                    expandedGroups: $expandedGroups,
+                    selectedType: $selectedType
+                )
+                .presentationCornerRadius(24)
+                .onDisappear {
+                    updateNextTrickInAppStorage()
+                    inProgressTricks = computeInProgressTricks()
+                    nextCombinationTricks = computeNextCombinationTricks()
+                    filteredTricks = computeFilteredTricks()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+            case .onboarding:
+                OnboardingView(isOnboardingComplete: $isOnboardingComplete)
+                    .presentationCornerRadius(24)
+                    .presentationDetents([.medium, .large])
+                    .environmentObject(healthKitManager)
+                    .interactiveDismissDisabled(!isOnboardingComplete)
+            }
+        }
+        .sheet(isPresented: $showingAddSession) {
+            AddSessionView()
+                .presentationCornerRadius(24)
+                .modelContext(modelContext)
+        }
+        .sheet(isPresented: $showingAddTrick) {
+            FullTrickListView(
+                visibleTrickTypes: $visibleTrickTypes,
+                searchText: $searchText,
+                expandedGroups: $expandedGroups,
+                selectedType: $selectedType
+            )
+            .presentationCornerRadius(24)
+            .onDisappear {
+                updateNextTrickInAppStorage()
+                inProgressTricks = computeInProgressTricks()
+                nextCombinationTricks = computeNextCombinationTricks()
+                filteredTricks = computeFilteredTricks()
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
+        .onChange(of: isOnboardingComplete) { _, newValue in
+            if newValue {
+                activeSheet = nil
+                UserDefaults.standard.set(true, forKey: "isOnboardingComplete")
+                inProgressTricks = computeInProgressTricks()
+                nextCombinationTricks = computeNextCombinationTricks()
+            }
+        }
+        .onOpenURL { url in
+           if let trick = decodeTrick(from: url) {
+                self.trick = trick
+                showTrickDetail = true
+            } else if let sessionId = decodeSessionReference(from: url) {
+                if let session = skateSessions.first(where: { $0.id == sessionId }) {
+                    self.session = session
+                    showSessionDetail = true
+                }
+            }
+        }
+        .navigationDestination(isPresented: $showTrickDetail) {
+            if let trick = trick {
+                TrickDetailView(trick: trick)
+                    .onDisappear {
+                        showTrickDetail = false
+                    }
+            }
+        }
+        .sheet(isPresented: $showSessionDetail) {
+            if let session = session {
+                SessionDetailView(session: session, mediaState: mediaState)
+                    .presentationCornerRadius(24)
+            }
+        }
+        .navigationDestination(for: Trick.self) { trick in
+            TrickDetailView(trick: trick)
+                .onDisappear {
+                    updateNextTrickInAppStorage()
+                    inProgressTricks = computeInProgressTricks()
+                    nextCombinationTricks = computeNextCombinationTricks()
+                    filteredTricks = computeFilteredTricks()
+                    WidgetCenter.shared.reloadAllTimelines()
+            }
         }
     }
     
@@ -573,8 +587,8 @@ struct MainView: View {
                                 .foregroundStyle(.black)
                         }
                         .padding(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-                        .background(.white)
-                        .clipShape(.capsule)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                     .padding(.top, 4)
                     .padding(.leading)
@@ -909,6 +923,229 @@ struct MainView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .padding(.bottom, 24)
             }
+        }
+    }
+    
+    @ViewBuilder
+    private var floatingButtonOnly: some View {
+        Button(action: {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                showingAddMenu.toggle()
+            }
+            
+            if showingAddMenu {
+                // Menu is now open - show background immediately with menu
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showBackground = true
+                }
+                // Show items with stagger
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    showFirstItem = true  // First item appears immediately
+                }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.05)) {
+                    showSecondItem = true
+                }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.08)) {
+                    showThirdItem = true
+                }
+            } else {
+                // Menu is now closed - hide items with reverse stagger, then background last
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                    showThirdItem = false  // Third item disappears first
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
+                    showSecondItem = false
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
+                    showFirstItem = false  // First item disappears last
+                }
+                // Background fades out after all items are gone
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
+                    showBackground = false
+                }
+            }
+            
+            HapticManager.shared.impact(.medium)
+        }) {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 56)
+                .background(
+                    Color.indigo.gradient
+                )
+                .clipShape(Circle())
+                .shadow(radius: 4)
+                .rotationEffect(.degrees(showingAddMenu ? 45 : 0))
+        }
+        .sensoryFeedback(.selection, trigger: showingAddMenu)
+    }
+    
+    @ViewBuilder
+    private var menuOverlay: some View {
+        ZStack {
+            Rectangle()
+                .fill(.background)
+                .backgroundStyle(.ultraThinMaterial)
+                .ignoresSafeArea()
+                .opacity(showBackground ? 1 : 0)
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showingAddMenu = false
+                    }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                        showThirdItem = false
+                    }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
+                        showSecondItem = false
+                    }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
+                        showFirstItem = false
+                    }
+                    // Background fades out after all items are gone
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
+                        showBackground = false
+                    }
+                }
+                .transition(.opacity)
+            
+            VStack(spacing: 12) {
+                Spacer()
+                
+                menuButtons
+                    .padding(.horizontal)
+            }
+            .padding(.bottom, 100)
+        }
+    }
+    
+    @ViewBuilder
+    private var menuButtons: some View {
+        VStack(spacing: 8) {
+            // Add Session Button
+            if !hideJournal {
+                Button(action: {
+                    // Close menu with staggered animation
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showingAddMenu = false
+                    }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                        showThirdItem = false
+                    }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
+                        showSecondItem = false
+                    }
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
+                        showFirstItem = false
+                    }
+                    // Background fades out after all items are gone
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
+                        showBackground = false
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showingAddSession = true
+                    }
+                    HapticManager.shared.selection()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 22))
+                            .frame(width: 32)
+                        Text("Add Session")
+                            .font(.system(size: 17))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                }
+                .foregroundStyle(.primary)
+                .scaleEffect(firstItemVisible ? 1 : 0.8)
+                .opacity(firstItemVisible ? 1 : 0)
+                .offset(y: firstItemVisible ? 0 : 20)
+                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: firstItemVisible)
+            }
+            
+            // Add Combo Button
+            Button(action: {
+                // Close menu with staggered animation
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showingAddMenu = false
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                    showThirdItem = false
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
+                    showSecondItem = false
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
+                    showFirstItem = false
+                }
+                // Background fades out after all items are gone
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
+                    showBackground = false
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    showingComboBuilder = true
+                }
+                HapticManager.shared.selection()
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 22))
+                        .frame(width: 32)
+                    Text("Add Combo")
+                        .font(.system(size: 17))
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .foregroundStyle(.primary)
+            .scaleEffect(secondItemVisible ? 1 : 0.8)
+            .opacity(secondItemVisible ? 1 : 0)
+            .offset(y: secondItemVisible ? 0 : 20)
+            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: secondItemVisible)
+            
+            // Add Trick Button
+            Button(action: {
+                // Close menu with staggered animation
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showingAddMenu = false
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                    showThirdItem = false
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
+                    showSecondItem = false
+                }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
+                    showFirstItem = false
+                }
+                // Background fades out after all items are gone
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
+                    showBackground = false
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    showingAddTrick = true
+                }
+                HapticManager.shared.selection()
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "figure.skateboarding")
+                        .font(.system(size: 22))
+                        .frame(width: 32)
+                    Text("Add Trick")
+                        .font(.system(size: 17))
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .foregroundStyle(.primary)
+            .scaleEffect(thirdItemVisible ? 1 : 0.8)
+            .opacity(thirdItemVisible ? 1 : 0)
+            .offset(y: thirdItemVisible ? 0 : 20)
+            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: thirdItemVisible)
         }
     }
 }
