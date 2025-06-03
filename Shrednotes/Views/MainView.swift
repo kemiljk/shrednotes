@@ -43,6 +43,8 @@ struct MainView: View {
     @State private var showSecondItem = false
     @State private var showThirdItem = false
     @State private var showBackground = false
+    @State private var showingSKATEGame = false
+    @State private var showFourthItem = false
     
     @Environment(NavigationModel.self) private var navigationModel
 
@@ -116,6 +118,7 @@ struct MainView: View {
     private var firstItemVisible: Bool { showingAddMenu && showFirstItem }
     private var secondItemVisible: Bool { showingAddMenu && showSecondItem }
     private var thirdItemVisible: Bool { showingAddMenu && showThirdItem }
+    private var fourthItemVisible: Bool { showingAddMenu && showFourthItem }
     
     var body: some View {
         @Bindable var navigationModel = navigationModel
@@ -241,9 +244,7 @@ struct MainView: View {
             }
             
             // Menu overlay
-            if showBackground {
-                menuOverlay
-            }
+            menuOverlay
             
             // Floating button on top
             VStack {
@@ -366,6 +367,10 @@ struct MainView: View {
                 filteredTricks = computeFilteredTricks()
                 WidgetCenter.shared.reloadAllTimelines()
             }
+        }
+        .fullScreenCover(isPresented: $showingSKATEGame) {
+            SKATEGameView()
+                .modelContext(modelContext)
         }
         .onChange(of: isOnboardingComplete) { _, newValue in
             if newValue {
@@ -932,48 +937,13 @@ struct MainView: View {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 showingAddMenu.toggle()
             }
-            
-            if showingAddMenu {
-                // Menu is now open - show background immediately with menu
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    showBackground = true
-                }
-                // Show items with stagger
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    showFirstItem = true  // First item appears immediately
-                }
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.05)) {
-                    showSecondItem = true
-                }
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.08)) {
-                    showThirdItem = true
-                }
-            } else {
-                // Menu is now closed - hide items with reverse stagger, then background last
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
-                    showThirdItem = false  // Third item disappears first
-                }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
-                    showSecondItem = false
-                }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
-                    showFirstItem = false  // First item disappears last
-                }
-                // Background fades out after all items are gone
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
-                    showBackground = false
-                }
-            }
-            
             HapticManager.shared.impact(.medium)
         }) {
             Image(systemName: "plus")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
-                .background(
-                    Color.indigo.gradient
-                )
+                .background(Color.indigo.gradient)
                 .clipShape(Circle())
                 .shadow(radius: 4)
                 .rotationEffect(.degrees(showingAddMenu ? 45 : 0))
@@ -988,34 +958,22 @@ struct MainView: View {
                 .fill(.background)
                 .backgroundStyle(.ultraThinMaterial)
                 .ignoresSafeArea()
-                .opacity(showBackground ? 1 : 0)
+                .opacity(showingAddMenu ? 1 : 0)
                 .onTapGesture {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         showingAddMenu = false
                     }
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
-                        showThirdItem = false
-                    }
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
-                        showSecondItem = false
-                    }
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
-                        showFirstItem = false
-                    }
-                    // Background fades out after all items are gone
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
-                        showBackground = false
-                    }
                 }
-                .transition(.opacity)
             
+            // Menu items - scale from button location
             VStack(spacing: 12) {
                 Spacer()
-                
                 menuButtons
                     .padding(.horizontal)
             }
             .padding(.bottom, 100)
+            .scaleEffect(showingAddMenu ? 1 : 0.01, anchor: .bottomTrailing)
+            .opacity(showingAddMenu ? 1 : 0)
         }
     }
     
@@ -1025,24 +983,10 @@ struct MainView: View {
             // Add Session Button
             if !hideJournal {
                 Button(action: {
-                    // Close menu with staggered animation
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         showingAddMenu = false
                     }
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
-                        showThirdItem = false
-                    }
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
-                        showSecondItem = false
-                    }
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
-                        showFirstItem = false
-                    }
-                    // Background fades out after all items are gone
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
-                        showBackground = false
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         showingAddSession = true
                     }
                     HapticManager.shared.selection()
@@ -1059,32 +1003,14 @@ struct MainView: View {
                     .padding(.vertical, 16)
                 }
                 .foregroundStyle(.primary)
-                .scaleEffect(firstItemVisible ? 1 : 0.8)
-                .opacity(firstItemVisible ? 1 : 0)
-                .offset(y: firstItemVisible ? 0 : 20)
-                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: firstItemVisible)
             }
             
             // Add Combo Button
             Button(action: {
-                // Close menu with staggered animation
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     showingAddMenu = false
                 }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
-                    showThirdItem = false
-                }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
-                    showSecondItem = false
-                }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
-                    showFirstItem = false
-                }
-                // Background fades out after all items are gone
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
-                    showBackground = false
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     showingComboBuilder = true
                 }
                 HapticManager.shared.selection()
@@ -1101,31 +1027,13 @@ struct MainView: View {
                 .padding(.vertical, 16)
             }
             .foregroundStyle(.primary)
-            .scaleEffect(secondItemVisible ? 1 : 0.8)
-            .opacity(secondItemVisible ? 1 : 0)
-            .offset(y: secondItemVisible ? 0 : 20)
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: secondItemVisible)
             
             // Add Trick Button
             Button(action: {
-                // Close menu with staggered animation
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     showingAddMenu = false
                 }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
-                    showThirdItem = false
-                }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.03)) {
-                    showSecondItem = false
-                }
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.9).delay(0.06)) {
-                    showFirstItem = false
-                }
-                // Background fades out after all items are gone
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.12)) {
-                    showBackground = false
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     showingAddTrick = true
                 }
                 HapticManager.shared.selection()
@@ -1142,10 +1050,29 @@ struct MainView: View {
                 .padding(.vertical, 16)
             }
             .foregroundStyle(.primary)
-            .scaleEffect(thirdItemVisible ? 1 : 0.8)
-            .opacity(thirdItemVisible ? 1 : 0)
-            .offset(y: thirdItemVisible ? 0 : 20)
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: thirdItemVisible)
+            
+            // Start SKATE Game Button
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showingAddMenu = false
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    showingSKATEGame = true
+                }
+                HapticManager.shared.selection()
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 22))
+                        .frame(width: 32)
+                    Text("Start SKATE Game")
+                        .font(.system(size: 17))
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .foregroundStyle(.primary)
         }
     }
 }
