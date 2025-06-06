@@ -59,14 +59,11 @@ struct SessionCard: View {
                 }
             }
             if let note = session.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let summarizer = TextSummarizer(tricks: session.tricks ?? [])
-                let summary = summarizer.summarizeSession(
-                    notes: note,
-                    landedTricks: session.tricks ?? [],
-                    date: session.date ?? .now
-                )
+                let lines = note.components(separatedBy: .newlines)
+                let truncatedNote = lines.prefix(3).joined(separator: "\n")
+                let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
                 
-                Text(summary)
+                Text(displayText)
                     .font(.body)
                     .multilineTextAlignment(.leading)
                     .padding(.top, 8)

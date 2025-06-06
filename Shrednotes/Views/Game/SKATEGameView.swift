@@ -18,8 +18,11 @@ struct SKATEGameView: View {
     @State private var currentAttemptingPlayer: Int = 0
     @State private var searchText = ""
     @State private var selectedTrickType: TrickType?
+    @State private var gameMode: GameMode = .skate
     
     @FocusState private var focusedField: FocusedField?
+    
+    @State private var expandedGroups: [String: Bool] = [:]
     
     enum GamePhase {
         case setup
@@ -35,6 +38,25 @@ struct SKATEGameView: View {
         case search
     }
     
+    enum GameMode {
+        case skate
+        case skateboard
+        
+        var letters: String {
+            switch self {
+            case .skate: return "SKATE"
+            case .skateboard: return "SKATEBOARD"
+            }
+        }
+        
+        var title: String {
+            switch self {
+            case .skate: return "S.K.A.T.E"
+            case .skateboard: return "S.K.A.T.E.B.O.A.R.D"
+            }
+        }
+    }
+    
     struct Player: Identifiable, Equatable {
         let id = UUID()
         var name: String
@@ -42,7 +64,7 @@ struct SKATEGameView: View {
         var isOut: Bool = false
         
         var isSkated: Bool {
-            letters == "SKATE"
+            letters == "SKATE" || letters == "SKATEBOARD"
         }
         
         mutating func addLetter(_ letter: Character) {
@@ -211,6 +233,51 @@ struct SKATEGameView: View {
                 
                 VStack(spacing: 24) {
                     HStack {
+                        Text("Game Mode")
+                            .font(.title3.bold())
+                            .fontWidth(.expanded)
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: 12) {
+                        Button {
+                            gameMode = .skate
+                        } label: {
+                            VStack(spacing: 8) {
+                                Text("S.K.A.T.E")
+                                    .font(.headline)
+                                Text("5 letters")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(gameMode == .skate ? .accent : Color(.systemGray6))
+                            .foregroundStyle(gameMode == .skate ? .white : .primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                        
+                        Button {
+                            gameMode = .skateboard
+                        } label: {
+                            VStack(spacing: 8) {
+                                Text("S.K.A.T.E.B.O.A.R.D")
+                                    .font(.headline)
+                                Text("10 letters")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(gameMode == .skateboard ? .accent : Color(.systemGray6))
+                            .foregroundStyle(gameMode == .skateboard ? .white : .primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                    }
+                }
+                
+                VStack(spacing: 24) {
+                    HStack {
                         Text("Players")
                             .font(.title3.bold())
                             .fontWidth(.expanded)
@@ -259,8 +326,6 @@ struct SKATEGameView: View {
                         }
                     }
                 }
-                
-                Spacer(minLength: 100)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 20)
@@ -609,8 +674,10 @@ struct SKATEGameView: View {
                                 .lineLimit(1)
                                 .foregroundStyle(isCurrentPlayer ? .white : .primary)
                             
+                            let lettersArray = Array(gameMode.letters)
                             HStack(spacing: 4) {
-                                ForEach(Array("SKATE"), id: \.self) { letter in
+                                ForEach(lettersArray.indices, id: \.self) { idx in
+                                    let letter = lettersArray[idx]
                                     Text(String(letter))
                                         .font(.caption.bold())
                                         .frame(width: 20, height: 20)
@@ -688,167 +755,24 @@ struct SKATEGameView: View {
     
     @ViewBuilder
     private var trickPickerView: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Search and filter section
-                VStack(spacing: 16) {
-                    HStack(spacing: 12) {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(.secondary)
-                            TextField("Search tricks...", text: $searchText)
-                                .focused($focusedField, equals: .search)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(
-                                    focusedField == .search ? 
-                                    LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing) : 
-                                    LinearGradient(gradient: Gradient(colors: [Color.secondary.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing), 
-                                    lineWidth: focusedField == .search ? 2 : 1
-                                )
-                        )
-                        
-                        Menu {
-                            Button("All Types") {
-                                selectedTrickType = nil
-                            }
-                            
-                            ForEach(trickTypes, id: \.self) { type in
-                                Button(type.rawValue) {
-                                    selectedTrickType = type
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "line.3.horizontal.decrease.circle")
-                                if let selectedType = selectedTrickType {
-                                    Text(selectedType.rawValue)
-                                        .font(.caption)
-                                }
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(selectedTrickType != nil ? .accent.opacity(0.1) : Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
-                            .foregroundStyle(selectedTrickType != nil ? .accent : .secondary)
-                        }
-                    }
-                    
-                    if selectedTrickType != nil {
-                        HStack {
-                            Button("Clear Filter") {
-                                selectedTrickType = nil
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.accent)
-                            Spacer()
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(Color(.systemBackground))
-                
-                // Tricks list
-                if availableTricks.isEmpty {
-                    VStack(spacing: 20) {
-                        Spacer()
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.largeTitle)
-                            .foregroundStyle(.orange)
-                        VStack(spacing: 8) {
-                            Text("No tricks available")
-                                .font(.headline)
-                            Text("Try learning some tricks first or adjust your filter")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 20)
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 1) {
-                            ForEach(availableTricks, id: \.id) { trick in
-                                Button(action: {
-                                    selectedTrick = trick
-                                    showingTrickPicker = false
-                                    startRound()
-                                }) {
-                                    HStack(spacing: 16) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(trick.name)
-                                                .font(.headline)
-                                                .foregroundStyle(.primary)
-                                            
-                                            HStack(spacing: 8) {
-                                                Text("Difficulty: \(trick.difficulty)")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                                
-                                                Text("•")
-                                                    .foregroundStyle(.secondary)
-                                                
-                                                Text(trick.type.rawValue)
-                                                    .font(.caption)
-                                                    .foregroundStyle(.accent)
-                                                    .padding(.horizontal, 6)
-                                                    .padding(.vertical, 2)
-                                                    .background(.accent.opacity(0.1), in: Capsule())
-                                            }
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Group {
-                                            if trick.isLearned {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .foregroundStyle(.green)
-                                            } else {
-                                                Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
-                                                    .foregroundStyle(.orange)
-                                            }
-                                        }
-                                        .font(.title3)
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 16)
-                                    .background(Color(.systemBackground))
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
+        FullTrickListView(
+            visibleTrickTypes: .constant(Set(TrickType.allCases)),
+            searchText: $searchText,
+            expandedGroups: .init(get: { self.expandedGroups }, set: { self.expandedGroups = $0 }),
+            selectedType: $selectedTrickType,
+            onTrickSelected: { trick in
+                selectedTrick = trick
+                showingTrickPicker = false
+                startRound()
             }
-            .navigationTitle("Choose Trick")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cancel") {
-                        showingTrickPicker = false
-                    }
-                }
-                
-                ToolbarItemGroup(placement: .keyboard) {
-                    HStack {
-                        Spacer()
-                        Button {
-                            dismissKeyboard()
-                        } label: {
-                            Image(systemName: "keyboard.chevron.compact.down")
-                                .foregroundStyle(.accent)
-                        }
-                    }
-                }
+        )
+        .onChange(of: searchText) { _, newValue in
+            if let trick = availableTricks.first(where: { $0.name.localizedCaseInsensitiveContains(newValue) }) {
+                selectedTrick = trick
+                showingTrickPicker = false
+                startRound()
             }
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
     }
     
     private func addPlayer() {
@@ -896,7 +820,7 @@ struct SKATEGameView: View {
         gameHistory.append(event)
         
         if !landed {
-            let skateLetters = Array("SKATE")
+            let skateLetters = Array(gameMode.letters)
             let currentPlayer = players[currentAttemptingPlayer]
             if let letterIndex = skateLetters.firstIndex(where: { letter in
                 !currentPlayer.letters.contains(letter)

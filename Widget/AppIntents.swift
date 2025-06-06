@@ -38,10 +38,6 @@ struct AddJournalEntryIntent: AppIntent {
     }
 }
 
-extension Notification.Name {
-    static let addJournalEntry = Notification.Name("addJournalEntry")
-}
-
 struct OpenAppWidgetIntent: AppIntent {
     static var title: LocalizedStringResource = "Open Shrednotes"
     static var description = IntentDescription("Quickly opens the app.")
@@ -100,6 +96,22 @@ struct OpenPracticeTricksIntent: AppIntent {
     private var navigationModel: NavigationModel
 }
 
+struct OpenSKATEGameIntent: AppIntent {
+    static var title: LocalizedStringResource = "Play S.K.A.T.E."
+    static var description = IntentDescription("Opens the app and enters a new game of S.K.A.T.E.")
+    static var openAppWhenRun: Bool = true
+    
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        navigationModel.showSKATEGame = true
+        navigationModel.selectedView = .skateGame
+        return .result()
+    }
+    
+    @Dependency
+    private var navigationModel: NavigationModel
+}
+
 @MainActor
 @Observable class NavigationModel: @unchecked Sendable {
     static let shared = NavigationModel()
@@ -107,6 +119,7 @@ struct OpenPracticeTricksIntent: AppIntent {
     var showAddSession: Bool = false
     var showViewJournal: Bool = false
     var showPracticeTricks: Bool = false
+    var showSKATEGame: Bool = false
     var selectedView: ViewType = .home
 }
 
@@ -115,4 +128,11 @@ enum ViewType {
     case addSession
     case journal
     case practice
+    case skateGame
+}
+
+extension Notification.Name {
+    static let addJournalEntry = Notification.Name("addJournalEntry")
+    static let showPracticeTricks = Notification.Name("showPracticeTricks")
+    static let showSKATEGame = Notification.Name("showSKATEGame")
 }

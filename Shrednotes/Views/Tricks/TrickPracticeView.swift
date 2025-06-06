@@ -25,20 +25,31 @@ struct TrickPracticeView: View {
     }
     
     var body: some View {
-        VStack {
-            if let trick = singleTrick ?? getCurrentTrick() {
-                practiceView(for: trick)
-            } else {
-                Text("No tricks to practice")
+        NavigationStack {
+            VStack {
+                if let trick = singleTrick ?? getCurrentTrick() {
+                    practiceView(for: trick)
+                } else {
+                    Text("No tricks to practice")
+                }
             }
-        }
-        .navigationTitle(singleTrick != nil ? "Practice \(singleTrick!.name)" : "Practice Mode")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showInfoPanel.toggle()
-                } label: {
-                    Image(systemName: "info.circle")
+            .navigationTitle(singleTrick != nil ? "Practice \(singleTrick!.name)" : "Practice Mode")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showInfoPanel.toggle()
+                    } label: {
+                        Image(systemName: "info.circle")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .tint(.secondary)
                 }
             }
         }

@@ -14,6 +14,10 @@ struct SettingsView: View {
     @State private var showDebug: Bool = false
     @State private var isFetching = false
     @State private var currentAppIcon: AppIcon = .appIcon
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    @State private var toastIcon = "info.circle"
+    @State private var showingDeleteConfirmation = false
     
     var body: some View {
         NavigationStack {
@@ -187,13 +191,28 @@ struct SettingsView: View {
                         Link(destination: URL(string: "mailto:karl+shrednotes@kejk.tech?subject=Feedback%20from%20Shrednotes%20app%20link")!) {
                             Label("Get in Touch", systemImage: "envelope")
                         }
-                        Divider()
+                    }
+                    .listRowSeparator(.hidden)
+                    
+                    Section(header: Text("Danger Zone").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
                         Button {
                             Task {
-                                await cleanUpTricks()
+                                let count = await cleanUpTricks()
+                                toastMessage = "\(count) duplicate tricks removed."
+                                toastIcon = "trash.circle.fill"
+                                withAnimation {
+                                    showToast = true
+                                }
                             }
                         } label: {
-                            Label("Remove duplicate tricks", systemImage: "trash")
+                            Label("De-duplicate tricks", systemImage: "trash")
+                        }
+                        .tint(.pink)
+                        
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Label("Delete All Data", systemImage: "trash.fill")
                         }
                     }
                     .listRowSeparator(.hidden)
@@ -230,12 +249,38 @@ struct SettingsView: View {
                     currentAppIcon = .appIcon
                 }
             }
+            .alert("Are you sure?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    deleteAllData()
+                    toastMessage = "All data has been deleted."
+                    toastIcon = "checkmark.circle.fill"
+                    withAnimation {
+                        showToast = true
+                    }
+                }
+            } message: {
+                Text("This will permanently delete all your tricks, sessions, and other data. This action cannot be undone.")
+            }
+            .overlay(
+                ToastView(show: $showToast, message: toastMessage, icon: toastIcon)
+            )
         }
     }
     
     private func saveVisibleTrickTypes() {
         let encodedData = try? JSONEncoder().encode(visibleTrickTypes)
         UserDefaults.standard.set(encodedData, forKey: "visibleTrickTypes")
+    }
+    
+    private func deleteAllData() {
+        do {
+            try modelContext.delete(model: Trick.self)
+            try modelContext.delete(model: SkateSession.self)
+            try modelContext.delete(model: ComboTrick.self)
+            try modelContext.save()
+        } catch {
+            print("Failed to delete all data: \(error)")
+        }
     }
     
     private func requestNotificationAuthorization() {

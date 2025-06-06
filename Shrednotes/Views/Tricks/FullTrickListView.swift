@@ -18,6 +18,8 @@ struct FullTrickListView: View {
     @FocusState private var searchIsFocused: Bool
     @State private var isShowingAddTrickView: Bool = false
     
+    var onTrickSelected: ((Trick) -> Void)? = nil
+    
     @Query(sort: [
         SortDescriptor(\Trick.difficulty, order: .forward),
         SortDescriptor(\Trick.name, order: .forward)
@@ -158,49 +160,55 @@ struct FullTrickListView: View {
                                                 }
                                             }) {
                                                 ForEach(sectionTricks) { trick in
-                                                    NavigationLink(value: trick) {
+                                                    if let onTrickSelected = onTrickSelected {
                                                         TrickRow(trick: trick, padless: true)
                                                             .padding(.horizontal, 0)
+                                                            .onTapGesture { onTrickSelected(trick) }
+                                                    } else {
+                                                        NavigationLink(value: trick) {
+                                                            TrickRow(trick: trick, padless: true)
+                                                                .padding(.horizontal, 0)
+                                                        }
+                                                        .contextMenu {
+                                                            Button {
+                                                                trick.isLearned.toggle()
+                                                                trick.isLearnedDate = Date()
+                                                                trick.isLearning = false
+                                                                trick.wantToLearn = false
+                                                                trick.wantToLearnDate = nil
+                                                                LearnedTrickManager.shared.trickLearned(trick)
+                                                            } label: {
+                                                                Label("Learned", systemImage: trick.isLearned ? "xmark.circle" : "checkmark.circle")
+                                                            }
+                                                            Button {
+                                                                trick.isLearning.toggle()
+                                                                trick.isLearned = false
+                                                                trick.wantToLearn = false
+                                                                trick.wantToLearnDate = nil
+                                                            } label: {
+                                                                Label("Learning", systemImage: trick.isLearning ? "xmark.circle" : "circle.dashed")
+                                                            }
+                                                            Button {
+                                                                trick.wantToLearn.toggle()
+                                                                trick.isSkipped = false
+                                                                trick.isLearned = false
+                                                                trick.isLearning = false
+                                                                trick.wantToLearnDate = Date()
+                                                            } label: {
+                                                                Label(trick.wantToLearn ? "Learning Next" : "Learn Next", systemImage: trick.wantToLearn ? "xmark.circle" : "text.insert")
+                                                            }
+                                                            Button {
+                                                                trick.isSkipped.toggle()
+                                                                trick.isLearning = false
+                                                                trick.isLearned = false
+                                                                trick.wantToLearn = false
+                                                                trick.wantToLearnDate = nil
+                                                            } label: {
+                                                                Label(trick.isSkipped ? "Skipped" : "Skip", systemImage: trick.isSkipped ? "checkmark.circle" : "arrow.clockwise")
+                                                            }
+                                                        }
+                                                        .tint(.primary)
                                                     }
-                                                    .contextMenu {
-                                                        Button {
-                                                            trick.isLearned.toggle()
-                                                            trick.isLearnedDate = Date()
-                                                            trick.isLearning = false
-                                                            trick.wantToLearn = false
-                                                            trick.wantToLearnDate = nil
-                                                            LearnedTrickManager.shared.trickLearned(trick)
-                                                        } label: {
-                                                            Label("Learned", systemImage: trick.isLearned ? "xmark.circle" : "checkmark.circle")
-                                                        }
-                                                        Button {
-                                                            trick.isLearning.toggle()
-                                                            trick.isLearned = false
-                                                            trick.wantToLearn = false
-                                                            trick.wantToLearnDate = nil
-                                                        } label: {
-                                                            Label("Learning", systemImage: trick.isLearning ? "xmark.circle" : "circle.dashed")
-                                                        }
-                                                        Button {
-                                                            trick.wantToLearn.toggle()
-                                                            trick.isSkipped = false
-                                                            trick.isLearned = false
-                                                            trick.isLearning = false
-                                                            trick.wantToLearnDate = Date()
-                                                        } label: {
-                                                            Label(trick.wantToLearn ? "Learning Next" : "Learn Next", systemImage: trick.wantToLearn ? "xmark.circle" : "text.insert")
-                                                        }
-                                                        Button {
-                                                            trick.isSkipped.toggle()
-                                                            trick.isLearning = false
-                                                            trick.isLearned = false
-                                                            trick.wantToLearn = false
-                                                            trick.wantToLearnDate = nil
-                                                        } label: {
-                                                            Label(trick.isSkipped ? "Skipped" : "Skip", systemImage: trick.isSkipped ? "checkmark.circle" : "arrow.clockwise")
-                                                        }
-                                                    }
-                                                    .tint(.primary)
                                                 }
                                             }
                                         }
@@ -254,6 +262,7 @@ struct FullTrickListView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
+                        searchText = ""
                         dismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")

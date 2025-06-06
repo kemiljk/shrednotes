@@ -26,11 +26,13 @@ struct LearnedTrickPromptModifier: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $manager.showingPrompt) {
-                if let trick = manager.learnedTrick {
-                    LearnedTrickPromptView(trick: trick)
+            .overlay(
+                ZStack {
+                    if let trick = manager.learnedTrick {
+                        ToastView(show: $manager.showingPrompt, message: "You've learned \(trick.name)!", icon: "sparkles")
+                    }
                 }
-            }
+            )
     }
 }
 

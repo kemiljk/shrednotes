@@ -24,6 +24,10 @@ struct AddTrickView: View {
     
     @FocusState private var noteIsFocused: Bool
     
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    @State private var toastIcon = ""
+    
     var difficultyLevels: Range<Int> = 1..<6  // Represents difficulties 1-5
     
     var body: some View {
@@ -119,6 +123,9 @@ struct AddTrickView: View {
                 }
             }
         }
+        .overlay(
+            ToastView(show: $showToast, message: toastMessage, icon: toastIcon)
+        )
     }
     
     private func saveNewTrick() {
@@ -146,12 +153,25 @@ struct AddTrickView: View {
                     newTrick.media = mediaItems
                     modelContext.insert(newTrick)
                     try? modelContext.save()
-                    dismiss()
+                    showCompletionToast()
                 }
             }
         } else {
             modelContext.insert(newTrick)
             try? modelContext.save()
+            showCompletionToast()
+        }
+    }
+    
+    private func showCompletionToast() {
+        toastMessage = "Trick saved!"
+        toastIcon = "checkmark.circle.fill"
+        withAnimation {
+            showToast = true
+        }
+        
+        // Dismiss after a delay to allow the user to see the toast
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             dismiss()
         }
     }
@@ -199,3 +219,4 @@ struct AddTrickView: View {
         return newMediaItems
     }
 }
+

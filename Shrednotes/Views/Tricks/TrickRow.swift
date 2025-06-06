@@ -131,6 +131,7 @@ struct TrickRow: View {
                     trick.wantToLearn = false
                     if trick.isLearned {
                         HapticManager.shared.success()
+                        LearnedTrickManager.shared.trickLearned(trick)
                     }
                 }
             } label: {

@@ -3,8 +3,9 @@ import SwiftData
 import HealthKit
 import AppIntents
 import BackgroundTasks
-import TipKit   
+import TipKit
 import WidgetKit
+import UIKit
 
 @main
 struct SkateboardTrickApp: App {
@@ -22,10 +23,11 @@ struct SkateboardTrickApp: App {
     
     static let shared = SkateboardTrickApp()
     
+    @Environment(\.scenePhase) var scenePhase
+    
     init() {
         let navModel = NavigationModel.shared
         sceneNavigationModel = navModel
-        
         AppDependencyManager.shared.add(dependency: navModel)
     }
     
@@ -45,19 +47,15 @@ struct SkateboardTrickApp: App {
                 }
                 .checkSkateInactivity()
                 .onAppear {
+                    UIApplication.shared.shortcutItems = []
                     WidgetCenter.shared.reloadAllTimelines()
-                    
-                    // Clean up old temporary video files
                     Task {
                         TempFileCleanup.shared.cleanupOldVideoFiles()
-                        
-                        // Log current temp directory size
                         let tempSize = TempFileCleanup.shared.getTempDirectorySize()
                         print("Temp directory size: \(TempFileCleanup.shared.formatBytes(tempSize))")
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-                    // Clean up when app goes to background
                     TempFileCleanup.shared.cleanupOldVideoFiles()
                 }
         }

@@ -138,22 +138,6 @@ struct MainView: View {
             filteredTricks = computeFilteredTricks()
             inProgressTricks = computeInProgressTricks()
             WidgetCenter.shared.reloadAllTimelines()
-            NotificationCenter.default.addObserver(
-                forName: .addJournalEntry,
-                object: nil,
-                queue: .main
-            ) { notification in
-                if let note = notification.userInfo?["note"] as? String,
-                    let title = notification.userInfo?["title"] as? String {
-                    let session = SkateSession()
-                    session.note = note
-                    session.title = title
-                    session.date = Date()
-                    
-                    modelContext.insert(session)
-                    try? modelContext.save()
-                }
-            }
         }
         .onChange(of: nextCombinationTricks) { refreshView.toggle() }
         .onChange(of: filteredTricks) { refreshView.toggle() }
@@ -171,13 +155,16 @@ struct MainView: View {
                 .presentationCornerRadius(24)
                 .modelContext(modelContext)
         }
-        .sheet(isPresented: $navigationModel.showViewJournal) {
+        .fullScreenCover(isPresented: $navigationModel.showViewJournal) {
             JournalView()
-                .presentationCornerRadius(24)
+                .environmentObject(SessionManager.shared)
         }
-        .sheet(isPresented: $navigationModel.showPracticeTricks) {
+        .fullScreenCover(isPresented: $navigationModel.showPracticeTricks) {
             TrickPracticeView()
-                .presentationCornerRadius(24)
+        }
+        .fullScreenCover(isPresented: $navigationModel.showSKATEGame) {
+            SKATEGameView()
+                .modelContext(modelContext)
         }
     }
     
@@ -272,17 +259,22 @@ struct MainView: View {
                 Button(action: {
                     activeSheet = .fullTrickList
                 }) {
-                    Image(systemName: "list.bullet")
-                        .symbolVariant(.circle.fill)
-                        .symbolRenderingMode(.hierarchical)
-                        .font(.title3)
+                    HStack {
+                        Image(systemName: "list.bullet")
+                            .symbolVariant(.fill)
+                        Text("All Tricks")
+                    }
                 }
+                .controlSize(.mini)
+                .buttonBorderShape(.capsule)
+                .buttonStyle(.bordered)
+                .tint(.accentColor)
                 .sensoryFeedback(.increase, trigger: activeSheet)
             }
             if !hideJournal {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        self.isShowingJournal = true
+                        navigationModel.showViewJournal = true
                     } label: {
                         HStack {
                             Image(systemName: "book.pages")
@@ -294,7 +286,7 @@ struct MainView: View {
                     .buttonBorderShape(.capsule)
                     .buttonStyle(.bordered)
                     .tint(.accentColor)
-                    .sensoryFeedback(.increase, trigger: isShowingJournal)
+                    .sensoryFeedback(.increase, trigger: navigationModel.showViewJournal)
                 }
             }
         }
@@ -347,11 +339,6 @@ struct MainView: View {
                     .interactiveDismissDisabled(!isOnboardingComplete)
             }
         }
-        .sheet(isPresented: $showingAddSession) {
-            AddSessionView()
-                .presentationCornerRadius(24)
-                .modelContext(modelContext)
-        }
         .sheet(isPresented: $showingAddTrick) {
             FullTrickListView(
                 visibleTrickTypes: $visibleTrickTypes,
@@ -367,10 +354,6 @@ struct MainView: View {
                 filteredTricks = computeFilteredTricks()
                 WidgetCenter.shared.reloadAllTimelines()
             }
-        }
-        .fullScreenCover(isPresented: $showingSKATEGame) {
-            SKATEGameView()
-                .modelContext(modelContext)
         }
         .onChange(of: isOnboardingComplete) { _, newValue in
             if newValue {
@@ -987,7 +970,7 @@ struct MainView: View {
                         showingAddMenu = false
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        showingAddSession = true
+                        navigationModel.showAddSession = true
                     }
                     HapticManager.shared.selection()
                 }) {
@@ -1057,7 +1040,7 @@ struct MainView: View {
                     showingAddMenu = false
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    showingSKATEGame = true
+                    navigationModel.showSKATEGame = true
                 }
                 HapticManager.shared.selection()
             }) {

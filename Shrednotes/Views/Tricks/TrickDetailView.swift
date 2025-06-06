@@ -123,11 +123,7 @@ struct TrickDetailView: View {
             }
         }
         .learnedTrickPrompt()
-//        .sheet(isPresented: $showEditTrickView) {
-//            EditTrickView(trick: trick)
-//                .presentationCornerRadius(24)
-//        }
-        .sheet(isPresented: $showPracticeView) {
+        .fullScreenCover(isPresented: $showPracticeView) {
             TrickPracticeView(singleTrick: trick)
                 .presentationCornerRadius(24)
         }

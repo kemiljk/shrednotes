@@ -33,7 +33,7 @@ var sharedModelContainer: ModelContainer = {
             
             // Clean up tricks if needed
             Task {
-                await cleanUpTricks()
+                _ = await cleanUpTricks()
             }
         }
         
@@ -64,15 +64,16 @@ let skateSessionExtensionModelContainer: ModelContainer = {
 }()
 
 @MainActor
-func cleanUpTricks() async {
+func cleanUpTricks() async -> Int {
     let context = sharedModelContainer.mainContext
     var allTricks: [Trick] = []
+    var deletedCount = 0
     
     do {
         allTricks = try context.fetch(FetchDescriptor<Trick>())
     } catch {
         print("Failed to fetch tricks: \(error)")
-        return
+        return 0
     }
     
     let groupedTricks = Dictionary(grouping: allTricks, by: { $0.name })
@@ -84,18 +85,24 @@ func cleanUpTricks() async {
             // Keep one trick and delete the rest
             for trick in tricks where trick != trickToKeep {
                 context.delete(trick)
+                deletedCount += 1
             }
         } else {
             // If no tricks are marked as learning or learned, keep the first one
             for trick in tricks.dropFirst() {
                 context.delete(trick)
+                deletedCount += 1
             }
         }
     }
     
     do {
-        try context.save()
+        if context.hasChanges {
+            try context.save()
+        }
     } catch {
         print("Failed to save context after cleanup: \(error)")
     }
+    
+    return deletedCount
 }
