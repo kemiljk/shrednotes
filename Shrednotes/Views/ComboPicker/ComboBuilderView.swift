@@ -131,6 +131,7 @@ struct ComboBuilderView: View {
             .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
+        .background(.background)
         .onChange(of: comboElements) { _, newValue in
             SwipeToLinkTip.elementCount = newValue.count
         }
@@ -144,7 +145,7 @@ struct ComboBuilderView: View {
                 addElement(element)
             })
             .presentationDetents([.fraction(0.5), .medium, .large])
-            .presentationCornerRadius(24)
+            
             .presentationBackgroundInteraction(.enabled)
         }
     }
@@ -155,29 +156,25 @@ struct ComboBuilderView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 EditButton()
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
                     saveAndDismiss()
-                } label: {
-                    Text("Save")
-                        .fontWeight(.bold)
                 }
             }
         } else {
-            ToolbarItem(placement: .topBarLeading) {
+            
+            ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
                     dismiss()
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .secondaryAction) {
                 EditButton()
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
+            
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
                     saveAndDismiss()
-                } label: {
-                    Text("Save")
-                        .fontWeight(.bold)
                 }
             }
         }
@@ -328,7 +325,7 @@ struct ShimmerElement: AnimatableModifier {
 struct SwipeToLinkTip: Tip {
     @Parameter
     static var elementCount: Int = 0
-
+    
     var title: Text {
         Text("Swipe to Link Tricks")
     }
@@ -340,7 +337,7 @@ struct SwipeToLinkTip: Tip {
     var image: Image? {
         Image(systemName: "hand.draw")
     }
-
+    
     var rules: [Rule] {
         #Rule(Self.$elementCount) { $0 >= 2 }
     }

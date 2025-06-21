@@ -102,6 +102,7 @@ final class Trick: ObservableObject, Identifiable, Codable {
     var consistency: Int = 0
     var wantToLearn: Bool = false
     var wantToLearnDate: Date?
+    var tip: String?
     
     @Relationship(inverse: \DependentTricks.dependentTricks) var dependentTricks: [DependentTricks]?
     @Relationship(inverse: \Prerequisite.prerequisiteTricks) var prerequisites: [Prerequisite]?
@@ -110,7 +111,7 @@ final class Trick: ObservableObject, Identifiable, Codable {
     @Relationship(inverse: \ComboTrick.tricks) var combos: [ComboTrick]?
 
 
-    init(id: UUID = UUID(), timestamp: Date = Date(), name: String = "Ollie", difficulty: Int = 1, type: TrickType = .air, isLearned: Bool = false, isLearnedDate: Date? = nil, isLearning: Bool = false, isSkipped: Bool = false, prerequisites: [Prerequisite]? = nil, dependentTricks: [DependentTricks]? = nil, notes: [Note]? = [], media: [MediaItem]? = nil, consistency: Int = 0, sessions: [SkateSession]? = nil, entries: [Entry]? = nil, wantToLearn: Bool = false, wantToLearnDate: Date? = nil) {
+    init(id: UUID = UUID(), timestamp: Date = Date(), name: String = "Ollie", difficulty: Int = 1, type: TrickType = .air, isLearned: Bool = false, isLearnedDate: Date? = nil, isLearning: Bool = false, isSkipped: Bool = false, prerequisites: [Prerequisite]? = nil, dependentTricks: [DependentTricks]? = nil, notes: [Note]? = [], media: [MediaItem]? = nil, consistency: Int = 0, sessions: [SkateSession]? = nil, entries: [Entry]? = nil, wantToLearn: Bool = false, wantToLearnDate: Date? = nil, tip: String? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.name = name
@@ -129,10 +130,11 @@ final class Trick: ObservableObject, Identifiable, Codable {
         self.entries = entries
         self.wantToLearn = wantToLearn
         self.wantToLearnDate = wantToLearnDate
+        self.tip = tip
     }
     
     enum CodingKeys: String, CodingKey {
-        case id, timestamp, name, difficulty, type, isLearned, isLearnedDate, isLearning, isSkipped, consistency, wantToLearn, wantToLearnDate
+        case id, timestamp, name, difficulty, type, isLearned, isLearnedDate, isLearning, isSkipped, consistency, wantToLearn, wantToLearnDate, tip
     }
 
     func encode(to encoder: Encoder) throws {
@@ -149,6 +151,7 @@ final class Trick: ObservableObject, Identifiable, Codable {
         try container.encode(consistency, forKey: .consistency)
         try container.encode(wantToLearn, forKey: .wantToLearn)
         try container.encode(wantToLearnDate, forKey: .wantToLearnDate)
+        try container.encode(tip, forKey: .tip)
     }
 
     required init(from decoder: Decoder) throws {
@@ -165,7 +168,7 @@ final class Trick: ObservableObject, Identifiable, Codable {
         consistency = try container.decode(Int.self, forKey: .consistency)
         wantToLearn = try container.decode(Bool.self, forKey: .wantToLearn)
         wantToLearnDate = try container.decode(Date.self, forKey: .wantToLearnDate)
-    
+        tip = try container.decodeIfPresent(String.self, forKey: .tip)
     }
 }
 

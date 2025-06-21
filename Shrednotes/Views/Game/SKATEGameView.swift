@@ -154,22 +154,9 @@ struct SKATEGameView: View {
                     gameOverView
                 }
             }
-            .background(Color(.systemBackground))
-            .navigationTitle("S.K.A.T.E")
-            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.tertiary)
-                    }
-                    .tint(.secondary)
-                }
-                
                 if gamePhase == .attemptingTrick || gamePhase == .settingTrick || gamePhase == .setterAttempting {
-                    ToolbarItem(placement: .topBarLeading) {
+                    ToolbarItem(placement: .cancellationAction) {
                         Button("End Game") {
                             endGame()
                         }
@@ -252,7 +239,11 @@ struct SKATEGameView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(gameMode == .skate ? .accent : Color(.systemGray6))
+                            .background(
+                                gameMode == .skate ? Color(.accent).gradient : Color(
+                                    .systemGray6
+                                ).gradient
+                            )
                             .foregroundStyle(gameMode == .skate ? .white : .primary)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
@@ -269,7 +260,10 @@ struct SKATEGameView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(gameMode == .skateboard ? .accent : Color(.systemGray6))
+                            .background(gameMode == .skateboard ? Color(.accent).gradient : Color(
+                                    .systemGray6
+                                ).gradient
+                            )
                             .foregroundStyle(gameMode == .skateboard ? .white : .primary)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
@@ -304,7 +298,7 @@ struct SKATEGameView: View {
                                 Button(action: {
                                     removePlayer(at: index)
                                 }) {
-                                    Image(systemName: "minus.circle.fill")
+                                    Image(systemName: "minus.circle")
                                         .foregroundStyle(.red)
                                         .font(.title3)
                                 }
@@ -316,7 +310,7 @@ struct SKATEGameView: View {
                         if players.count < 6 {
                             Button(action: addPlayer) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "plus.circle.fill")
+                                    Image(systemName: "plus.circle")
                                     Text("Add Player")
                                 }
                                 .foregroundStyle(.accent)
@@ -332,7 +326,10 @@ struct SKATEGameView: View {
         }
         .safeAreaInset(edge: .bottom) {
             ZStack {
-                VariableBlurView(maxBlurRadius: 4, direction: .blurredTopClearBottom)
+                VariableBlurView(
+                    maxBlurRadius: 4,
+                    direction: .blurredBottomClearTop
+                )
                     .frame(height: 100)
                     .ignoresSafeArea(edges: .bottom)
                     .padding(.bottom, -44)
@@ -342,11 +339,9 @@ struct SKATEGameView: View {
                     currentTrickSetter = Int.random(in: 0..<players.count)
                     gamePhase = .readyToStart
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(.accent, in: RoundedRectangle(cornerRadius: 16))
+                .buttonStyle(.borderedProminent)
+                .controlSize(.extraLarge)
+                .buttonBorderShape(.capsule)
                 .disabled(players.count < 2 || players.contains { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
                 .opacity(players.count < 2 || players.contains { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ? 0.6 : 1.0)
                 .padding(.horizontal, 20)
@@ -368,7 +363,7 @@ struct SKATEGameView: View {
             
             VStack(spacing: 32) {
                 VStack(spacing: 16) {
-                    Image(systemName: "dice.fill")
+                    Image(systemName: "dice")
                         .font(.system(size: 40))
                         .foregroundStyle(.accent)
                     
@@ -388,7 +383,7 @@ struct SKATEGameView: View {
         }
         .safeAreaInset(edge: .bottom) {
             ZStack {
-                VariableBlurView(maxBlurRadius: 4, direction: .blurredTopClearBottom)
+                VariableBlurView(maxBlurRadius: 4, direction: .blurredBottomClearTop)
                     .frame(height: 100)
                     .ignoresSafeArea(edges: .bottom)
                     .padding(.bottom, -44)
@@ -396,11 +391,9 @@ struct SKATEGameView: View {
                 Button("Begin Game") {
                     gamePhase = .settingTrick
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(.accent, in: RoundedRectangle(cornerRadius: 16))
+                .buttonStyle(.borderedProminent)
+                .controlSize(.extraLarge)
+                .buttonBorderShape(.capsule)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
@@ -434,7 +427,7 @@ struct SKATEGameView: View {
         }
         .safeAreaInset(edge: .bottom) {
             ZStack {
-                VariableBlurView(maxBlurRadius: 4, direction: .blurredTopClearBottom)
+                VariableBlurView(maxBlurRadius: 4, direction: .blurredBottomClearTop)
                     .frame(height: 100)
                     .ignoresSafeArea(edges: .bottom)
                     .padding(.bottom, -44)
@@ -442,11 +435,9 @@ struct SKATEGameView: View {
                 Button("Choose Trick") {
                     showingTrickPicker = true
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(.accent, in: RoundedRectangle(cornerRadius: 16))
+                .buttonStyle(.borderedProminent)
+                .controlSize(.extraLarge)
+                .buttonBorderShape(.capsule)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
@@ -486,7 +477,7 @@ struct SKATEGameView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.roundedRectangle(radius: 16))
+                        .buttonBorderShape(.capsule)
                         .controlSize(.large)
                         
                         Button("Bailed") {
@@ -494,7 +485,7 @@ struct SKATEGameView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .buttonStyle(.bordered)
-                        .buttonBorderShape(.roundedRectangle(radius: 16))
+                        .buttonBorderShape(.capsule)
                         .controlSize(.large)
                     }
                     .padding(.horizontal, 20)
@@ -542,7 +533,7 @@ struct SKATEGameView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.roundedRectangle(radius: 16))
+                        .buttonBorderShape(.capsule)
                         .controlSize(.large)
                         
                         Button("Bailed") {
@@ -550,7 +541,7 @@ struct SKATEGameView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .buttonStyle(.bordered)
-                        .buttonBorderShape(.roundedRectangle(radius: 16))
+                        .buttonBorderShape(.capsule)
                         .controlSize(.large)
                     }
                     .padding(.horizontal, 20)
@@ -570,7 +561,7 @@ struct SKATEGameView: View {
         ScrollView {
             VStack(spacing: 40) {
                 VStack(spacing: 20) {
-                    Image(systemName: "trophy.fill")
+                    Image(systemName: "trophy")
                         .font(.system(size: 60))
                         .foregroundStyle(.yellow)
                     
@@ -618,7 +609,7 @@ struct SKATEGameView: View {
         }
         .safeAreaInset(edge: .bottom) {
             ZStack {
-                VariableBlurView(maxBlurRadius: 4, direction: .blurredTopClearBottom)
+                VariableBlurView(maxBlurRadius: 4, direction: .blurredBottomClearTop)
                     .frame(height: 140)
                     .ignoresSafeArea(edges: .bottom)
                     .padding(.bottom, -44)
@@ -627,21 +618,18 @@ struct SKATEGameView: View {
                     Button("Play Again") {
                         resetGame()
                     }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(.accent, in: RoundedRectangle(cornerRadius: 16))
+                    .buttonStyle(.bordered)
+                    .controlSize(.extraLarge)
+                    .buttonBorderShape(.capsule)
                     
                     Button("New Players") {
                         gamePhase = .setup
                         players.removeAll()
                         resetGameState()
                     }
-                    .font(.headline)
-                    .foregroundStyle(.accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.extraLarge)
+                    .buttonBorderShape(.capsule)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
@@ -736,10 +724,10 @@ struct SKATEGameView: View {
                         Group {
                             switch event.result {
                             case .landed:
-                                Image(systemName: "checkmark.circle.fill")
+                                Image(systemName: "checkmark.circle")
                                     .foregroundStyle(.green)
                             case .failed:
-                                Image(systemName: "xmark.circle.fill")
+                                Image(systemName: "xmark.circle")
                                     .foregroundStyle(.red)
                             }
                         }

@@ -32,7 +32,7 @@ struct TrickDetailView: View {
     @State private var totalZoom = 1.0
     @State private var selectedMediaIds: Set<UUID> = []
     @State private var isEditMode: Bool = false
-    @State private var showPracticeView = false
+    @State private var showPracticeView: Bool = false
     
     @FocusState private var noteIsFocused: Bool
     
@@ -55,7 +55,7 @@ struct TrickDetailView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
+                    .buttonBorderShape(.capsule)
                     .controlSize(.large)
                 }
                 .listRowSeparator(.hidden)
@@ -64,7 +64,7 @@ struct TrickDetailView: View {
             .listStyle(.plain)
             .navigationTitle(trick.name)
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItem {
                     Menu {
                         Button {
                             showEditTrickView = true
@@ -81,16 +81,35 @@ struct TrickDetailView: View {
                         } label: {
                             Label("Learned", systemImage: "checkmark.circle")
                         }
+                        if trick.wantToLearn {
+                            Button {
+                                trick.wantToLearn = false
+                                trick.wantToLearnDate = nil
+                                saveContext(modelContext: modelContext)
+                            } label: {
+                                Label("Remove from Up Next", systemImage: "star.slash")
+                            }
+                        } else {
+                            Button {
+                                trick.wantToLearn = true
+                                trick.wantToLearnDate = Date()
+                                trick.isLearned = false
+                                trick.isLearning = false
+                                saveContext(modelContext: modelContext)
+                            } label: {
+                                Label("Add to Up Next", systemImage: "star")
+                            }
+                        }
                         Divider()
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
-                            Label("Delete Trick", systemImage: "trash.fill")
+                            Label("Delete Trick", systemImage: "trash")
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle.fill")
-                            .symbolRenderingMode(.hierarchical)
-                            .font(.title3)
+                        Image(systemName: "ellipsis")
+                            .frame(width: 32, height: 32)
+                            .contentShape(.circle)
                     }
                 }
                 ToolbarItemGroup(placement: .keyboard) {
@@ -119,13 +138,12 @@ struct TrickDetailView: View {
                     modelContext.delete(trick)
                     dismiss()
                 }
-                Button("Cancel", role: .cancel) { }
             }
         }
         .learnedTrickPrompt()
         .fullScreenCover(isPresented: $showPracticeView) {
             TrickPracticeView(singleTrick: trick)
-                .presentationCornerRadius(24)
+                
         }
         .fullScreenCover(item: $selectedMediaItem, onDismiss: {
             currentZoom = 0.0
@@ -138,6 +156,11 @@ struct TrickDetailView: View {
                     mediaState: mediaState
                 )
             }
+        }
+        .sheet(isPresented: $showEditTrickView) {
+            AddTrickView(trickToEdit: trick)
+                .modelContext(modelContext)
+                
         }
     }
 
@@ -170,6 +193,10 @@ struct TrickDetailView: View {
                      LearnedTrickManager.shared.trickLearned(trick)
                  } else if newValue != .learned {
                      trick.isLearnedDate = nil
+                 }
+                 if newValue == .paused || newValue == .notStarted {
+                     trick.isLearned = false
+                     trick.isLearning = false
                  }
                  saveContext(modelContext: modelContext)
              }
@@ -215,7 +242,7 @@ struct TrickDetailView: View {
                              .font(.caption)
                              .foregroundStyle(.secondary)
                          HStack(spacing: 4) {
-                             Image(systemName: "flame.fill")
+                             Image(systemName: "flame")
                                  .foregroundColor(.orange)
                              Text("\(trickStreak.currentStreak)")
                                  .font(.title3)
@@ -256,8 +283,12 @@ struct TrickDetailView: View {
                          .font(.caption)
                          .foregroundStyle(.secondary)
                      
-                     HeatMapView(trick: trick, sessions: sessions, weeks: 12)
-                         .frame(maxWidth: .infinity)
+                     HeatMapView(
+                        trick: trick,
+                        sessions: sessions,
+                        weeks: 12
+                     )
+                     .frame(maxWidth: .infinity)
                  }
                  
                  if let lastPracticed = trickStreak.lastPracticed {
@@ -275,6 +306,7 @@ struct TrickDetailView: View {
          }
          .listRowSeparator(.hidden)
      }
+    
      
      private var notesSection: some View {
          Section(header: Text("Notes")) {
@@ -348,7 +380,7 @@ struct TrickDetailView: View {
                          .frame(maxWidth: .infinity)
                  }
                  .buttonStyle(.bordered)
-                 .buttonBorderShape(.roundedRectangle(radius: 16))
+                 .buttonBorderShape(.capsule)
                  .controlSize(.large)
              }
          }
@@ -438,7 +470,7 @@ struct TrickDetailView: View {
                      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                      .overlay(selectionOverlay(for: mediaItem))
                      .overlay(
-                         Image(systemName: "play.circle.fill")
+                         Image(systemName: "play.circle")
                              .foregroundColor(.white)
                              .font(.title)
                      )
@@ -465,7 +497,7 @@ struct TrickDetailView: View {
                  Color.black.opacity(0.3)
                      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                  if selectedMediaIds.contains(mediaItem.id ?? UUID()) {
-                     Image(systemName: "checkmark.circle.fill")
+                     Image(systemName: "checkmark.circle")
                          .foregroundColor(.white)
                          .font(.title)
                  }
@@ -634,6 +666,8 @@ struct TrickDetailView: View {
              progress = .learned
          } else if trick.isLearning {
              progress = .learning
+         } else if progress == .paused {
+             progress = .paused
          } else {
              progress = .notStarted
          }

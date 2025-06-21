@@ -69,19 +69,19 @@ struct SEAddSessionView: View {
             title = "Session #\(sessions.count + 1)"
         }
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Close") {
-                    coordinator.dismiss()
-                }
-                .foregroundStyle(.indigo)
+            ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        coordinator.dismiss()
+                    }
+                    .foregroundStyle(.indigo)
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") {
-                    saveSession()
+            ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveSession()
+                    }
+                    .fontWeight(.bold)
+                    .foregroundStyle(.indigo)
                 }
-                .fontWeight(.bold)
-                .foregroundStyle(.indigo)
-            }
         }
     }
     

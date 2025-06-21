@@ -42,13 +42,13 @@ struct TrickSelectionView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading) {
-                HStack {
-                    Text("Add Tricks")
-                        .fontWidth(.expanded)
-                        .font(.title)
-                        .fontWeight(.bold)
-                }
-                .padding(.horizontal)
+                    HStack {
+                        Text("Add Tricks")
+                            .fontWidth(.expanded)
+                            .font(.title)
+                            .fontWeight(.bold)
+                    }
+                    .padding(.horizontal)
                 
                 // Search bar
                 Group {
@@ -139,22 +139,21 @@ struct TrickSelectionView: View {
                 }
                 .listStyle(.plain)
                 .toolbar {
-                    ToolbarItemGroup(placement: .topBarLeading) {
+                    ToolbarItem(placement: .cancellationAction) {
                         Button(action: {
                             showNewTrickSheet = true
                         }) {
-                            Image(systemName: "plus.circle.fill")
+                            Image(systemName: "plus")
                                 .symbolRenderingMode(.hierarchical)
                         }
                     }
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Spacer()
-                        Button {
-                            dismiss()
-                        } label: {
-                            Text("Done")
-                                .fontWeight(.bold)
-                        }
+                    ToolbarItem(placement: .primaryAction) {
+                            Button {
+                                dismiss()
+                            } label: {
+                                Text("Done")
+                                    .fontWeight(.bold)
+                            }
                     }
                     ToolbarItemGroup(placement: .keyboard) {
                         HStack {
@@ -181,7 +180,7 @@ struct TrickSelectionView: View {
             .sheet(isPresented: $showNewTrickSheet) {
                 AddTrickView()
                     .modelContext(modelContext)
-                    .presentationCornerRadius(24)
+                    
             }
         }
     }

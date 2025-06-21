@@ -70,15 +70,6 @@ struct FullTrickListView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading) {
-                    HStack {
-                        Text("Full Trick List")
-                            .fontWidth(.expanded)
-                            .font(.title)
-                            .fontWeight(.bold)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
                     Group {
                         HStack {
                             Image(systemName: "magnifyingglass.circle")
@@ -164,6 +155,17 @@ struct FullTrickListView: View {
                                                         TrickRow(trick: trick, padless: true)
                                                             .padding(.horizontal, 0)
                                                             .onTapGesture { onTrickSelected(trick) }
+                                                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                                                Button {
+                                                                    trick.wantToLearn.toggle()
+                                                                    trick.wantToLearnDate = trick.wantToLearn ? Date() : nil
+                                                                    trick.isLearned = false
+                                                                    trick.isLearning = false
+                                                                } label: {
+                                                                    Label(trick.wantToLearn ? "Remove from Up Next" : "Add to Up Next", systemImage: trick.wantToLearn ? "star.slash" : "star")
+                                                                }
+                                                                .tint(trick.wantToLearn ? .gray : .blue)
+                                                            }
                                                     } else {
                                                         NavigationLink(value: trick) {
                                                             TrickRow(trick: trick, padless: true)
@@ -229,7 +231,7 @@ struct FullTrickListView: View {
                     
                 }
             }
-            .padding(.top, 24)
+            .navigationTitle("Full Trick List")
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     HStack {
@@ -252,23 +254,21 @@ struct FullTrickListView: View {
                         }
                     }
                 }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        isShowingAddTrickView.toggle()
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .symbolRenderingMode(.hierarchical)
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
                         searchText = ""
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.tertiary)
+                        Image(systemName: "xmark")
                     }
-                    .tint(.secondary)
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isShowingAddTrickView.toggle()
+                    } label: {
+                        Image(systemName: "plus")
+                            .symbolRenderingMode(.hierarchical)
+                    }
                 }
             }
             .learnedTrickPrompt()
@@ -281,7 +281,7 @@ struct FullTrickListView: View {
             .sheet(isPresented: $isShowingAddTrickView) {
                 AddTrickView()
                     .modelContext(modelContext)
-                    .presentationCornerRadius(24)
+                    
             }
             Spacer()
             HStack {

@@ -90,7 +90,7 @@ struct SettingsView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                                         .overlay {
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(currentAppIcon == icon ? Color.pink : Color.clear, lineWidth: 2)
+                                                .stroke(currentAppIcon == icon ? Color.pink : Color.clear, lineWidth: 1)
                                         }
                                 }
                                 .contentShape(.rect)
@@ -199,7 +199,7 @@ struct SettingsView: View {
                             Task {
                                 let count = await cleanUpTricks()
                                 toastMessage = "\(count) duplicate tricks removed."
-                                toastIcon = "trash.circle.fill"
+                                toastIcon = "trash.circle"
                                 withAnimation {
                                     showToast = true
                                 }
@@ -212,7 +212,7 @@ struct SettingsView: View {
                         Button(role: .destructive) {
                             showingDeleteConfirmation = true
                         } label: {
-                            Label("Delete All Data", systemImage: "trash.fill")
+                            Label("Delete All Data", systemImage: "trash")
                         }
                     }
                     .listRowSeparator(.hidden)
@@ -232,14 +232,12 @@ struct SettingsView: View {
                 .listStyle(.plain)
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.tertiary)
+                        Image(systemName: "xmark")
                     }
-                    .tint(.secondary)
                 }
             }
             .onAppear {
@@ -253,7 +251,7 @@ struct SettingsView: View {
                 Button("Delete", role: .destructive) {
                     deleteAllData()
                     toastMessage = "All data has been deleted."
-                    toastIcon = "checkmark.circle.fill"
+                    toastIcon = "checkmark.circle"
                     withAnimation {
                         showToast = true
                     }

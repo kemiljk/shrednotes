@@ -5,7 +5,7 @@ import CoreLocation
 
 struct LocationPickerView: View {
     @Binding var selectedLocation: IdentifiableLocation?
-    @Query private var skateSessions: [SkateSession]
+    @Query(sort: \SkateSession.date, order: .reverse) private var skateSessions: [SkateSession]
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
@@ -13,12 +13,8 @@ struct LocationPickerView: View {
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @FocusState.Binding var locationSearchIsFocused: Bool
-    @State private var isSearching = false
     @StateObject private var locationManager = LocationManager()
-    
-    private var recentSessions: [SkateSession] {
-        Array(skateSessions.prefix(2))
-    }
+    @State private var cameraPosition: MapCameraPosition = .automatic
     
     private func locationMatchesSearch(_ location: IdentifiableLocation) -> Bool {
         if searchText.isEmpty {
@@ -34,16 +30,24 @@ struct LocationPickerView: View {
     
     @MainActor
     private func getRecentLocations() {
-        let recentLocations = recentSessions.compactMap { $0.location }
-            .filter { locationMatchesSearch($0) }
-        
-        let uniqueRecentLocations = Dictionary(
-            grouping: recentLocations,
-            by: { "\($0.coordinate.latitude),\($0.coordinate.longitude),\($0.name)" }
-        ).values.compactMap { $0.first }
-        .sorted { $0.name < $1.name }
-        
-        searchResults = uniqueRecentLocations.map { location in
+        let allLocations = skateSessions.compactMap { session -> (location: IdentifiableLocation, date: Date)? in
+            guard let location = session.location else { return nil }
+            guard let date = session.date else { return nil }
+            return (location, date)
+        }
+
+        let uniqueLocations = Dictionary(grouping: allLocations, by: { $0.location.id })
+            .values
+            .compactMap { group in
+                group.max(by: { $0.date < $1.date })
+            }
+            .sorted(by: { $0.date > $1.date })
+            .map { $0.location }
+            .prefix(5)
+
+        let filteredLocations = Array(uniqueLocations).filter { locationMatchesSearch($0) }
+
+        searchResults = filteredLocations.map { location in
             let placemark = MKPlacemark(coordinate: location.coordinate)
             let item = MKMapItem(placemark: placemark)
             item.name = location.name
@@ -52,24 +56,19 @@ struct LocationPickerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Map View - Always visible
+        VStack {
+            ZStack(alignment: .top) {
                 MapReader { proxy in
-                    Map(initialPosition: .camera(MapCamera(
-                    centerCoordinate: selectedLocation?.coordinate ?? region.center,
-                        distance: 1000,
-                        heading: 0,
-                        pitch: 0
-                    ))) {
+                    Map(position: $cameraPosition) {
                         UserAnnotation()
-                    if let selectedLocation = selectedLocation {
-                        Annotation(selectedLocation.name, coordinate: selectedLocation.coordinate) {
-                            Image(systemName: "mappin.circle.fill")
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Circle().fill(Color.indigo))
-                                .clipShape(Circle())
-                        }
+                        if let selectedLocation = selectedLocation {
+                            Annotation(selectedLocation.name, coordinate: selectedLocation.coordinate) {
+                                Image(systemName: "mappin.circle")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Circle().fill(Color.indigo))
+                                    .clipShape(Circle())
+                            }
                         }
                     }
                     .mapStyle(.standard)
@@ -78,114 +77,112 @@ struct LocationPickerView: View {
                         MapCompass()
                         MapScaleView()
                     }
-                    .frame(maxHeight: .infinity)
+                    .frame(height: 300)
                     .cornerRadius(16)
-                    .onTapGesture { screenCoord in
-                        if let coordinate = proxy.convert(screenCoord, from: .local) {
-                        // Create a new location with a default name
-                        let newLocation = IdentifiableLocation(
-                                coordinate: coordinate,
-                            name: "Selected Location"
-                        )
-                        selectedLocation = newLocation
-                        
-                        // Reverse geocode to get the actual location name
-                        let geocoder = CLGeocoder()
-                        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                        geocoder.reverseGeocodeLocation(location) { placemarks, error in
-                            if let placemark = placemarks?.first {
-                                let name = [placemark.name, placemark.subThoroughfare, placemark.thoroughfare]
-                                    .compactMap { $0 }
-                                    .joined(separator: " ")
-                                
-                                if !name.isEmpty {
-                                    selectedLocation?.name = name
-                                } else if let locality = placemark.locality {
-                                    selectedLocation?.name = locality
-                                } else if let administrativeArea = placemark.administrativeArea {
-                                    selectedLocation?.name = administrativeArea
-                                }
+                    .onTapGesture { location in
+                        guard !locationSearchIsFocused else {
+                            locationSearchIsFocused = false
+                            return
+                        }
+                        if let coordinate = proxy.convert(location, from: .local) {
+                            // Create a new location at the tapped coordinate
+                            Task {
+                                await reverseGeocode(coordinate: coordinate)
                             }
                         }
                     }
+                }
+                .onChange(of: selectedLocation) { _, newLocation in
+                    if let loc = newLocation {
+                        cameraPosition = .camera(MapCamera(
+                            centerCoordinate: loc.coordinate,
+                            distance: 1000,
+                            heading: 0,
+                            pitch: 0
+                        ))
                     }
                 }
                 
-            // Search UI - Overlay on top of map when searching
-            if isSearching {
                 VStack(spacing: 8) {
                     // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass.circle")
                             .font(.title3)
                             .foregroundStyle(locationSearchIsFocused ? .indigo : .secondary)
-                        TextField("Search for a location", text: $searchText)
+                        TextField("Search for a skatepark", text: $searchText)
+                            .focused($locationSearchIsFocused)
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(.ultraThinMaterial)
+                    .background(.thinMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .focused($locationSearchIsFocused)
                     .onChange(of: searchText) {
                         searchLocations()
                     }
+                    .onChange(of: locationSearchIsFocused) {
+                        if locationSearchIsFocused {
+                            getRecentLocations()
+                        } else {
+                            searchText = ""
+                        }
+                    }
                     
                     // Search results
-                    if !searchResults.isEmpty {
-                        LazyVStack(spacing: 8) {
-                            ForEach(searchResults, id: \.self) { item in
-                                Button(action: {
-                                    selectLocation(item)
-                                    isSearching = false
-                                }) {
-                                    HStack {
-                                        Image(systemName: "mappin.circle.fill")
-                                            .foregroundStyle(.indigo)
-                                        Text(item.name ?? "Unknown location")
-                                            .fontWidth(.expanded)
-                                            .lineLimit(1)
-                                        Spacer()
+                    if locationSearchIsFocused {
+                        ScrollView {
+                            LazyVStack(spacing: 8) {
+                                ForEach(searchResults, id: \ .self) { item in
+                                    Button(action: {
+                                        selectLocation(item)
+                                        searchText = ""
+                                        locationSearchIsFocused = false
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "mappin.and.ellipse")
+                                            Text(item.name ?? "Unknown location")
+                                                .lineLimit(1)
+                                            Spacer()
+                                        }
+                                        .padding()
+                                        .background(.thinMaterial)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                        .foregroundStyle(.primary)
                                     }
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal, 16)
                                 }
                             }
                         }
+                        .frame(maxHeight: 200)
                     }
                 }
+                .padding()
             }
             
-            // Action buttons
-            HStack {
-                if selectedLocation != nil {
-                    Button(action: {
-                        isSearching = true
-                        searchText = ""
-                    }) {
-                        Label("Change Location", systemImage: "location.circle")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 32)
+            // Add Go to My Location button
+            if let userCoordinate = locationManager.currentLocation {
+                Button(action: {
+                    let userLoc = IdentifiableLocation(coordinate: userCoordinate, name: "Current Location")
+                    selectedLocation = userLoc
+                    withAnimation {
+                        cameraPosition = .camera(
+                            MapCamera(
+                                centerCoordinate: userCoordinate,
+                                distance: 1000,
+                                heading: 0,
+                                pitch: 0
+                            )
+                        )
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
-                    .controlSize(.large)
-                } else {
-                    Button(action: {
-                        isSearching = true
-                        searchText = ""
-                    }) {
-                        Label("Search Location", systemImage: "magnifyingglass")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 32)
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
-                    .controlSize(.large)
+                }) {
+                    Label("Use Current Location", systemImage: "mappin")
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 32)
                 }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
             }
         }
         .onAppear {
-            getRecentLocations()
             locationManager.requestLocation()
         }
         .onChange(of: locationManager.authorizationStatus) { _, newStatus in
@@ -260,18 +257,71 @@ struct LocationPickerView: View {
             name: item.name ?? "Unknown location"
         )
         selectedLocation = newLocation
-        region.center = item.placemark.coordinate
         
         // Update the map's camera position
         withAnimation {
-            region = MKCoordinateRegion(
-                center: item.placemark.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            cameraPosition = .camera(
+                MapCamera(
+                    centerCoordinate: item.placemark.coordinate,
+                    distance: 1000,
+                    heading: 0,
+                    pitch: 0
+                )
             )
         }
         
         searchText = ""
         searchResults = []
-        isSearching = false
+    }
+
+    @MainActor
+    private func reverseGeocode(coordinate: CLLocationCoordinate2D) async {
+        let geocoder = CLGeocoder()
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        
+        do {
+            let placemarks = try await geocoder.reverseGeocodeLocation(location)
+            if let placemark = placemarks.first {
+                let name = formatPlacemarkName(placemark)
+                selectedLocation = IdentifiableLocation(coordinate: coordinate, name: name)
+                
+                // Update camera position
+                withAnimation {
+                    cameraPosition = .camera(
+                        MapCamera(
+                            centerCoordinate: coordinate,
+                            distance: 1000,
+                            heading: 0,
+                            pitch: 0
+                        )
+                    )
+                }
+            }
+        } catch {
+            // If geocoding fails, use a generic name
+            selectedLocation = IdentifiableLocation(coordinate: coordinate, name: "Selected Location")
+        }
+    }
+    
+    private func formatPlacemarkName(_ placemark: CLPlacemark) -> String {
+        var components: [String] = []
+        
+        // Try to get a specific location name
+        if let name = placemark.name {
+            components.append(name)
+        } else if let thoroughfare = placemark.thoroughfare {
+            if let subThoroughfare = placemark.subThoroughfare {
+                components.append("\(subThoroughfare) \(thoroughfare)")
+            } else {
+                components.append(thoroughfare)
+            }
+        }
+        
+        // Add locality for context
+        if let locality = placemark.locality {
+            components.append(locality)
+        }
+        
+        return components.isEmpty ? "Selected Location" : components.joined(separator: ", ")
     }
 }

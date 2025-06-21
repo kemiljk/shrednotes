@@ -18,13 +18,13 @@ struct ComboPicker: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading) {
-                HStack {
-                    Text("Select Combos")
-                        .fontWidth(.expanded)
-                        .font(.title)
-                        .fontWeight(.bold)
-                }
-                .padding(.horizontal)
+                    HStack {
+                        Text("Select Combos")
+                            .fontWidth(.expanded)
+                            .font(.title)
+                            .fontWeight(.bold)
+                    }
+                    .padding(.horizontal)
                 
                 List {
                     if allCombos.isEmpty {
@@ -42,32 +42,51 @@ struct ComboPicker: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Done")
-                            .fontWeight(.bold)
+                   
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Done")
+                                .fontWeight(.bold)
+                        }
                     }
+                ToolbarItem(placement: .cancellationAction) {
+                    
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Cancel")
+                                .fontWeight(.bold)
+                        }
+                    }
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        showingAddCombo.toggle()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .tint(.accentColor)
+                    .sensoryFeedback(.impact, trigger: showingAddCombo)
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                GradientButton<Bool, Bool, Never>(
-                    label: "Add Combo",
-                    hasImage: true,
-                    image: "plus.circle.fill",
-                    binding: $showingAddCombo,
-                    value: true,
-                    fullWidth: false,
-                    hapticTrigger: showingAddCombo,
-                    hapticFeedbackType: .impact
-                )
-                .padding(.bottom)
+                    GradientButton<Bool, Bool, Never>(
+                        label: "Add Combo",
+                        hasImage: true,
+                        image: "plus.circle",
+                        binding: $showingAddCombo,
+                        value: true,
+                        fullWidth: false,
+                        hapticTrigger: showingAddCombo,
+                        hapticFeedbackType: .impact
+                    )
+                    .padding(.bottom)
             }
             .sheet(isPresented: $showingAddCombo) {
                 NavigationStack {
                     ComboBuilderView()
                         .presentationDragIndicator(.visible)
-                        .presentationCornerRadius(24)
+                        
                         .modelContext(modelContext)
                 }
             }

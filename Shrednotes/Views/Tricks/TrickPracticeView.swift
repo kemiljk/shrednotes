@@ -35,21 +35,19 @@ struct TrickPracticeView: View {
             }
             .navigationTitle(singleTrick != nil ? "Practice \(singleTrick!.name)" : "Practice Mode")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showInfoPanel.toggle()
-                    } label: {
-                        Image(systemName: "info.circle")
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.tertiary)
+                        Image(systemName: "xmark")
                     }
-                    .tint(.secondary)
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showInfoPanel.toggle()
+                    } label: {
+                        Image(systemName: "info")
+                    }
                 }
             }
         }
@@ -112,7 +110,7 @@ struct TrickPracticeView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 16))
+                .buttonBorderShape(.capsule)
                 .controlSize(.large)
                 .opacity(showCheckmark ? 0.5 : 1)
                 .disabled(showCheckmark)
@@ -126,7 +124,7 @@ struct TrickPracticeView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle(radius: 16))
+                .buttonBorderShape(.capsule)
                 .controlSize(.large)
                 .opacity(showCheckmark ? 0.5 : 1)
                 .disabled(showCheckmark)
@@ -148,7 +146,7 @@ struct TrickPracticeView: View {
                 ZStack {
                     Circle().fill(.ultraThinMaterial)
                         .frame(width: 100, height: 100)
-                    Image(systemName: "checkmark.circle.fill")
+                    Image(systemName: "checkmark.circle")
                         .font(.system(size: 100))
                         .foregroundColor(.teal)
                         .transition(.scale.combined(with: .opacity))
@@ -215,7 +213,7 @@ struct TrickPracticeView: View {
             )
         }
         .padding()
-        .presentationCornerRadius(24)
+        
         .presentationDetents([.fraction(0.6)])
     }
     
@@ -257,7 +255,7 @@ struct TrickPracticeView: View {
             .padding(.bottom)
         }
         .padding()
-        .presentationCornerRadius(24)
+        
         .presentationDetents([.fraction(0.3)])
     }
     

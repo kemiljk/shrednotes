@@ -139,7 +139,7 @@ struct StoredWorkoutView: View {
                 .background(.background.secondary)
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(colorScheme == .light ? .black : .white, lineWidth: 2)
+                        .stroke(colorScheme == .light ? .black : .white, lineWidth: 1)
                         .blendMode(.overlay)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))

@@ -36,11 +36,11 @@ struct TrickRow: View {
     
     var stateIcon: String {
         if trick.isLearned {
-            return "checkmark.circle.fill"
+            return "checkmark.circle"
         } else if trick.isLearning {
             return "circle.dashed"
         } else if trick.wantToLearn {
-            return "star.circle.fill"
+            return "star.circle"
         } else if trick.isSkipped {
             return "xmark.circle"
         } else {
@@ -69,7 +69,7 @@ struct TrickRow: View {
                         // Streak indicator (only if not onDark)
                         if !onDark && (trick.isLearned || trick.isLearning) && trickStreak.currentStreak > 0 {
                             HStack(spacing: 2) {
-                                Image(systemName: "flame.fill")
+                                Image(systemName: "flame")
                                     .font(.system(size: 11))
                                 Text("\(trickStreak.currentStreak)")
                                     .font(.system(size: 12, weight: .medium))
@@ -136,7 +136,7 @@ struct TrickRow: View {
                 }
             } label: {
                 Label(trick.isLearned ? "Mark as Not Learned" : "Mark as Learned", 
-                      systemImage: trick.isLearned ? "xmark.circle" : "checkmark.circle.fill")
+                      systemImage: trick.isLearned ? "xmark.circle" : "checkmark.circle")
             }
             
             Button {
@@ -161,7 +161,7 @@ struct TrickRow: View {
                 }
             } label: {
                 Label(trick.wantToLearn ? "Remove from Up Next" : "Add to Up Next", 
-                      systemImage: trick.wantToLearn ? "star.slash" : "star.circle.fill")
+                      systemImage: trick.wantToLearn ? "star.slash" : "star.circle")
             }
             
             if trickStreak.totalSessions > 0 {
@@ -313,11 +313,11 @@ struct TrickPreviewCard: View {
     
     private func getStateIcon() -> String {
         if trick.isLearned {
-            return "checkmark.circle.fill"
+            return "checkmark.circle"
         } else if trick.isLearning {
             return "circle.dashed"
         } else if trick.wantToLearn {
-            return "star.circle.fill"
+            return "star.circle"
         } else {
             return "circle"
         }
