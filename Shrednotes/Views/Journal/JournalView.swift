@@ -10,7 +10,6 @@ import SwiftData
 import PhotosUI
 import TipKit
 import WidgetKit
-import FoundationModels
 
 struct JournalView: View {
     @Query(sort: \SkateSession.date, order: .reverse) private var sessions: [SkateSession]
@@ -61,42 +60,6 @@ struct JournalView: View {
                             TipView(tip)
                                 .listRowSeparator(.hidden)
                         }
-                        if #available(iOS 26, *) {
-                            if sessions.count >= 2 {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    HStack {
-                                        Image(systemName: "apple.intelligence")
-                                            .foregroundStyle(.blue)
-                                            .onTapGesture {
-                                                Task {
-                                                    await generateSummary()
-                                                    lastSessionCount = sessions.count
-                                                }
-                                            }
-                                            .symbolEffect(
-                                                .pulse,
-                                                isActive: isGenerating == true
-                                            )
-                                        Text("Summary")
-                                            .foregroundStyle(
-                                                LinearGradient(
-                                                    gradient: Gradient(colors: [Color.orange, Color.red, Color.purple, Color.blue]),
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                )
-                                            )
-                                        Spacer()
-                                    }
-                                    .fontWeight(.bold)
-                                    .fontWidth(.expanded)
-                                    .frame(maxWidth: .infinity)
-                                    
-                                    Text(summary)
-                                }
-                                .listRowSeparator(.hidden)
-                                .frame(maxWidth: .infinity)
-                            }
-                        }
                         
                         ForEach(filteredGroupedSessions.isEmpty ? placeholderGroupedSessions : filteredGroupedSessions, id: \.key) { month, sessions in
                             Section(header: monthHeader(for: month)) {
@@ -134,27 +97,11 @@ struct JournalView: View {
             .onAppear {
                 loadSessions()
                 checkForFrequentTricks()
-                if #available(iOS 26, *) {
-                    Task {
-                        if summary.isEmpty {
-                            await generateSummary()
-                            lastSessionCount = sessions.count
-                        }
-                    }
-                }
             }
             .onChange(of: sessions) {
                 updateGroupedSessions()
                 checkForFrequentTricks()
                 updateLatestSession()
-                if #available(iOS 26, *) {
-                    Task {
-                        if sessions.count != lastSessionCount {
-                            await generateSummary()
-                            lastSessionCount = sessions.count
-                        }
-                    }
-                }
             }
             .navigationTitle("^[\(sessions.count) session](inflect: true)")
             .navigationBarTitleDisplayMode(.inline)
@@ -317,41 +264,6 @@ struct JournalView: View {
         }
     }
     
-    @available(iOS 26, *)
-    private func generateSummary() async {
-        do {
-            isGenerating = true
-            let instructions = Instructions {
-                """
-                You are an AI assistant specializing in summarizing skateboarding sessions. Your primary goal is to highlight the skater's progress, improvements, and key achievements, creating an encouraging and personal overview of their journey.
-
-                - **Data Usage:** Use the provided data (session title, date, notes, feelings, and workout metrics like duration, distance, etc.) to create a concise and insightful summary. If specific data points are missing, simply exclude them from the summary – do not invent information.
-                - **Focus on Progress:** Emphasize improvements in trick progression (e.g., "You're landing kickflips more consistently!"), consistency (e.g., "Your ollies are becoming much more reliable."), confidence (e.g., "You seemed much more confident tackling that new ramp."), and stamina (e.g., "You skated for a full hour without tiring!").
-                - **Tone and Style:**
-                    - Maintain an encouraging and positive tone throughout the summary.
-                    - Keep the summary concise, aiming for a single paragraph of no more than five sentences.
-                    - Refer to the skater directly using "you" to create a personal connection. For example, "Today, you nailed that new grind you've been working on!"
-                - **Important Exclusions:**
-                    - Do not include any conversational elements, introductions, or acknowledgements of being an AI. Provide the summary directly.
-                    - Do not mention the SwiftUI model or any other internal data structures.
-                - **Formatting and Readability:** Ensure dates and other information from the SkateSession model are presented in a human-readable format (e.g., "June 21, 2025" instead of "2025-06-21").
-                - **Example Output:**  "On June 21, 2025, you had a fantastic session at the park! Your kickflips are looking much cleaner, and you landed three in a row. You also pushed yourself to try the bigger ramp and, although you didn't quite land it, your confidence is clearly growing. Keep up the great work!"
-                """
-            }
-            let prompt = Prompt("Provide a single, overarching summary of sessions based on all the available data in \(sessions). Exclude any chat-like responses or introductions; provide the summary directly.")
-            let session = LanguageModelSession(instructions: instructions)
-            let stream = session.streamResponse(to: prompt)
-            
-            for try await partial in stream {
-                await MainActor.run {
-                    self.summary = partial
-                }
-            }
-            isGenerating = false
-        } catch {
-            print(error.localizedDescription)
-        }
-    }
     
     @MainActor
     private func updateLastTipDismissalDate() {

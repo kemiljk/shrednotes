@@ -133,18 +133,12 @@ struct InsightDetailView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .cancellationAction) {
-                    if #available(iOS 26.0, *) {
-                        Button(role: .cancel) {
-                            dismiss()
-                        }
-                    } else {
                         Button {
                             dismiss()
                         } label: {
                             Image(systemName: "xmark")
                         }
                     }
-                }
             }
         }
     }

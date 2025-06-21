@@ -5,7 +5,6 @@ import HealthKit
 import AVKit
 import MapKit
 import WidgetKit
-import FoundationModels
 
 struct AddSessionView: View {
     @Environment(\.modelContext) private var modelContext
@@ -135,28 +134,6 @@ struct AddSessionView: View {
                             )
                             .focused($noteIsFocused)
                         
-                        if #available(iOS 26, *) {
-                            Button {
-                                Task {
-                                    await generateTrickSuggestions()
-                                }
-                            } label: {
-                                HStack {
-                                    Label("Suggest Tricks", systemImage: "sparkles")
-                                    if isSuggestingTricks {
-                                        Spacer()
-                                        ProgressView()
-                                    }
-                                }
-                            }
-                            .disabled(note.isEmpty || isSuggestingTricks)
-                            .listRowSeparator(.hidden)
-                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
-                            .buttonStyle(.bordered)
-                            .buttonBorderShape(.capsule)
-                            .controlSize(.mini)
-                        }
-                        
                         if !suggestedTricks.isEmpty {
                             TrickSuggestionPickerView(
                                 suggestedTricks: $suggestedTricks,
@@ -246,29 +223,17 @@ struct AddSessionView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .cancellationAction) {
-                    if #available(iOS 26.0, *) {
-                        Button(role: .cancel) {
-                            dismiss()
-                        }
-                    } else {
                         Button("Cancel") {
                             dismiss()
                         }
-                    }
                 }
                 ToolbarItemGroup(placement: .confirmationAction) {
-                    if #available(iOS 26.0, *) {
-                        Button(role: .confirm) {
-                            saveSession()
-                        }
-                    } else {
                         Button("Save") {
                             saveSession()
                         }
                         .fontWeight(.bold)
                         .sensoryFeedback(.success, trigger: isSaved)
                     }
-                }
             }
             .navigationTitle("New Session")
             .navigationBarTitleDisplayMode(.inline)
@@ -350,101 +315,6 @@ struct AddSessionView: View {
         
         // Return duration if it's greater than 0 (user has set a value)
         return totalSeconds > 0 ? totalSeconds : nil
-    }
-    
-    @available(iOS 26, *)
-    private func generateTrickSuggestions() async {
-        isSuggestingTricks = true
-        self.suggestedTricks = []
-        
-        do {
-            let instructions = Instructions {
-                """
-                Extract skateboarding trick names from the session note.
-                
-                Rules:
-                - Return ONLY a comma-separated list of trick names
-                - Include common variations (e.g., "kickflip", "kickflips", "kick flip" all count as the same trick)
-                - Common abbreviations: fs = frontside, bs = backside
-                - NO explanations, just the trick names
-                
-                Examples:
-                - "Landed some kickflips" → Kickflip
-                - "pop shove it" → Pop Shove It
-                - "bs flip" → BS Flip
-                - "nose manual" → Nose Manual
-                - "manual" → Manual (not Nose Manual)
-                """
-            }
-            
-            let prompt = Prompt("Extract trick names from: \(note)")
-            let session = LanguageModelSession(instructions: instructions)
-            
-            let response = try await session.respond(to: prompt)
-            
-            print("LLM Response: \(response.content)")
-            
-            // Extract trick names from response
-            let extractedNames = response.content
-                .components(separatedBy: ",")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-            
-            print("Extracted names: \(extractedNames)")
-            
-            // Now match against our database with fuzzy matching
-            var matchedTricks: [Trick] = []
-            
-            for extractedName in extractedNames {
-                let normalizedExtracted = extractedName.lowercased()
-                
-                // First try exact match (case insensitive)
-                if let exactMatch = allTricks.first(where: { $0.name.lowercased() == normalizedExtracted }) {
-                    matchedTricks.append(exactMatch)
-                    continue
-                }
-                
-                // Check aliases
-                let aliases: [String: String] = [
-                    "bs flip": "BS 180 Kickflip",
-                    "fs flip": "FS 180 Kickflip",
-                    "tre flip": "Tre Flip",
-                    "360 flip": "Tre Flip",
-                    "noseslide": "BS Noseslide",
-                    "nose slide": "BS Noseslide"
-                ]
-                
-                if let aliasMatch = aliases[normalizedExtracted],
-                   let trick = allTricks.first(where: { $0.name == aliasMatch }) {
-                    matchedTricks.append(trick)
-                    continue
-                }
-                
-                // Try fuzzy matching for close matches
-                let bestMatch = allTricks
-                    .map { trick in
-                        (trick: trick, score: similarityScore(normalizedExtracted, trick.name.lowercased()))
-                    }
-                    .filter { $0.score > 0.8 } // 80% similarity threshold
-                    .max { $0.score < $1.score }
-                
-                if let match = bestMatch {
-                    matchedTricks.append(match.trick)
-                }
-            }
-            
-            print("Matched tricks: \(matchedTricks.map { $0.name })")
-            
-            self.suggestedTricks = matchedTricks
-            
-        } catch {
-            print("Error generating trick suggestions: \(error.localizedDescription)")
-            
-            // If LLM fails (including sensitive content), fall back to basic matching
-            await performBasicTrickMatching()
-        }
-        
-        self.isSuggestingTricks = false
     }
     
     @MainActor

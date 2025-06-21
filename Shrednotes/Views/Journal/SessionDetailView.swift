@@ -184,18 +184,12 @@ struct SessionDetailView: View {
             ToolbarItem {
                 ShareLink(item: sessionSummary)
             }
-            if #available(iOS 26, *) {
-                ToolbarSpacer(.fixed)
-            }
             ToolbarItem {
                 Button {
                     isEditingSession = true
                 } label: {
                     Label("Edit", systemImage: "pencil.circle")
                 }
-            }
-            if #available(iOS 26, *) {
-                ToolbarSpacer(.fixed)
             }
             ToolbarItem {
                 Button {

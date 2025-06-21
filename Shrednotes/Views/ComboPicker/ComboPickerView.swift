@@ -18,7 +18,6 @@ struct ComboPicker: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading) {
-                if #unavailable(iOS 26) {
                     HStack {
                         Text("Select Combos")
                             .fontWidth(.expanded)
@@ -26,7 +25,6 @@ struct ComboPicker: View {
                             .fontWeight(.bold)
                     }
                     .padding(.horizontal)
-                }
                 
                 List {
                     if allCombos.isEmpty {
@@ -43,20 +41,8 @@ struct ComboPicker: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if #available(iOS 26, *) {
-                    ToolbarItem(placement: .largeTitle) {
-                        Text("Select Combos")
-                            .fontWidth(.expanded)
-                            .font(.title)
-                            .fontWeight(.bold)
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
-                    if #available(iOS 26.0, *) {
-                        Button(role: .confirm) {
-                            dismiss()
-                        }
-                    } else {
+                   
                         Button {
                             dismiss()
                         } label: {
@@ -64,13 +50,8 @@ struct ComboPicker: View {
                                 .fontWeight(.bold)
                         }
                     }
-                }
                 ToolbarItem(placement: .cancellationAction) {
-                    if #available(iOS 26.0, *) {
-                        Button(role: .cancel) {
-                            dismiss()
-                        }
-                    } else {
+                    
                         Button {
                             dismiss()
                         } label: {
@@ -78,7 +59,6 @@ struct ComboPicker: View {
                                 .fontWeight(.bold)
                         }
                     }
-                }
                 ToolbarItem(placement: .bottomBar) {
                     Button {
                         showingAddCombo.toggle()
@@ -90,7 +70,6 @@ struct ComboPicker: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                if #unavailable(iOS 26) {
                     GradientButton<Bool, Bool, Never>(
                         label: "Add Combo",
                         hasImage: true,
@@ -102,7 +81,6 @@ struct ComboPicker: View {
                         hapticFeedbackType: .impact
                     )
                     .padding(.bottom)
-                }
             }
             .sheet(isPresented: $showingAddCombo) {
                 NavigationStack {

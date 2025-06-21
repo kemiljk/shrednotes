@@ -156,53 +156,25 @@ struct ComboBuilderView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 EditButton()
             }
-            if #unavailable(iOS 26) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        saveAndDismiss()
-                    } label: {
-                        Text("Save")
-                            .fontWeight(.bold)
-                    }
-                }
-            } else {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(role: .confirm) {
-                        saveAndDismiss()
-                    }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    saveAndDismiss()
                 }
             }
         } else {
-            if #unavailable(iOS 26) {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            } else {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .cancel) {
-                        dismiss()
-                    }
+            
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
                 }
             }
             ToolbarItem(placement: .secondaryAction) {
                 EditButton()
             }
-            if #unavailable(iOS 26) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        saveAndDismiss()
-                    } label: {
-                        Text("Save")
-                            .fontWeight(.bold)
-                    }
-                }
-            } else {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(role: .confirm) {
-                        saveAndDismiss()
-                    }
+            
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    saveAndDismiss()
                 }
             }
         }
@@ -353,7 +325,7 @@ struct ShimmerElement: AnimatableModifier {
 struct SwipeToLinkTip: Tip {
     @Parameter
     static var elementCount: Int = 0
-
+    
     var title: Text {
         Text("Swipe to Link Tricks")
     }
@@ -365,7 +337,7 @@ struct SwipeToLinkTip: Tip {
     var image: Image? {
         Image(systemName: "hand.draw")
     }
-
+    
     var rules: [Rule] {
         #Rule(Self.$elementCount) { $0 >= 2 }
     }

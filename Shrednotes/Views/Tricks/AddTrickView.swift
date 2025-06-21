@@ -126,35 +126,17 @@ struct AddTrickView: View {
             .navigationTitle(trickToEdit == nil ? "New Trick" : "Edit Trick")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if #available(iOS 26, *) {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(role: .cancel) {
-                            dismiss()
-                        }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
                     }
-                } else {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                    }
-                    
                 }
                 
-                if #available(iOS 26, *) {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(role: .confirm) {
-                            saveTrick()
-                        }
-                        .disabled(trickName.isEmpty)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(trickToEdit == nil ? "Save" : "Update") {
+                        saveTrick()
                     }
-                } else {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(trickToEdit == nil ? "Save" : "Update") {
-                            saveTrick()
-                        }
-                        .disabled(trickName.isEmpty)
-                    }
+                    .disabled(trickName.isEmpty)
                 }
                 
                 ToolbarItem(placement: .keyboard) {

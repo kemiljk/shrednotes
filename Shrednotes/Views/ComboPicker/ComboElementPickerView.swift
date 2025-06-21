@@ -171,14 +171,8 @@ struct ComboElementPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if #available(iOS 26, *) {
-                        Button(role: .close) {
-                            dismiss()
-                        }
-                    } else {
-                        Button("Close") {
-                            dismiss()
-                        }
+                    Button("Close") {
+                        dismiss()
                     }
                 }
             }

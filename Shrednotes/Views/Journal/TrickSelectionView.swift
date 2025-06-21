@@ -42,7 +42,6 @@ struct TrickSelectionView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading) {
-                if #unavailable(iOS 26) {
                     HStack {
                         Text("Add Tricks")
                             .fontWidth(.expanded)
@@ -50,7 +49,6 @@ struct TrickSelectionView: View {
                             .fontWeight(.bold)
                     }
                     .padding(.horizontal)
-                }
                 
                 // Search bar
                 Group {
@@ -141,14 +139,6 @@ struct TrickSelectionView: View {
                 }
                 .listStyle(.plain)
                 .toolbar {
-                    if #available(iOS 26, *) {
-                        ToolbarItem(placement: .largeTitle) {
-                            Text("Add Tricks")
-                                .fontWidth(.expanded)
-                                .font(.title)
-                                .fontWeight(.bold)
-                        }
-                    }
                     ToolbarItem(placement: .cancellationAction) {
                         Button(action: {
                             showNewTrickSheet = true
@@ -158,18 +148,12 @@ struct TrickSelectionView: View {
                         }
                     }
                     ToolbarItem(placement: .primaryAction) {
-                        if #available(iOS 26, *) {
-                            Button(role: .confirm) {
-                                dismiss()
-                            }
-                        } else {
                             Button {
                                 dismiss()
                             } label: {
                                 Text("Done")
                                     .fontWeight(.bold)
                             }
-                        }
                     }
                     ToolbarItemGroup(placement: .keyboard) {
                         HStack {

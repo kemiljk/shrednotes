@@ -13,13 +13,8 @@ struct LocationPickerView: View {
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @FocusState.Binding var locationSearchIsFocused: Bool
-    @State private var isSearching = false
     @StateObject private var locationManager = LocationManager()
     @State private var cameraPosition: MapCameraPosition = .automatic
-    
-    private var recentSessions: [SkateSession] {
-        Array(skateSessions.prefix(5))
-    }
     
     private func locationMatchesSearch(_ location: IdentifiableLocation) -> Bool {
         if searchText.isEmpty {
@@ -35,16 +30,24 @@ struct LocationPickerView: View {
     
     @MainActor
     private func getRecentLocations() {
-        let recentLocations = recentSessions.compactMap { $0.location }
-            .filter { locationMatchesSearch($0) }
-        
-        let uniqueRecentLocations = Dictionary(
-            grouping: recentLocations,
-            by: { "\($0.coordinate.latitude),\($0.coordinate.longitude),\($0.name)" }
-        ).values.compactMap { $0.first }
-        .sorted { $0.name < $1.name }
-        
-        searchResults = uniqueRecentLocations.map { location in
+        let allLocations = skateSessions.compactMap { session -> (location: IdentifiableLocation, date: Date)? in
+            guard let location = session.location else { return nil }
+            guard let date = session.date else { return nil }
+            return (location, date)
+        }
+
+        let uniqueLocations = Dictionary(grouping: allLocations, by: { $0.location.id })
+            .values
+            .compactMap { group in
+                group.max(by: { $0.date < $1.date })
+            }
+            .sorted(by: { $0.date > $1.date })
+            .map { $0.location }
+            .prefix(5)
+
+        let filteredLocations = Array(uniqueLocations).filter { locationMatchesSearch($0) }
+
+        searchResults = filteredLocations.map { location in
             let placemark = MKPlacemark(coordinate: location.coordinate)
             let item = MKMapItem(placemark: placemark)
             item.name = location.name
@@ -53,116 +56,107 @@ struct LocationPickerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            MapReader { proxy in
-                Map(position: $cameraPosition) {
-                    UserAnnotation()
-                    if let selectedLocation = selectedLocation {
-                        Annotation(selectedLocation.name, coordinate: selectedLocation.coordinate) {
-                            Image(systemName: "mappin.circle")
-                                .foregroundColor(.white)
-                                .padding()
-                                .background(Circle().fill(Color.indigo))
-                                .clipShape(Circle())
+        VStack {
+            ZStack(alignment: .top) {
+                MapReader { proxy in
+                    Map(position: $cameraPosition) {
+                        UserAnnotation()
+                        if let selectedLocation = selectedLocation {
+                            Annotation(selectedLocation.name, coordinate: selectedLocation.coordinate) {
+                                Image(systemName: "mappin.circle")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .background(Circle().fill(Color.indigo))
+                                    .clipShape(Circle())
+                            }
+                        }
+                    }
+                    .mapStyle(.standard)
+                    .mapControls {
+                        MapUserLocationButton()
+                        MapCompass()
+                        MapScaleView()
+                    }
+                    .frame(height: 300)
+                    .cornerRadius(16)
+                    .onTapGesture { location in
+                        guard !locationSearchIsFocused else {
+                            locationSearchIsFocused = false
+                            return
+                        }
+                        if let coordinate = proxy.convert(location, from: .local) {
+                            // Create a new location at the tapped coordinate
+                            Task {
+                                await reverseGeocode(coordinate: coordinate)
+                            }
                         }
                     }
                 }
-                .mapStyle(.standard)
-                .mapControls {
-                    MapUserLocationButton()
-                    MapCompass()
-                    MapScaleView()
-                }
-                .frame(height: 300)
-                .cornerRadius(16)
-                .onTapGesture { location in
-                    if let coordinate = proxy.convert(location, from: .local) {
-                        // Create a new location at the tapped coordinate
-                        Task {
-                            await reverseGeocode(coordinate: coordinate)
-                        }
+                .onChange(of: selectedLocation) { _, newLocation in
+                    if let loc = newLocation {
+                        cameraPosition = .camera(MapCamera(
+                            centerCoordinate: loc.coordinate,
+                            distance: 1000,
+                            heading: 0,
+                            pitch: 0
+                        ))
                     }
                 }
-            }
-            .onChange(of: selectedLocation) { _, newLocation in
-                if let loc = newLocation {
-                    cameraPosition = .camera(MapCamera(
-                        centerCoordinate: loc.coordinate,
-                        distance: 1000,
-                        heading: 0,
-                        pitch: 0
-                    ))
-                }
-            }
-
-            if isSearching {
+                
                 VStack(spacing: 8) {
                     // Search bar
                     HStack {
                         Image(systemName: "magnifyingglass.circle")
                             .font(.title3)
                             .foregroundStyle(locationSearchIsFocused ? .indigo : .secondary)
-                        TextField("Search for a location", text: $searchText)
+                        TextField("Search for a skatepark", text: $searchText)
+                            .focused($locationSearchIsFocused)
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(.ultraThinMaterial)
+                    .background(.thinMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .focused($locationSearchIsFocused)
                     .onChange(of: searchText) {
                         searchLocations()
                     }
-
+                    .onChange(of: locationSearchIsFocused) {
+                        if locationSearchIsFocused {
+                            getRecentLocations()
+                        } else {
+                            searchText = ""
+                        }
+                    }
+                    
                     // Search results
-                    if !searchResults.isEmpty {
-                        LazyVStack(spacing: 8) {
-                            ForEach(searchResults, id: \ .self) { item in
-                                Button(action: {
-                                    selectLocation(item)
-                                    isSearching = false
-                                }) {
-                                    HStack {
-                                        Image(systemName: "mappin.circle")
-                                        Text(item.name ?? "Unknown location")
-                                            .fontWidth(.expanded)
-                                            .lineLimit(1)
-                                        Spacer()
+                    if locationSearchIsFocused {
+                        ScrollView {
+                            LazyVStack(spacing: 8) {
+                                ForEach(searchResults, id: \ .self) { item in
+                                    Button(action: {
+                                        selectLocation(item)
+                                        searchText = ""
+                                        locationSearchIsFocused = false
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "mappin.and.ellipse")
+                                            Text(item.name ?? "Unknown location")
+                                                .lineLimit(1)
+                                            Spacer()
+                                        }
+                                        .padding()
+                                        .background(.thinMaterial)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                        .foregroundStyle(.primary)
                                     }
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal, 16)
                                 }
                             }
                         }
+                        .frame(maxHeight: 200)
                     }
                 }
+                .padding()
             }
-
-            // Action buttons
-            HStack {
-                if selectedLocation != nil {
-                    Button(action: {
-                        isSearching = true
-                        searchText = ""
-                    }) {
-                        Label("Change Location", systemImage: "location.circle")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 32)
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                } else {
-                    Button(action: {
-                        isSearching = true
-                        searchText = ""
-                    }) {
-                        Label("Search Location", systemImage: "magnifyingglass")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 32)
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                }
-            }
+            
             // Add Go to My Location button
             if let userCoordinate = locationManager.currentLocation {
                 Button(action: {
@@ -179,7 +173,7 @@ struct LocationPickerView: View {
                         )
                     }
                 }) {
-                    Label("Go to My Location", systemImage: "mappin")
+                    Label("Use Current Location", systemImage: "mappin")
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 32)
@@ -189,7 +183,6 @@ struct LocationPickerView: View {
             }
         }
         .onAppear {
-            getRecentLocations()
             locationManager.requestLocation()
         }
         .onChange(of: locationManager.authorizationStatus) { _, newStatus in
@@ -279,7 +272,6 @@ struct LocationPickerView: View {
         
         searchText = ""
         searchResults = []
-        isSearching = false
     }
 
     @MainActor
