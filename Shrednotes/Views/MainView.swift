@@ -34,7 +34,7 @@ struct MainView: View {
     @State private var inProgressTricksCount: Int = 0
     @State private var lastProcessedSessionDate: Date?
     @State private var showingComboBuilder = false
-    @State private var isInProgressExpanded = false
+    @AppStorage("isInProgressExpanded") private var isInProgressExpanded: Bool = false
     @State private var isComboExpanded = false
     @State private var latestWorkoutRefreshTrigger = UUID()
     @State private var showingAddMenu = false
@@ -45,12 +45,16 @@ struct MainView: View {
     @State private var showBackground = false
     @State private var showingSKATEGame = false
     @State private var showFourthItem = false
+    @State private var isEditingInProgress = false
+    @AppStorage("inProgressTrickOrder") private var inProgressTrickOrderData: Data = Data()
+    @State private var showReorderSheet = false
     
     @Environment(NavigationModel.self) private var navigationModel
-
+    
     @MainActor @AppStorage("nextTrickToLearn", store: UserDefaults(suiteName: "group.com.shredNotes.nextTrick")) private var nextTrickData: Data = Data()
     @AppStorage("HideRecommendations") private var hideRecommendations: Bool = false
     @AppStorage("HideJournal") private var hideJournal: Bool = false
+    @AppStorage("didMigrateTrickIDs") private var didMigrateTrickIDs: Bool = false
     
     enum ActiveSheet: Identifiable {
         case settings, fullTrickList, onboarding
@@ -120,9 +124,40 @@ struct MainView: View {
     private var thirdItemVisible: Bool { showingAddMenu && showThirdItem }
     private var fourthItemVisible: Bool { showingAddMenu && showFourthItem }
     
+    private var upNextTricks: [Trick] {
+        tricks.filter { $0.wantToLearn && !$0.isLearned && !$0.isLearning && !$0.isSkipped }
+            .sorted { ($0.wantToLearnDate ?? .distantPast) < ($1.wantToLearnDate ?? .distantPast) }
+    }
+    
+    private var upNextSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Up Next")
+                    .foregroundStyle(.white)
+                    .textScale(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+            }
+            .padding(.horizontal)
+            ForEach(upNextTricks) { trick in
+                NavigationLink(value: trick) {
+                    TrickRow(trick: trick, padless: false, onDark: true)
+                        .foregroundStyle(.white)
+                }
+                .foregroundStyle(.primary)
+            }
+        }
+        .padding(.vertical)
+        .background(
+            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.bottom, 16)
+    }
+    
     var body: some View {
         @Bindable var navigationModel = navigationModel
-
+        
         NavigationStack {
             mainContent
         }
@@ -151,8 +186,8 @@ struct MainView: View {
             WidgetCenter.shared.reloadAllTimelines()
         }
         .sheet(isPresented: $navigationModel.showAddSession) {
-            AddSessionView()
-                .presentationCornerRadius(24)
+            AddSessionView(mediaState: mediaState)
+                
                 .modelContext(modelContext)
         }
         .fullScreenCover(isPresented: $navigationModel.showViewJournal) {
@@ -170,55 +205,30 @@ struct MainView: View {
     
     @ViewBuilder
     private var mainContent: some View {
-        ZStack(alignment: .bottom) {
+        VStack {
             ScrollView {
-                VStack(alignment: .leading) {
-                    HStack(spacing: 16) {
-                        if !hideRecommendations {
-                            recommendationSection
+                VStack(alignment: .leading, spacing: 0) {
+                    if let latestSession = skateSessions.first {
+                        NavigationLink(value: latestSession) {
+                            StoredWorkoutView(session: latestSession, condensed: false)
+                                .padding(.bottom, 16)
                         }
-
-                        if let latestSessionDate = skateSessions.first?.date {
-                            latestSkateView(latestSessionDate: latestSessionDate)
-                        }
+                        .buttonStyle(.plain)
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 24)
-                    .padding(.bottom, !hideRecommendations ? 16 : 0)
-                    
-                    if iPad {
-                        LazyVGrid(columns: columns, alignment: .leading, spacing: 0) {
-                            if !inProgressTricks.isEmpty {
-                                inProgressSection
-                            }
-                            
-                            if !combos.isEmpty {
-                                comboTricksSection
-                                    .frame(maxHeight: .infinity, alignment: .top)
-                            }
-                            
-                            if !hideRecommendations {
-                                basedOnTricksYouKnowSection
-                            }
-                        }
-                        .padding(.horizontal)
-                    } else {
-                        VStack(alignment: .leading, spacing: 0) {
-                            if !inProgressTricks.isEmpty {
-                                inProgressSection
-                            }
-                            
-                            if !combos.isEmpty {
-                                comboTricksSection
-                            }
-                            
-                            if !hideRecommendations {
-                                basedOnTricksYouKnowSection
-                            }
-                        }
-                        .padding(.horizontal)
+                    if !upNextTricks.isEmpty {
+                        upNextSection
+                    }
+                    if !inProgressTricks.isEmpty {
+                        inProgressSection
+                    }
+                    if !combos.isEmpty {
+                        comboTricksSection
+                    }
+                    if !hideRecommendations {
+                        basedOnTricksYouKnowSection
                     }
                 }
+                .padding(.horizontal)
             }
             .refreshable {
                 inProgressTricks = computeInProgressTricks()
@@ -226,81 +236,40 @@ struct MainView: View {
                 filteredTricks = computeFilteredTricks()
                 WidgetCenter.shared.reloadAllTimelines()
             }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 80)
-            }
-            
-            // Menu overlay
-            menuOverlay
-            
-            // Floating button on top
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    floatingButtonOnly
-                }
-                .padding(.horizontal)
-                .padding(.bottom)
-            }
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button(action: {
                     activeSheet = .settings
                 }) {
-                    Image(systemName: "gearshape.circle.fill")
-                        .symbolRenderingMode(.hierarchical)
-                        .font(.title3)
+                    Image(systemName: "gearshape")
                 }
                 .sensoryFeedback(.increase, trigger: activeSheet)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: {
-                    activeSheet = .fullTrickList
-                }) {
-                    HStack {
-                        Image(systemName: "list.bullet")
-                            .symbolVariant(.fill)
-                        Text("All Tricks")
+                Menu {
+                    Button(action: {
+                        navigationModel.showAddSession = true
+                    }) {
+                        Label("Add Session", systemImage: "calendar.badge.plus")
                     }
-                }
-                .controlSize(.mini)
-                .buttonBorderShape(.capsule)
-                .buttonStyle(.bordered)
-                .tint(.accentColor)
-                .sensoryFeedback(.increase, trigger: activeSheet)
-            }
-            if !hideJournal {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        navigationModel.showViewJournal = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "book.pages")
-                                .symbolVariant(.fill)
-                            Text("Journal")
-                        }
+                    
+                    Button(action: {
+                        showingComboBuilder = true
+                    }) {
+                        Label("Add Combo", systemImage: "list.bullet")
                     }
-                    .controlSize(.mini)
-                    .buttonBorderShape(.capsule)
-                    .buttonStyle(.bordered)
-                    .tint(.accentColor)
-                    .sensoryFeedback(.increase, trigger: navigationModel.showViewJournal)
+                    
+                    Button(action: {
+                        showingAddTrick = true
+                    }) {
+                        Label("Add Trick", systemImage: "figure.skateboarding")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
                 }
             }
         }
-        .fullScreenCover(isPresented: $isShowingJournal) {
-            JournalView()
-                .environmentObject(SessionManager.shared)
-        }
-        .fullScreenCover(isPresented: $showingComboBuilder, content: {
-            NavigationStack {
-                ComboBuilderView()
-                    .modelContext(modelContext)
-            }
-            .sensoryFeedback(.increase, trigger: showingComboBuilder)
-        })
         .sheet(item: $activeSheet, onDismiss: {
             do {
                 try modelContext.save()
@@ -311,7 +280,7 @@ struct MainView: View {
             switch item {
             case .settings:
                 SettingsView(visibleTrickTypes: $visibleTrickTypes)
-                    .presentationCornerRadius(24)
+                    
                     .environmentObject(healthKitManager)
                     .onDisappear {
                         loadVisibleTrickTypes()
@@ -323,7 +292,7 @@ struct MainView: View {
                     expandedGroups: $expandedGroups,
                     selectedType: $selectedType
                 )
-                .presentationCornerRadius(24)
+                
                 .onDisappear {
                     updateNextTrickInAppStorage()
                     inProgressTricks = computeInProgressTricks()
@@ -333,7 +302,7 @@ struct MainView: View {
                 }
             case .onboarding:
                 OnboardingView(isOnboardingComplete: $isOnboardingComplete)
-                    .presentationCornerRadius(24)
+                    
                     .presentationDetents([.medium, .large])
                     .environmentObject(healthKitManager)
                     .interactiveDismissDisabled(!isOnboardingComplete)
@@ -346,7 +315,7 @@ struct MainView: View {
                 expandedGroups: $expandedGroups,
                 selectedType: $selectedType
             )
-            .presentationCornerRadius(24)
+            
             .onDisappear {
                 updateNextTrickInAppStorage()
                 inProgressTricks = computeInProgressTricks()
@@ -364,7 +333,7 @@ struct MainView: View {
             }
         }
         .onOpenURL { url in
-           if let trick = decodeTrick(from: url) {
+            if let trick = decodeTrick(from: url) {
                 self.trick = trick
                 showTrickDetail = true
             } else if let sessionId = decodeSessionReference(from: url) {
@@ -382,10 +351,16 @@ struct MainView: View {
                     }
             }
         }
-        .sheet(isPresented: $showSessionDetail) {
+        .fullScreenCover(isPresented: $showSessionDetail) {
             if let session = session {
-                SessionDetailView(session: session, mediaState: mediaState)
-                    .presentationCornerRadius(24)
+                NavigationStack {
+                    SessionDetailView(
+                        session: session,
+                        mediaState: mediaState,
+                        fullScreenCover: true
+                    )
+                    
+                }
             }
         }
         .navigationDestination(for: Trick.self) { trick in
@@ -396,7 +371,13 @@ struct MainView: View {
                     nextCombinationTricks = computeNextCombinationTricks()
                     filteredTricks = computeFilteredTricks()
                     WidgetCenter.shared.reloadAllTimelines()
-            }
+                }
+        }
+        .navigationDestination(for: SkateSession.self) { session in
+            SessionDetailView(
+                session: session,
+                mediaState: mediaState
+            )
         }
     }
     
@@ -473,7 +454,7 @@ struct MainView: View {
         .prefix(3)
         .map { $0 }
     }
-
+    
     private func computeFilteredTricks() -> [Trick] {
         if searchText.isEmpty {
             return tricks.filter { visibleTrickTypes.contains($0.type) }
@@ -481,9 +462,18 @@ struct MainView: View {
             return tricks.filter { $0.name.localizedCaseInsensitiveContains(searchText) && visibleTrickTypes.contains($0.type) }
         }
     }
-
+    
     private func computeInProgressTricks() -> [Trick] {
-        return tricks.filter { $0.isLearning && !$0.isLearned }
+        let filtered = tricks.filter { $0.isLearning && !$0.isLearned }
+        // Restore custom order if available
+        if let order = try? JSONDecoder().decode([UUID].self, from: inProgressTrickOrderData), !order.isEmpty {
+            let dict = Dictionary(uniqueKeysWithValues: filtered.compactMap { trick in trick.id.map { ($0, trick) } })
+            return order.compactMap { dict[$0] } + filtered.filter { trick in
+                guard let id = trick.id else { return false }
+                return !order.contains(id)
+            }
+        }
+        return filtered
     }
     
     @ViewBuilder
@@ -596,7 +586,7 @@ struct MainView: View {
     @ViewBuilder
     private func latestSkateView(latestSessionDate: Date) -> some View {
         if let latestSession = skateSessions.first {
-                StoredWorkoutView(session: latestSession)
+            StoredWorkoutView(session: latestSession)
                 .onTapGesture {
                     self.showSessionDetail = true
                 }
@@ -616,6 +606,9 @@ struct MainView: View {
                     .textScale(.secondary)
                     .textCase(.uppercase)
                 Spacer()
+                Button("Edit") {
+                    showReorderSheet = true
+                }
                 if inProgressTricks.count > 6 {
                     Button(action: {
                         withAnimation(.spring(.bouncy)) {
@@ -720,7 +713,7 @@ struct MainView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .buttonBorderShape(.roundedRectangle(radius: 16))
+            .buttonBorderShape(.capsule)
             .controlSize(.large)
             .padding(.horizontal)
         }
@@ -732,6 +725,34 @@ struct MainView: View {
         )
         .padding(.bottom, 24)
         .padding(.top, hideRecommendations ? 24 : 0)
+        .sheet(isPresented: $showReorderSheet) {
+            NavigationStack {
+                List {
+                    ForEach(inProgressTricks) { trick in
+                        TrickRow(trick: trick, padless: true)
+                    }
+                    .onMove { indices, newOffset in
+                        inProgressTricks.move(fromOffsets: indices, toOffset: newOffset)
+                        let order = inProgressTricks.compactMap { $0.id }
+                        if let data = try? JSONEncoder().encode(order) {
+                            inProgressTrickOrderData = data
+                        }
+                    }
+                }
+                .listStyle(.plain)
+                .navigationTitle("Reorder Tricks")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") { showReorderSheet = false }
+                            .fontWeight(.bold)
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        EditButton()
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
     }
     
     @ViewBuilder
@@ -911,151 +932,6 @@ struct MainView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .padding(.bottom, 24)
             }
-        }
-    }
-    
-    @ViewBuilder
-    private var floatingButtonOnly: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                showingAddMenu.toggle()
-            }
-            HapticManager.shared.impact(.medium)
-        }) {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(Color.indigo.gradient)
-                .clipShape(Circle())
-                .shadow(radius: 4)
-                .rotationEffect(.degrees(showingAddMenu ? 45 : 0))
-        }
-        .sensoryFeedback(.selection, trigger: showingAddMenu)
-    }
-    
-    @ViewBuilder
-    private var menuOverlay: some View {
-        ZStack {
-            Rectangle()
-                .fill(.background)
-                .backgroundStyle(.ultraThinMaterial)
-                .ignoresSafeArea()
-                .opacity(showingAddMenu ? 1 : 0)
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showingAddMenu = false
-                    }
-                }
-            
-            // Menu items - scale from button location
-            VStack(spacing: 12) {
-                Spacer()
-                menuButtons
-                    .padding(.horizontal)
-            }
-            .padding(.bottom, 100)
-            .scaleEffect(showingAddMenu ? 1 : 0.01, anchor: .bottomTrailing)
-            .opacity(showingAddMenu ? 1 : 0)
-        }
-    }
-    
-    @ViewBuilder
-    private var menuButtons: some View {
-        VStack(spacing: 8) {
-            // Add Session Button
-            if !hideJournal {
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showingAddMenu = false
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        navigationModel.showAddSession = true
-                    }
-                    HapticManager.shared.selection()
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "calendar.badge.plus")
-                            .font(.system(size: 22))
-                            .frame(width: 32)
-                        Text("Add Session")
-                            .font(.system(size: 17))
-                        Spacer()
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                }
-                .foregroundStyle(.primary)
-            }
-            
-            // Add Combo Button
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    showingAddMenu = false
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    showingComboBuilder = true
-                }
-                HapticManager.shared.selection()
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 22))
-                        .frame(width: 32)
-                    Text("Add Combo")
-                        .font(.system(size: 17))
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-            .foregroundStyle(.primary)
-            
-            // Add Trick Button
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    showingAddMenu = false
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    showingAddTrick = true
-                }
-                HapticManager.shared.selection()
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "figure.skateboarding")
-                        .font(.system(size: 22))
-                        .frame(width: 32)
-                    Text("Add Trick")
-                        .font(.system(size: 17))
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-            .foregroundStyle(.primary)
-            
-            // Start SKATE Game Button
-            Button(action: {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    showingAddMenu = false
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    navigationModel.showSKATEGame = true
-                }
-                HapticManager.shared.selection()
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "gamecontroller.fill")
-                        .font(.system(size: 22))
-                        .frame(width: 32)
-                    Text("Start SKATE Game")
-                        .font(.system(size: 17))
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-            .foregroundStyle(.primary)
         }
     }
 }

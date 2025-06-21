@@ -101,7 +101,7 @@ struct AddJournalEntryView: View {
         NavigationStack {
             VStack {
                 TextFieldLink(prompt: Text("Describe session")) {
-                    Label("Record Session", systemImage: "mic.fill")
+                    Label("Record Session", systemImage: "mic")
                 } onSubmit: { inputText in
                     note = inputText
                 }

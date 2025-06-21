@@ -92,6 +92,15 @@ struct SessionCard: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                if let duration = session.workoutDuration, duration > 0 {
+                    Text("•")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Label(formatDuration(duration), systemImage: "clock")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .labelStyle(.titleOnly)
+                }
                 if let locationName = session.location?.name {
                     Text("•")
                         .font(.subheadline)
@@ -159,7 +168,7 @@ struct SessionCard: View {
                 .frame(minWidth: fullWidth ? 320 : 60, maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
-                    Image(systemName: "play.circle.fill")
+                    Image(systemName: "play.circle")
                         .foregroundColor(.white)
                         .font(.title3)
                 )
@@ -223,6 +232,16 @@ struct SessionCard: View {
                     self.locationName = administrativeArea
                 }
             }
+        }
+    }
+    
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let hours = Int(seconds) / 3600
+        let minutes = Int(seconds) % 3600 / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
         }
     }
 }

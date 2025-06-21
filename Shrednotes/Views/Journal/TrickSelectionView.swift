@@ -42,13 +42,15 @@ struct TrickSelectionView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading) {
-                HStack {
-                    Text("Add Tricks")
-                        .fontWidth(.expanded)
-                        .font(.title)
-                        .fontWeight(.bold)
+                if #unavailable(iOS 26) {
+                    HStack {
+                        Text("Add Tricks")
+                            .fontWidth(.expanded)
+                            .font(.title)
+                            .fontWeight(.bold)
+                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
                 
                 // Search bar
                 Group {
@@ -139,21 +141,34 @@ struct TrickSelectionView: View {
                 }
                 .listStyle(.plain)
                 .toolbar {
-                    ToolbarItemGroup(placement: .topBarLeading) {
+                    if #available(iOS 26, *) {
+                        ToolbarItem(placement: .largeTitle) {
+                            Text("Add Tricks")
+                                .fontWidth(.expanded)
+                                .font(.title)
+                                .fontWeight(.bold)
+                        }
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
                         Button(action: {
                             showNewTrickSheet = true
                         }) {
-                            Image(systemName: "plus.circle.fill")
+                            Image(systemName: "plus")
                                 .symbolRenderingMode(.hierarchical)
                         }
                     }
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Spacer()
-                        Button {
-                            dismiss()
-                        } label: {
-                            Text("Done")
-                                .fontWeight(.bold)
+                    ToolbarItem(placement: .primaryAction) {
+                        if #available(iOS 26, *) {
+                            Button(role: .confirm) {
+                                dismiss()
+                            }
+                        } else {
+                            Button {
+                                dismiss()
+                            } label: {
+                                Text("Done")
+                                    .fontWeight(.bold)
+                            }
                         }
                     }
                     ToolbarItemGroup(placement: .keyboard) {
@@ -181,7 +196,7 @@ struct TrickSelectionView: View {
             .sheet(isPresented: $showNewTrickSheet) {
                 AddTrickView()
                     .modelContext(modelContext)
-                    .presentationCornerRadius(24)
+                    
             }
         }
     }

@@ -69,18 +69,30 @@ struct SEAddSessionView: View {
             title = "Session #\(sessions.count + 1)"
         }
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Close") {
-                    coordinator.dismiss()
+            ToolbarItem(placement: .cancellationAction) {
+                if #available(iOS 26.0, *) {
+                    Button(role: .close) {
+                        coordinator.dismiss()
+                    }
+                } else {
+                    Button("Close") {
+                        coordinator.dismiss()
+                    }
+                    .foregroundStyle(.indigo)
                 }
-                .foregroundStyle(.indigo)
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") {
-                    saveSession()
+            ToolbarItem(placement: .confirmationAction) {
+                if #available(iOS 26.0, *) {
+                    Button(role: .confirm) {
+                        saveSession()
+                    }
+                } else {
+                    Button("Save") {
+                        saveSession()
+                    }
+                    .fontWeight(.bold)
+                    .foregroundStyle(.indigo)
                 }
-                .fontWeight(.bold)
-                .foregroundStyle(.indigo)
             }
         }
     }

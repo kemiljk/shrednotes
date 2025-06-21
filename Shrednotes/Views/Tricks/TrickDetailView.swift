@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 import AVKit
+import FoundationModels
 
 struct TrickDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -32,7 +33,8 @@ struct TrickDetailView: View {
     @State private var totalZoom = 1.0
     @State private var selectedMediaIds: Set<UUID> = []
     @State private var isEditMode: Bool = false
-    @State private var showPracticeView = false
+    @State private var showPracticeView: Bool = false
+    @State private var isGenerating: Bool = false
     
     @FocusState private var noteIsFocused: Bool
     
@@ -44,6 +46,9 @@ struct TrickDetailView: View {
                 trickDetailsSection
                 consistencySection
                 practiceHistorySection
+                if #available(iOS 26, *) {
+                    tipSection
+                }
                 notesSection
                 mediaSection
                 
@@ -55,7 +60,7 @@ struct TrickDetailView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
+                    .buttonBorderShape(.capsule)
                     .controlSize(.large)
                 }
                 .listRowSeparator(.hidden)
@@ -64,7 +69,7 @@ struct TrickDetailView: View {
             .listStyle(.plain)
             .navigationTitle(trick.name)
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                ToolbarItem {
                     Menu {
                         Button {
                             showEditTrickView = true
@@ -81,16 +86,35 @@ struct TrickDetailView: View {
                         } label: {
                             Label("Learned", systemImage: "checkmark.circle")
                         }
+                        if trick.wantToLearn {
+                            Button {
+                                trick.wantToLearn = false
+                                trick.wantToLearnDate = nil
+                                saveContext(modelContext: modelContext)
+                            } label: {
+                                Label("Remove from Up Next", systemImage: "star.slash")
+                            }
+                        } else {
+                            Button {
+                                trick.wantToLearn = true
+                                trick.wantToLearnDate = Date()
+                                trick.isLearned = false
+                                trick.isLearning = false
+                                saveContext(modelContext: modelContext)
+                            } label: {
+                                Label("Add to Up Next", systemImage: "star")
+                            }
+                        }
                         Divider()
                         Button(role: .destructive) {
                             showDeleteConfirmation = true
                         } label: {
-                            Label("Delete Trick", systemImage: "trash.fill")
+                            Label("Delete Trick", systemImage: "trash")
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle.fill")
-                            .symbolRenderingMode(.hierarchical)
-                            .font(.title3)
+                        Image(systemName: "ellipsis")
+                            .frame(width: 32, height: 32)
+                            .contentShape(.circle)
                     }
                 }
                 ToolbarItemGroup(placement: .keyboard) {
@@ -107,6 +131,13 @@ struct TrickDetailView: View {
             }
             .onAppear {
                 setupInitialState()
+                Task {
+                    if #available(iOS 26.0, *) {
+                        if trick.tip == nil || trick.tip!.isEmpty {
+                            await generateTrickTip()
+                        }
+                    }
+                }
             }
             .onChange(of: trick.isLearning) {
                 updateProgressState()
@@ -119,13 +150,12 @@ struct TrickDetailView: View {
                     modelContext.delete(trick)
                     dismiss()
                 }
-                Button("Cancel", role: .cancel) { }
             }
         }
         .learnedTrickPrompt()
         .fullScreenCover(isPresented: $showPracticeView) {
             TrickPracticeView(singleTrick: trick)
-                .presentationCornerRadius(24)
+                
         }
         .fullScreenCover(item: $selectedMediaItem, onDismiss: {
             currentZoom = 0.0
@@ -138,6 +168,11 @@ struct TrickDetailView: View {
                     mediaState: mediaState
                 )
             }
+        }
+        .sheet(isPresented: $showEditTrickView) {
+            AddTrickView(trickToEdit: trick)
+                .modelContext(modelContext)
+                
         }
     }
 
@@ -170,6 +205,10 @@ struct TrickDetailView: View {
                      LearnedTrickManager.shared.trickLearned(trick)
                  } else if newValue != .learned {
                      trick.isLearnedDate = nil
+                 }
+                 if newValue == .paused || newValue == .notStarted {
+                     trick.isLearned = false
+                     trick.isLearning = false
                  }
                  saveContext(modelContext: modelContext)
              }
@@ -215,7 +254,7 @@ struct TrickDetailView: View {
                              .font(.caption)
                              .foregroundStyle(.secondary)
                          HStack(spacing: 4) {
-                             Image(systemName: "flame.fill")
+                             Image(systemName: "flame")
                                  .foregroundColor(.orange)
                              Text("\(trickStreak.currentStreak)")
                                  .font(.title3)
@@ -256,8 +295,12 @@ struct TrickDetailView: View {
                          .font(.caption)
                          .foregroundStyle(.secondary)
                      
-                     HeatMapView(trick: trick, sessions: sessions, weeks: 12)
-                         .frame(maxWidth: .infinity)
+                     HeatMapView(
+                        trick: trick,
+                        sessions: sessions,
+                        weeks: 12
+                     )
+                     .frame(maxWidth: .infinity)
                  }
                  
                  if let lastPracticed = trickStreak.lastPracticed {
@@ -273,6 +316,94 @@ struct TrickDetailView: View {
              }
              .padding(.vertical, 4)
          }
+         .listRowSeparator(.hidden)
+     }
+    
+    @available(iOS 26, *)
+    private func generateTrickTip() async {
+        do {
+            isGenerating = true
+            let instructions = Instructions {
+                """
+                You are a skateboarding professional with over 30 years of experience on the board. Your job is to provide useful tips for this specific trick.
+
+                1.  **Receive Trick Input:** The prompt will provide the name of a specific skateboarding trick (e.g., "Ollie," "Kickflip," "50-50 Grind").
+                2.  **Skill Level Assessment (Implied):** Mentally categorize the trick's difficulty (Beginner, Intermediate, Advanced) to tailor the advice. Don't explicitly state the skill level.
+                3.  **Deconstruct the Trick:** Break the trick down into essential steps or phases.
+                4.  **Provide Targeted Tips for Each Step:** Offer concise, practical advice for each phase. Prioritize effectiveness and clarity.
+                    *   Use active voice and direct language.
+                    *   Focus on specific techniques and adjustments.
+                    *   Avoid overly generic statements.
+                5.  **Address Common Errors & Solutions:** Highlight typical mistakes skaters make when learning the trick and provide actionable solutions.
+                6.  **Safety Advice (Concise):** Include brief safety reminders where relevant, without being overly repetitive.
+                7.  **Progression Suggestions (Optional):** If appropriate, suggest logical next steps or related tricks to learn after mastering the current one.
+                8.  **Tone:** Direct, informative, and encouraging, but without excessive slang or a forced persona. Assume the user wants practical guidance.
+                9.  When returning newlines, always include the `\n` syntax
+                
+                **Example Response (for "Ollie"):**
+
+                "**Ollie Tips:**\n
+                *   **Foot Placement:** Back foot centered on the tail; front foot slightly behind the bolts, angled.\n
+                *   **Pop:** Snap your back ankle down hard for maximum board lift. Focus on a quick, powerful motion.\n
+                *   **Slide:** As the board rises, slide your front foot up the nose to level it out. A smooth, consistent slide is key.\n
+                *   **Knee Bend:** Bend your knees upon landing to absorb impact and maintain balance.\n\n
+
+                **Common Mistakes & Solutions:**\n
+                *   **Not Enough Height:** Pop harder and slide your front foot further.\n
+                *   **Leaning Back:** Keep your weight centered over the board. Engage your core.\n
+                *   **Board Shoots Forward:** Ensure your front foot slides straight up the board, not outwards.\n\n
+
+                **Safety:** Practice on a smooth, flat surface. Start slow and increase speed gradually.\n
+                Once you're comfortable with stationary Ollies, try them rolling, then over small objects."
+                """
+            }
+            let prompt = Prompt("Provide a single, short and simple set of trick tips for \(trick.name). Exclude any chat-like responses or introductions; provide the tip directly.")
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(to: prompt)
+            self.trick.tip = response.content
+            
+            isGenerating = false
+        } catch {
+            print(error.localizedDescription)
+        }
+    }
+     
+     private var tipSection: some View {
+         Section(header: Text("Tips")) {
+            HStack {
+                Text("Tip")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    Spacer()
+                Button {
+                    if #available(iOS 26, *) {
+                        Task {
+                          await generateTrickTip()
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "wand.and.sparkles")
+                        Text("Regenerate")
+                    }
+                    .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+            }
+
+            if isGenerating {
+                ProgressView {
+                    Text("Generating tips with TrickAssist...")
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            } else if let tip = trick.tip, !tip.isEmpty {
+                if let attributedTip = try? AttributedString(markdown: tip, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+                    Text(attributedTip)
+                }
+            }
+        }
          .listRowSeparator(.hidden)
      }
      
@@ -348,7 +479,7 @@ struct TrickDetailView: View {
                          .frame(maxWidth: .infinity)
                  }
                  .buttonStyle(.bordered)
-                 .buttonBorderShape(.roundedRectangle(radius: 16))
+                 .buttonBorderShape(.capsule)
                  .controlSize(.large)
              }
          }
@@ -438,7 +569,7 @@ struct TrickDetailView: View {
                      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                      .overlay(selectionOverlay(for: mediaItem))
                      .overlay(
-                         Image(systemName: "play.circle.fill")
+                         Image(systemName: "play.circle")
                              .foregroundColor(.white)
                              .font(.title)
                      )
@@ -465,7 +596,7 @@ struct TrickDetailView: View {
                  Color.black.opacity(0.3)
                      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                  if selectedMediaIds.contains(mediaItem.id ?? UUID()) {
-                     Image(systemName: "checkmark.circle.fill")
+                     Image(systemName: "checkmark.circle")
                          .foregroundColor(.white)
                          .font(.title)
                  }
@@ -634,6 +765,8 @@ struct TrickDetailView: View {
              progress = .learned
          } else if trick.isLearning {
              progress = .learning
+         } else if progress == .paused {
+             progress = .paused
          } else {
              progress = .notStarted
          }

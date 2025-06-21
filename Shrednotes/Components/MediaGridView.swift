@@ -61,7 +61,7 @@ struct MediaGridItemView: View {
                             .clipped()
                             .cornerRadius(8)
                         
-                        Image(systemName: "play.circle.fill")
+                        Image(systemName: "play.circle")
                             .font(.title2)
                             .foregroundColor(.white)
                             .background(Circle().fill(Color.black.opacity(0.3)))

@@ -29,6 +29,10 @@ struct OnboardingView: View {
     @State private var trickTypePulse = false
     @State private var learnedTricksPulse = false
     @State private var learningTricksPulse = false
+
+    @State private var showingLearnedTricks = false
+    @State private var showingLearningTricks = false
+    @State private var searchText = ""
     
     var body: some View {
         VStack(alignment: .center) {
@@ -113,7 +117,7 @@ struct OnboardingView: View {
                     GradientButton<Any, Bool, Never>(
                         label: "Next",
                         hasImage: true,
-                        image: "arrow.right.circle.fill",
+                        image: "arrow.right.circle",
                         action: {
                             currentStep += 1
                         },
@@ -124,7 +128,7 @@ struct OnboardingView: View {
                     GradientButton<Any, Bool, Never>(
                         label: "Grant Health Access",
                         hasImage: true,
-                        image: "heart.fill",
+                        image: "heart",
                         action: {
                             healthKitManager.requestAuthorization { success in
                                 DispatchQueue.main.async {
@@ -163,7 +167,7 @@ struct OnboardingView: View {
                     GradientButton<Any, Bool, Never>(
                         label: "Next",
                         hasImage: true,
-                        image: "arrow.right.circle.fill",
+                        image: "arrow.right.circle",
                         action: {
                             currentStep += 1
                         },
@@ -174,7 +178,7 @@ struct OnboardingView: View {
                     GradientButton<Any, Bool, Never>(
                         label: "Grant Notification Access",
                         hasImage: true,
-                        image: "app.badge.fill",
+                        image: "app.badge",
                         action: {
                             requestNotificationAuthorization()
                         },
@@ -209,7 +213,7 @@ struct OnboardingView: View {
                     GradientButton<Any, Bool, Never>(
                         label: "Next",
                         hasImage: true,
-                        image: "arrow.right.circle.fill",
+                        image: "arrow.right.circle",
                         action: {
                             currentStep += 1
                         },
@@ -220,7 +224,7 @@ struct OnboardingView: View {
                     GradientButton<Any, Bool, Never>(
                         label: "Grant Location Access",
                         hasImage: true,
-                        image: "location.fill",
+                        image: "location",
                         action: {
                             locationManager.requestLocationAuthorization()
                         },
@@ -281,7 +285,7 @@ struct OnboardingView: View {
                 GradientButton<Any, Int, Never>(
                     label: "Next",
                     hasImage: true,
-                    image: "arrow.right.circle.fill",
+                    image: "arrow.right.circle",
                     action: {
                         currentStep += 1
                     },
@@ -309,34 +313,54 @@ struct OnboardingView: View {
                     .padding(.horizontal)
                     .multilineTextAlignment(.center)
                 
+            Button(action: {
+                showingLearnedTricks.toggle()
+            }) {
+                Text("Select Learned Tricks")
+            }
+            .buttonStyle(.bordered)
+        }
+        .contentMargins(.horizontal, 20)
+        .safeAreaInset(edge: .bottom) {
+            VStack {
+                GradientButton<Any, Int, Never>(
+                    label: "Next",
+                    hasImage: true,
+                    image: "arrow.right.circle",
+                    action: {
+                        currentStep += 1
+                    },
+                    hapticTrigger: currentStep
+                )
+                .padding(.horizontal)
+                if currentStep < 5 {
+                    Button("Skip") {
+                        currentStep += 1
+                    }
+                    .padding()
+                }
+            }
+        }
+        .sheet(isPresented: $showingLearnedTricks, onDismiss: { searchText = "" }) {
+            NavigationStack {
                 FullTrickListViewForOnboarding(
                     visibleTrickTypes: $visibleTrickTypes,
                     learnedTricks: $learnedTricks,
                     learningTricks: $learningTricks,
-                    mode: .learned
+                    mode: .learned,
                 )
-            }
-            .contentMargins(.horizontal, 20)
-            .safeAreaInset(edge: .bottom) {
-                VStack {
-                    GradientButton<Any, Int, Never>(
-                        label: "Next",
-                        hasImage: true,
-                        image: "arrow.right.circle.fill",
-                        action: {
-                            currentStep += 1
-                        },
-                        hapticTrigger: currentStep
-                    )
-                    .padding(.horizontal)
-                    if currentStep < 5 {
-                        Button("Skip") {
-                            currentStep += 1
+                .navigationTitle("Learned Tricks")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            showingLearnedTricks = false
                         }
-                        .padding()
                     }
                 }
             }
+            .searchable(text: $searchText, prompt: "Search tricks")
+        }
     }
     
     private var learningTricksSelectionView: some View {
@@ -350,12 +374,12 @@ struct OnboardingView: View {
                 .padding(.horizontal)
                 .multilineTextAlignment(.center)
             
-            FullTrickListViewForOnboarding(
-                visibleTrickTypes: $visibleTrickTypes,
-                learnedTricks: $learnedTricks,
-                learningTricks: $learningTricks,
-                mode: .learning
-            )
+            Button(action: {
+                showingLearningTricks.toggle()
+            }) {
+                Text("Select Learning Tricks")
+            }
+            .buttonStyle(.bordered)
         }
         .contentMargins(.horizontal, 20)
         .safeAreaInset(edge: .bottom) {
@@ -377,6 +401,26 @@ struct OnboardingView: View {
                     .padding()
                 }
             }
+        }
+        .sheet(isPresented: $showingLearningTricks, onDismiss: { searchText = "" }) {
+            NavigationStack {
+                FullTrickListViewForOnboarding(
+                    visibleTrickTypes: $visibleTrickTypes,
+                    learnedTricks: $learnedTricks,
+                    learningTricks: $learningTricks,
+                    mode: .learning,
+                )
+                .navigationTitle("Learning Tricks")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            showingLearningTricks = false
+                        }
+                    }
+                }
+            }
+            .searchable(text: $searchText, prompt: "Search tricks")
         }
     }
     

@@ -5,7 +5,7 @@ import CoreLocation
 
 struct LocationPickerView: View {
     @Binding var selectedLocation: IdentifiableLocation?
-    @Query private var skateSessions: [SkateSession]
+    @Query(sort: \SkateSession.date, order: .reverse) private var skateSessions: [SkateSession]
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
@@ -15,9 +15,10 @@ struct LocationPickerView: View {
     @FocusState.Binding var locationSearchIsFocused: Bool
     @State private var isSearching = false
     @StateObject private var locationManager = LocationManager()
+    @State private var cameraPosition: MapCameraPosition = .automatic
     
     private var recentSessions: [SkateSession] {
-        Array(skateSessions.prefix(2))
+        Array(skateSessions.prefix(5))
     }
     
     private func locationMatchesSearch(_ location: IdentifiableLocation) -> Bool {
@@ -53,65 +54,47 @@ struct LocationPickerView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // Map View - Always visible
-                MapReader { proxy in
-                    Map(initialPosition: .camera(MapCamera(
-                    centerCoordinate: selectedLocation?.coordinate ?? region.center,
-                        distance: 1000,
-                        heading: 0,
-                        pitch: 0
-                    ))) {
-                        UserAnnotation()
+            MapReader { proxy in
+                Map(position: $cameraPosition) {
+                    UserAnnotation()
                     if let selectedLocation = selectedLocation {
                         Annotation(selectedLocation.name, coordinate: selectedLocation.coordinate) {
-                            Image(systemName: "mappin.circle.fill")
+                            Image(systemName: "mappin.circle")
                                 .foregroundColor(.white)
                                 .padding()
                                 .background(Circle().fill(Color.indigo))
                                 .clipShape(Circle())
                         }
-                        }
-                    }
-                    .mapStyle(.standard)
-                    .mapControls {
-                        MapUserLocationButton()
-                        MapCompass()
-                        MapScaleView()
-                    }
-                    .frame(maxHeight: .infinity)
-                    .cornerRadius(16)
-                    .onTapGesture { screenCoord in
-                        if let coordinate = proxy.convert(screenCoord, from: .local) {
-                        // Create a new location with a default name
-                        let newLocation = IdentifiableLocation(
-                                coordinate: coordinate,
-                            name: "Selected Location"
-                        )
-                        selectedLocation = newLocation
-                        
-                        // Reverse geocode to get the actual location name
-                        let geocoder = CLGeocoder()
-                        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                        geocoder.reverseGeocodeLocation(location) { placemarks, error in
-                            if let placemark = placemarks?.first {
-                                let name = [placemark.name, placemark.subThoroughfare, placemark.thoroughfare]
-                                    .compactMap { $0 }
-                                    .joined(separator: " ")
-                                
-                                if !name.isEmpty {
-                                    selectedLocation?.name = name
-                                } else if let locality = placemark.locality {
-                                    selectedLocation?.name = locality
-                                } else if let administrativeArea = placemark.administrativeArea {
-                                    selectedLocation?.name = administrativeArea
-                                }
-                            }
-                        }
-                    }
                     }
                 }
-                
-            // Search UI - Overlay on top of map when searching
+                .mapStyle(.standard)
+                .mapControls {
+                    MapUserLocationButton()
+                    MapCompass()
+                    MapScaleView()
+                }
+                .frame(height: 300)
+                .cornerRadius(16)
+                .onTapGesture { location in
+                    if let coordinate = proxy.convert(location, from: .local) {
+                        // Create a new location at the tapped coordinate
+                        Task {
+                            await reverseGeocode(coordinate: coordinate)
+                        }
+                    }
+                }
+            }
+            .onChange(of: selectedLocation) { _, newLocation in
+                if let loc = newLocation {
+                    cameraPosition = .camera(MapCamera(
+                        centerCoordinate: loc.coordinate,
+                        distance: 1000,
+                        heading: 0,
+                        pitch: 0
+                    ))
+                }
+            }
+
             if isSearching {
                 VStack(spacing: 8) {
                     // Search bar
@@ -129,18 +112,17 @@ struct LocationPickerView: View {
                     .onChange(of: searchText) {
                         searchLocations()
                     }
-                    
+
                     // Search results
                     if !searchResults.isEmpty {
                         LazyVStack(spacing: 8) {
-                            ForEach(searchResults, id: \.self) { item in
+                            ForEach(searchResults, id: \ .self) { item in
                                 Button(action: {
                                     selectLocation(item)
                                     isSearching = false
                                 }) {
                                     HStack {
-                                        Image(systemName: "mappin.circle.fill")
-                                            .foregroundStyle(.indigo)
+                                        Image(systemName: "mappin.circle")
                                         Text(item.name ?? "Unknown location")
                                             .fontWidth(.expanded)
                                             .lineLimit(1)
@@ -154,7 +136,7 @@ struct LocationPickerView: View {
                     }
                 }
             }
-            
+
             // Action buttons
             HStack {
                 if selectedLocation != nil {
@@ -167,8 +149,7 @@ struct LocationPickerView: View {
                             .frame(height: 32)
                     }
                     .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
-                    .controlSize(.large)
+                    .buttonBorderShape(.capsule)
                 } else {
                     Button(action: {
                         isSearching = true
@@ -179,9 +160,32 @@ struct LocationPickerView: View {
                             .frame(height: 32)
                     }
                     .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
-                    .controlSize(.large)
+                    .buttonBorderShape(.capsule)
                 }
+            }
+            // Add Go to My Location button
+            if let userCoordinate = locationManager.currentLocation {
+                Button(action: {
+                    let userLoc = IdentifiableLocation(coordinate: userCoordinate, name: "Current Location")
+                    selectedLocation = userLoc
+                    withAnimation {
+                        cameraPosition = .camera(
+                            MapCamera(
+                                centerCoordinate: userCoordinate,
+                                distance: 1000,
+                                heading: 0,
+                                pitch: 0
+                            )
+                        )
+                    }
+                }) {
+                    Label("Go to My Location", systemImage: "mappin")
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 32)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
             }
         }
         .onAppear {
@@ -260,18 +264,72 @@ struct LocationPickerView: View {
             name: item.name ?? "Unknown location"
         )
         selectedLocation = newLocation
-        region.center = item.placemark.coordinate
         
         // Update the map's camera position
         withAnimation {
-            region = MKCoordinateRegion(
-                center: item.placemark.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            cameraPosition = .camera(
+                MapCamera(
+                    centerCoordinate: item.placemark.coordinate,
+                    distance: 1000,
+                    heading: 0,
+                    pitch: 0
+                )
             )
         }
         
         searchText = ""
         searchResults = []
         isSearching = false
+    }
+
+    @MainActor
+    private func reverseGeocode(coordinate: CLLocationCoordinate2D) async {
+        let geocoder = CLGeocoder()
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        
+        do {
+            let placemarks = try await geocoder.reverseGeocodeLocation(location)
+            if let placemark = placemarks.first {
+                let name = formatPlacemarkName(placemark)
+                selectedLocation = IdentifiableLocation(coordinate: coordinate, name: name)
+                
+                // Update camera position
+                withAnimation {
+                    cameraPosition = .camera(
+                        MapCamera(
+                            centerCoordinate: coordinate,
+                            distance: 1000,
+                            heading: 0,
+                            pitch: 0
+                        )
+                    )
+                }
+            }
+        } catch {
+            // If geocoding fails, use a generic name
+            selectedLocation = IdentifiableLocation(coordinate: coordinate, name: "Selected Location")
+        }
+    }
+    
+    private func formatPlacemarkName(_ placemark: CLPlacemark) -> String {
+        var components: [String] = []
+        
+        // Try to get a specific location name
+        if let name = placemark.name {
+            components.append(name)
+        } else if let thoroughfare = placemark.thoroughfare {
+            if let subThoroughfare = placemark.subThoroughfare {
+                components.append("\(subThoroughfare) \(thoroughfare)")
+            } else {
+                components.append(thoroughfare)
+            }
+        }
+        
+        // Add locality for context
+        if let locality = placemark.locality {
+            components.append(locality)
+        }
+        
+        return components.isEmpty ? "Selected Location" : components.joined(separator: ", ")
     }
 }

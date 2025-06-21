@@ -131,6 +131,7 @@ struct ComboBuilderView: View {
             .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
+        .background(.background)
         .onChange(of: comboElements) { _, newValue in
             SwipeToLinkTip.elementCount = newValue.count
         }
@@ -144,7 +145,7 @@ struct ComboBuilderView: View {
                 addElement(element)
             })
             .presentationDetents([.fraction(0.5), .medium, .large])
-            .presentationCornerRadius(24)
+            
             .presentationBackgroundInteraction(.enabled)
         }
     }
@@ -155,29 +156,53 @@ struct ComboBuilderView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 EditButton()
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    saveAndDismiss()
-                } label: {
-                    Text("Save")
-                        .fontWeight(.bold)
+            if #unavailable(iOS 26) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        saveAndDismiss()
+                    } label: {
+                        Text("Save")
+                            .fontWeight(.bold)
+                    }
+                }
+            } else {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(role: .confirm) {
+                        saveAndDismiss()
+                    }
                 }
             }
         } else {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Cancel") {
-                    dismiss()
+            if #unavailable(iOS 26) {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            } else {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .cancel) {
+                        dismiss()
+                    }
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .secondaryAction) {
                 EditButton()
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    saveAndDismiss()
-                } label: {
-                    Text("Save")
-                        .fontWeight(.bold)
+            if #unavailable(iOS 26) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        saveAndDismiss()
+                    } label: {
+                        Text("Save")
+                            .fontWeight(.bold)
+                    }
+                }
+            } else {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(role: .confirm) {
+                        saveAndDismiss()
+                    }
                 }
             }
         }

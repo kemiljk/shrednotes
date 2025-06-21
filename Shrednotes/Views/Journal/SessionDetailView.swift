@@ -25,216 +25,192 @@ struct SessionDetailView: View {
     @Namespace private var sessionPicture
     @State private var preloadedPlayers: [UUID: AVPlayer] = [:]
     @State private var isEditingSession = false
+    @State private var showDeleteConfirmation: Bool = false
     
     @State private var matchingWorkout: HKWorkout?
     @State private var activeEnergyBurned: Double = 0.0
     
     @State private var cameraPosition: MapCameraPosition = .automatic
-
+    
+    var fullScreenCover: Bool = false
+    
     var body: some View {
-        ZStack(alignment: .top) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Hero Section
-                    if let firstMedia = session.media?.first {
-                        heroMediaView(mediaItem: firstMedia)
-                    } else if let latitude = session.latitude, let longitude = session.longitude {
-                        heroMapView(latitude: latitude, longitude: longitude)
-                    } else {
-                        // Default hero view when no media or location
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.1))
-                            .frame(height: 300)
-                            .overlay {
-                                Image(systemName: "figure.skateboarding")
-                                    .font(.system(size: 60))
-                                    .foregroundStyle(.secondary)
-                            }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Session Header
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text(session.date?.formatted(date: .abbreviated, time: .omitted) ?? "")
+        ScrollView {
+            VStack(spacing: 0) {
+                // Hero Section
+                if let firstMedia = session.media?.first {
+                    heroMediaView(mediaItem: firstMedia)
+                } else if let latitude = session.latitude, let longitude = session.longitude {
+                    heroMapView(latitude: latitude, longitude: longitude)
+                } else {
+                    // Default hero view when no media or location
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.1))
+                        .frame(height: 300)
+                        .overlay {
+                            Image(systemName: "figure.skateboarding")
+                                .font(.system(size: 60))
+                                .foregroundStyle(.secondary)
+                        }
+                }
+                
+                VStack(alignment: .leading, spacing: 24) {
+                    // Session Header
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text(session.date?.formatted(date: .abbreviated, time: .omitted) ?? "")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            if let duration = session.workoutDuration {
+                                Label(formatDuration(duration), systemImage: "clock")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
-                                Spacer()
-                                if let duration = session.workoutDuration {
-                                    Label(formatDuration(duration), systemImage: "clock")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
                             }
-                            
-                            if let title = session.title {
-                                Text(title)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .fontWidth(.expanded)
-                            }
-                            
-                            if let feelings = session.feeling {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack {
-                                        ForEach(feelings, id: \.self) { feeling in
-                                            Text(feeling.rawValue.capitalized)
-                                                .font(.caption)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(Color.indigo.opacity(0.2))
-                                                .cornerRadius(10)
-                                        }
+                        }
+                        
+                        if let title = session.title {
+                            Text(title)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .fontWidth(.expanded)
+                        }
+                        
+                        if let feelings = session.feeling {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack {
+                                    ForEach(feelings, id: \.self) { feeling in
+                                        Text(feeling.rawValue.capitalized)
+                                            .font(.caption)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color.indigo.opacity(0.2))
+                                            .cornerRadius(10)
                                     }
                                 }
                             }
-                        }
-                        
-                        // Session Stats Card
-                        if session.date != nil {
-                            StoredWorkoutView(session: session, condensed: true)
-                        }
-                        
-                        // Notes Section
-                        if let note = session.note, !note.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Notes")
-                                    .font(.headline)
-                                    .fontWidth(.expanded)
-                                Text(note)
-                                    .font(.body)
-                                    .textSelection(.enabled)
-                            }
-                        }
-                        
-                        // Media Grid (excluding hero image)
-                        if let media = session.media, media.count > 1 {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Media")
-                                    .font(.headline)
-                                    .fontWidth(.expanded)
-                                MediaGridView(media: Array(media.dropFirst()), mediaState: mediaState, onTap: { mediaItem in
-                                    selectedMediaItem = mediaItem
-                                })
-                            }
-                        }
-                        
-                        // Tricks Section with improved layout
-                        if let tricks = session.tricks, !tricks.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack(alignment: .firstTextBaseline) {
-                                    Text("Tricks")
-                                        .font(.headline)
-                                        .fontWidth(.expanded)
-                                    Spacer()
-                                    Text("\(tricks.count)")
-                                        .foregroundStyle(.secondary)
-                                }
-                                
-                                LazyVGrid(columns: [
-                                    GridItem(.flexible(), spacing: 8),
-                                    GridItem(.flexible(), spacing: 8)
-                                ], spacing: 8) {
-                                    ForEach(tricks) { trick in
-                                        NavigationLink(destination: TrickDetailView(trick: trick)) {
-                                            TrickCard(trick: trick)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Combos Section
-                        if let combos = session.combos, !combos.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Combos")
-                                    .font(.headline)
-                                    .fontWidth(.expanded)
-                                
-                                ForEach(combos) { combo in
-                                    ComboCard(combo: combo)
-                                }
-                            }
-                        }
-                        
-                        // Location Section (if not shown as hero)
-                        if session.media != nil,
-                           let latitude = session.latitude,
-                           let longitude = session.longitude {
-                            locationSection(latitude: latitude, longitude: longitude)
                         }
                     }
-                    .padding()
-                }
-            }
-            .ignoresSafeArea(.container, edges: .top)
-            
-            // Gradient overlay and buttons on top
-            VStack {
-                // Gradient and blur
-                ZStack {
-                    LinearGradient(
-                        colors: [.black.opacity(0.6), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 160)
-                    .ignoresSafeArea(.all, edges: .top)
                     
-                    VariableBlurView(maxBlurRadius: 2, direction: .blurredTopClearBottom)
-                        .frame(height: 160)
-                }
-                
-                Spacer()
-            }
-            
-            // Floating Action Buttons at the very top
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.indigo)
-                        .frame(width: 24, height: 24)
-                        .background(Color(.systemGray5))
-                        .clipShape(Circle())
-                }
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-                
-                Spacer()
-                
-                Menu {
-                    Button {
-                        isEditingSession = true
-                    } label: {
-                        Label("Edit", systemImage: "pencil.circle")
+                    // Session Stats Card
+                    if session.date != nil {
+                        StoredWorkoutView(session: session, condensed: true)
                     }
-                    Divider()
-                    Button(role: .destructive) {
-                        modelContext.delete(session)
+                    
+                    // Notes Section
+                    if let note = session.note, !note.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Notes")
+                                .font(.headline)
+                                .fontWidth(.expanded)
+                            Text(note)
+                                .font(.body)
+                                .textSelection(.enabled)
+                        }
+                    }
+                    
+                    // Media Grid (excluding hero image)
+                    if let media = session.media, media.count > 1 {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Media")
+                                .font(.headline)
+                                .fontWidth(.expanded)
+                            MediaGridView(media: Array(media.dropFirst()), mediaState: mediaState, onTap: { mediaItem in
+                                selectedMediaItem = mediaItem
+                            })
+                        }
+                    }
+                    
+                    // Tricks Section with improved layout
+                    if let tricks = session.tricks, !tricks.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text("Tricks")
+                                    .font(.headline)
+                                    .fontWidth(.expanded)
+                                Spacer()
+                                Text("\(tricks.count)")
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 8),
+                                GridItem(.flexible(), spacing: 8)
+                            ], spacing: 8) {
+                                ForEach(tricks) { trick in
+                                    NavigationLink(destination: TrickDetailView(trick: trick)) {
+                                        TrickCard(trick: trick)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Combos Section
+                    if let combos = session.combos, !combos.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Combos")
+                                .font(.headline)
+                                .fontWidth(.expanded)
+                            
+                            ForEach(combos) { combo in
+                                ComboCard(combo: combo)
+                            }
+                        }
+                    }
+                    
+                    // Location Section (if not shown as hero)
+                    if session.media != nil,
+                       let latitude = session.latitude,
+                       let longitude = session.longitude {
+                        locationSection(latitude: latitude, longitude: longitude)
+                    }
+                }
+                .padding()
+            }
+        }
+        .ignoresSafeArea(.container, edges: .top)
+        .background(.background)
+        .toolbar {
+            if fullScreenCover == true {
+                ToolbarItem(placement: .navigation) {
+                    Button {
                         dismiss()
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Image(systemName: "chevron.down")
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.indigo)
-                        .frame(width: 24, height: 24)
-                        .background(Color(.systemGray5))
-                        .clipShape(Circle())
                 }
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
             }
-            .zIndex(2)
-            .padding(.horizontal)
-            .padding(.top, 60)
+            ToolbarItem {
+                ShareLink(item: sessionSummary)
+            }
+            if #available(iOS 26, *) {
+                ToolbarSpacer(.fixed)
+            }
+            ToolbarItem {
+                Button {
+                    isEditingSession = true
+                } label: {
+                    Label("Edit", systemImage: "pencil.circle")
+                }
+            }
+            if #available(iOS 26, *) {
+                ToolbarSpacer(.fixed)
+            }
+            ToolbarItem {
+                Button {
+                    self.showDeleteConfirmation = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .confirmationDialog("Are you sure you want to delete this session?", isPresented: $showDeleteConfirmation) {
+                    Button("Delete", role: .destructive) {
+                        modelContext.delete(session)
+                        dismiss()
+                    }
+                }
+            }
         }
-        .ignoresSafeArea(.all, edges: .top)
-        .navigationBarHidden(true)
         .sheet(isPresented: $isEditingSession, onDismiss: {
             if let latitude = session.latitude,
                let longitude = session.longitude {
@@ -249,8 +225,8 @@ struct SessionDetailView: View {
                 ))
             }
         }) {
-            EditSessionView(session: session)
-                .presentationCornerRadius(24)
+            EditSessionView(session: session, mediaState: mediaState)
+                
         }
         .fullScreenCover(item: $selectedMediaItem, onDismiss: {
             currentZoom = 0.0
@@ -276,8 +252,33 @@ struct SessionDetailView: View {
             refreshMediaState()
         }
         .onChange(of: healthKitManager.allSkateboardingWorkouts) {
-                findMatchingWorkout()
+            findMatchingWorkout()
         }
+    }
+    
+    private var sessionSummary: String {
+        var summary = ""
+        
+        if let title = session.title {
+            summary += "Session: \(title)\n"
+        }
+        
+        if let date = session.date {
+            summary += "Date: \(date.formatted())\n"
+        }
+        
+        if let note = session.note, !note.isEmpty {
+            summary += "\nNotes:\n\(note)\n"
+        }
+        
+        if let tricks = session.tricks, !tricks.isEmpty {
+            summary += "\nTricks Landed:\n"
+            for trick in tricks {
+                summary += "- \(trick.name)\n"
+            }
+        }
+        
+        return summary
     }
     
     private func preGenerateVideoThumbnailsAndPreloadPlayers() {
@@ -407,7 +408,7 @@ struct SessionDetailView: View {
             }
         }
     }
-
+    
     private func findMatchingWorkout() {
         guard let date = session.date else { return }
         matchingWorkout = healthKitManager.allSkateboardingWorkouts.first { workout in
@@ -441,7 +442,7 @@ struct SessionDetailView: View {
                         .frame(width: geometry.size.width, height: 300)
                         .clipped()
                         .overlay(alignment: .center) {
-                            Image(systemName: "play.circle.fill")
+                            Image(systemName: "play.circle")
                                 .font(.largeTitle)
                                 .foregroundStyle(.white)
                         }
@@ -459,8 +460,8 @@ struct SessionDetailView: View {
     private func heroMapView(latitude: Double, longitude: Double) -> some View {
         Map(position: $cameraPosition) {
             Annotation(session.location?.name ?? "Session Location",
-                      coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) {
-                Image(systemName: "mappin.circle.fill")
+                       coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) {
+                Image(systemName: "mappin.circle")
                     .foregroundColor(.white)
                     .padding()
                     .background(Circle().fill(Color.indigo))
@@ -493,8 +494,8 @@ struct SessionDetailView: View {
             
             Map(position: $cameraPosition) {
                 Annotation(session.location?.name ?? "Session Location",
-                          coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) {
-                    Image(systemName: "mappin.circle.fill")
+                           coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) {
+                    Image(systemName: "mappin.circle")
                         .foregroundColor(.white)
                         .padding()
                         .background(Circle().fill(Color.indigo))
@@ -562,12 +563,6 @@ struct ComboCard: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .fontWidth(.expanded)
-            }
-            
-            if let tricks = combo.tricks {
-                Text(tricks.map { $0.name }.joined(separator: " → "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

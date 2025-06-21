@@ -163,7 +163,7 @@ struct ComboElementPickerView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .buttonBorderShape(.roundedRectangle(radius: 16))
+                .buttonBorderShape(.capsule)
                 .controlSize(.large)
                 .padding(.horizontal)
             }
@@ -171,8 +171,14 @@ struct ComboElementPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
+                    if #available(iOS 26, *) {
+                        Button(role: .close) {
+                            dismiss()
+                        }
+                    } else {
+                        Button("Close") {
+                            dismiss()
+                        }
                     }
                 }
             }

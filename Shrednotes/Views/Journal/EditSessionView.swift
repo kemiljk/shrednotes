@@ -11,16 +11,18 @@ import PhotosUI
 import SwiftData
 import AVKit
 import MapKit
+import FoundationModels
 
 struct EditSessionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @Query private var allTricks: [Trick]
     @Query private var sessions: [SkateSession]
     @Bindable var session: SkateSession
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var mediaItems: [MediaItem] = []
-    @StateObject private var mediaState = MediaState()
+    @ObservedObject var mediaState: MediaState
     @StateObject private var locationManager = LocationManager()
     @State private var selectedMediaIds: Set<UUID> = []
     @State private var isEditMode: Bool = false
@@ -28,6 +30,7 @@ struct EditSessionView: View {
     @State private var isSelectingCombo = false
     @State private var isSaved = false
     @State private var suggestedTricks: [Trick] = []
+    @State private var isSuggestingTricks = false
     
     @FocusState private var titleIsFocused: Bool
     @FocusState private var noteIsFocused: Bool
@@ -51,6 +54,8 @@ struct EditSessionView: View {
     }()
     @State private var manualDuration: TimeInterval?
     
+    @State private var cameraPosition: MapCameraPosition = .automatic
+    
     private func initializeDuration() {
         if let workoutDuration = session.workoutDuration, workoutDuration > 0 {
             let hours = Int(workoutDuration) / 3600
@@ -64,8 +69,9 @@ struct EditSessionView: View {
         }
     }
 
-    init(session: SkateSession) {
+    init(session: SkateSession, mediaState: MediaState) {
         self.session = session
+        self.mediaState = mediaState
         _mediaItems = State(initialValue: session.media ?? [])
         _debouncedTitle = State(initialValue: session.title ?? "")
         _debouncedNote = State(initialValue: session.note ?? "")
@@ -127,30 +133,52 @@ struct EditSessionView: View {
                             .listRowInsets(EdgeInsets())
                     }
                     
-                    TextField("Add some more details...", text: $debouncedNote, axis: .vertical)
-                        .padding()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(noteIsFocused ? LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(gradient: Gradient(colors: [Color.secondary.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: noteIsFocused ? 2 : 1)
-                        )
-                        .focused($noteIsFocused)
-                        .onChange(of: debouncedNote) { _, newValue in
-                            debounceUpdateNote(newValue)
-                            findMatchingTricks(in: newValue)
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField("Add some more details...", text: $debouncedNote, axis: .vertical)
+                            .padding()
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(noteIsFocused ? LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(gradient: Gradient(colors: [Color.secondary.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: noteIsFocused ? 2 : 1)
+                            )
+                            .focused($noteIsFocused)
+                            .onChange(of: debouncedNote) { _, newValue in
+                                debounceUpdateNote(newValue)
+                            }
+                        
+                        if #available(iOS 26, *) {
+                            Button {
+                                Task {
+                                    await generateTrickSuggestions()
+                                }
+                            } label: {
+                                HStack {
+                                    Label(isSuggestingTricks ? "Thinking..." : "Suggest Tricks", systemImage: "sparkles")
+                                        .transition(.opacity)
+                                }
+                            }
+                            .disabled(debouncedNote.isEmpty || isSuggestingTricks)
+                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
+                            .buttonStyle(.bordered)
+                            .buttonBorderShape(.capsule)
+                            .controlSize(.mini)
+                            .animation(.linear, value: isSuggestingTricks)
+                            .listRowSeparator(.hidden)
                         }
+                        
+                        if !suggestedTricks.isEmpty {
+                            TrickSuggestionPickerView(
+                                suggestedTricks: $suggestedTricks,
+                                selectedTricks: Binding(
+                                    get: { Set(session.tricks ?? []) },
+                                    set: { session.tricks = Array($0) }
+                                ),
+                                note: debouncedNote
+                            )
+                        }
+                    }
                 }
                 .listRowSeparator(.hidden)
                 
-                if !suggestedTricks.isEmpty {
-                    TrickSuggestionPickerView(
-                        suggestedTricks: $suggestedTricks,
-                        selectedTricks: Binding(
-                            get: { Set(session.tricks ?? []) },
-                            set: { session.tricks = Array($0) }
-                        ),
-                        note: debouncedNote
-                    )
-                }
                 
                 mediaSection
                 
@@ -163,14 +191,13 @@ struct EditSessionView: View {
                         self.isAddingTricks = true
                     } label: {
                         Label("Select Tricks", systemImage: "figure.skateboarding")
-                            .font(.body)
                             .frame(maxWidth: .infinity)
-                            .foregroundStyle(.indigo)
-                            .padding()
-                            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(.thinMaterial)
-                            )
+                            .frame(height: 32)
+                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
                     }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
                 }
                 .listRowSeparator(.hidden)
                 
@@ -187,17 +214,16 @@ struct EditSessionView: View {
                         Label("Select Combos", systemImage: "list.bullet")
                             .frame(maxWidth: .infinity)
                             .frame(height: 32)
+                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
                     }
                     .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
+                    .buttonBorderShape(.capsule)
                     .controlSize(.large)
                 }
                 .listRowSeparator(.hidden)
                 
                 Section(header: Text("Location")) {
                     LocationPickerView(selectedLocation: $selectedLocation, locationSearchIsFocused: $locationSearchIsFocused)
-                        .frame(height: 300)
-                        .listRowSeparator(.hidden)
                 }
                 .listRowSeparator(.hidden)
             }
@@ -219,17 +245,29 @@ struct EditSessionView: View {
                         }
                     }
                 }
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
+                ToolbarItemGroup(placement: .cancellationAction) {
+                    if #available(iOS 26.0, *) {
+                        Button(role: .cancel) {
+                            dismiss()
+                        }
+                    } else {
+                        Button("Cancel") {
+                            dismiss()
+                        }
                     }
                 }
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button("Save") {
-                        saveSession()
+                ToolbarItemGroup(placement: .confirmationAction) {
+                    if #available(iOS 26.0, *) {
+                        Button(role: .confirm) {
+                            saveSession()
+                        }
+                    } else {
+                        Button("Save") {
+                            saveSession()
+                        }
+                        .fontWeight(.bold)
+                        .sensoryFeedback(.success, trigger: isSaved)
                     }
-                    .fontWeight(.bold)
-                    .sensoryFeedback(.success, trigger: isSaved)
                 }
             }
             .navigationTitle("Edit Session")
@@ -239,14 +277,14 @@ struct EditSessionView: View {
                     get: { Set(session.tricks ?? []) },
                     set: { session.tricks = Array($0) }
                 ))
-                .presentationCornerRadius(24)
+                
             }
             .sheet(isPresented: $isSelectingCombo) {
                 ComboPicker(selectedCombos: Binding(
                     get: { Set(session.combos ?? []) },
                     set: { session.combos = Array($0) }
                 ))
-                .presentationCornerRadius(24)
+                
             }
         }
         .onAppear {
@@ -289,106 +327,187 @@ struct EditSessionView: View {
         return seconds
     }
     
-    @MainActor
-    private func findMatchingTricks(in note: String) {
-        // Split on whitespace and remove punctuation from each word
-        let words = note.lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .map { word in
-                word.trimmingCharacters(in: .punctuationCharacters)
+    @available(iOS 26, *)
+    private func generateTrickSuggestions() async {
+        isSuggestingTricks = true
+        self.suggestedTricks = []
+        
+        do {
+            let instructions = Instructions {
+                """
+                Extract skateboarding trick names from the session note.
+                
+                Rules:
+                - Return ONLY a comma-separated list of trick names
+                - Include common variations (e.g., "kickflip", "kickflips", "kick flip" all count as the same trick)
+                - Common abbreviations: fs = frontside, bs = backside
+                - NO explanations, just the trick names
+                
+                Examples:
+                - "Landed some kickflips" → Kickflip
+                - "pop shove it" → Pop Shove It
+                - "bs flip" → BS Flip
+                - "nose manual" → Nose Manual
+                - "manual" → Manual (not Nose Manual)
+                """
             }
+            
+            let prompt = Prompt("Extract trick names from: \(debouncedNote)")
+            let session = LanguageModelSession(instructions: instructions)
+            
+            let response = try await session.respond(to: prompt)
+            
+            print("LLM Response: \(response.content)")
+            
+            // Extract trick names from response
+            let extractedNames = response.content
+                .components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            
+            print("Extracted names: \(extractedNames)")
+            
+            // Now match against our database with fuzzy matching
+            var matchedTricks: [Trick] = []
+            
+            for extractedName in extractedNames {
+                let normalizedExtracted = extractedName.lowercased()
+                
+                // First try exact match (case insensitive)
+                if let exactMatch = allTricks.first(where: { $0.name.lowercased() == normalizedExtracted }) {
+                    matchedTricks.append(exactMatch)
+                    continue
+                }
+                
+                // Check aliases
+                let aliases: [String: String] = [
+                    "bs flip": "BS 180 Kickflip",
+                    "fs flip": "FS 180 Kickflip",
+                    "tre flip": "Tre Flip",
+                    "360 flip": "Tre Flip",
+                    "noseslide": "BS Noseslide",
+                    "nose slide": "BS Noseslide"
+                ]
+                
+                if let aliasMatch = aliases[normalizedExtracted],
+                   let trick = allTricks.first(where: { $0.name == aliasMatch }) {
+                    matchedTricks.append(trick)
+                    continue
+                }
+                
+                // Try fuzzy matching for close matches
+                let bestMatch = allTricks
+                    .map { trick in
+                        (trick: trick, score: similarityScore(normalizedExtracted, trick.name.lowercased()))
+                    }
+                    .filter { $0.score > 0.8 } // 80% similarity threshold
+                    .max { $0.score < $1.score }
+                
+                if let match = bestMatch {
+                    matchedTricks.append(match.trick)
+                }
+            }
+            
+            print("Matched tricks: \(matchedTricks.map { $0.name })")
+            
+            self.suggestedTricks = matchedTricks
+            
+        } catch {
+            print("Error generating trick suggestions: \(error.localizedDescription)")
+            
+            // If LLM fails (including sensitive content), fall back to basic matching
+            await performBasicTrickMatching()
+        }
+        
+        self.isSuggestingTricks = false
+    }
+    
+    @MainActor
+    private func performBasicTrickMatching() async {
+        // Simple word-based matching as fallback
+        let words = debouncedNote.lowercased()
+            .components(separatedBy: .whitespacesAndNewlines)
+            .flatMap { $0.components(separatedBy: .punctuationCharacters) }
             .filter { !$0.isEmpty }
         
-        var scoredTricks: [(trick: Trick, score: Int)] = []
-        
-        func standardizeWord(_ word: String) -> String {
-            // Handle common plural forms and possessives
-            var standardized = word.lowercased()
-            if standardized.hasSuffix("'s") {
-                standardized = String(standardized.dropLast(2))
-            } else if standardized.hasSuffix("s") && !standardized.hasSuffix("bs") {  // Don't strip 's' from 'bs'
-                standardized = String(standardized.dropLast())
-            }
-            return standardized
-        }
-        
-        func standardizeTrickName(_ name: String) -> [String] {
-            return name.lowercased()
-                .components(separatedBy: .whitespacesAndNewlines)
-                .map(standardizeWord)
-                .filter { !$0.isEmpty }
-        }
-        
-        func isExactMatch(_ word: String, _ trickWord: String) -> Bool {
-            let standardizedWord = standardizeWord(word)
-            let standardizedTrickWord = standardizeWord(trickWord)
-            
-            // Handle FS/BS cases
-            if (word == "fs" || word == "bs"), let wordIndex = words.firstIndex(of: word),
-               wordIndex + 1 < words.count {
-                // Look for "FS" or "BS" followed by the rest of the trick name
-                let remainingWords = words[(wordIndex + 1)...].joined(separator: " ")
-                let expectedMatch = word + " " + remainingWords
-                return standardizeWord(trickWord) == standardizeWord(expectedMatch)
-            }
-            
-            // For regular words, match standardized forms
-            return standardizedWord == standardizedTrickWord
-        }
+        var matchedTricks: [Trick] = []
         
         for trick in allTricks {
-            let trickWords = standardizeTrickName(trick.name)
-            var score = 0
-            var lastMatchIndex = -1
-            var matchedIndices = Set<Int>()
+            let trickWords = trick.name.lowercased().components(separatedBy: .whitespaces)
             
-            // Handle full matches for FS/BS tricks
-            if trick.name.lowercased().starts(with: "fs ") || trick.name.lowercased().starts(with: "bs ") {
-                // Check if input contains the full trick name (after standardizing both)
-                let inputPhrase = words.joined(separator: " ")
-                let standardizedInput = standardizeWord(inputPhrase)
-                let standardizedTrick = standardizeWord(trick.name.lowercased())
-                
-                if standardizedInput.contains(standardizedTrick) {
-                    score += 5  // High score for complete FS/BS trick match
+            // Check if all trick words appear in the note
+            var allWordsFound = true
+            for trickWord in trickWords {
+                if !words.contains(where: { word in
+                    word == trickWord || 
+                    (word.hasPrefix(trickWord) && word.dropFirst(trickWord.count).allSatisfy { $0 == "s" })
+                }) {
+                    allWordsFound = false
+                    break
                 }
             }
             
-            // Then try matching individual words
-            for word in words where word.count > 1 {
-                for (index, trickWord) in trickWords.enumerated() where !matchedIndices.contains(index) {
-                    if isExactMatch(word, trickWord) {
-                        score += 2 // Higher score for exact matches
-                        if index > lastMatchIndex {
-                            score += 1  // Bonus for correct word order
-                        }
-                        lastMatchIndex = index
-                        matchedIndices.insert(index)
-                        break
-                    }
-                }
-            }
-            
-            // Extra points for matching all words in the trick name
-            if matchedIndices.count == trickWords.count {
-                score += 3
-            }
-            
-            if score > 0 {
-                scoredTricks.append((trick: trick, score: score))
+            if allWordsFound {
+                matchedTricks.append(trick)
             }
         }
         
-        // Sort by score (descending) and then by name length (ascending)
-        scoredTricks.sort {
-            if $0.score != $1.score {
-                return $0.score > $1.score
+        // Apply common aliases
+        let aliasPatterns: [(pattern: String, trick: String)] = [
+            ("bs flip", "BS 180 Kickflip"),
+            ("fs flip", "FS 180 Kickflip"),
+            ("noseslide", "BS Noseslide"),
+            ("nose slide", "BS Noseslide")
+        ]
+        
+        let noteText = debouncedNote.lowercased()
+        for (pattern, trickName) in aliasPatterns {
+            if noteText.contains(pattern),
+               let trick = allTricks.first(where: { $0.name == trickName }),
+               !matchedTricks.contains(where: { $0.id == trick.id }) {
+                matchedTricks.append(trick)
             }
-            return $0.trick.name.count < $1.trick.name.count
         }
         
-        let maxSuggestions = 5
-        suggestedTricks = scoredTricks.prefix(maxSuggestions).map { $0.trick }
+        self.suggestedTricks = matchedTricks
+    }
+    
+    private func similarityScore(_ str1: String, _ str2: String) -> Double {
+        if str1 == str2 { return 1.0 }
+        
+        let len1 = str1.count
+        let len2 = str2.count
+        let maxLen = max(len1, len2)
+        
+        if maxLen == 0 { return 1.0 }
+        
+        let distance = levenshteinDistance(str1, str2)
+        return 1.0 - (Double(distance) / Double(maxLen))
+    }
+    
+    private func levenshteinDistance(_ str1: String, _ str2: String) -> Int {
+        let s1 = Array(str1)
+        let s2 = Array(str2)
+        let len1 = s1.count
+        let len2 = s2.count
+        
+        var matrix = [[Int]](repeating: [Int](repeating: 0, count: len2 + 1), count: len1 + 1)
+        
+        for i in 0...len1 { matrix[i][0] = i }
+        for j in 0...len2 { matrix[0][j] = j }
+        
+        for i in 1...len1 {
+            for j in 1...len2 {
+                let cost = s1[i-1] == s2[j-1] ? 0 : 1
+                matrix[i][j] = min(
+                    matrix[i-1][j] + 1,      // deletion
+                    matrix[i][j-1] + 1,      // insertion
+                    matrix[i-1][j-1] + cost  // substitution
+                )
+            }
+        }
+        
+        return matrix[len1][len2]
     }
     
     private var mediaSection: some View {
@@ -438,14 +557,13 @@ struct EditSessionView: View {
                 // Ensure the PhotosPicker is shown if there's no media at all
                 PhotosPicker(selection: $selectedItems, matching: .any(of: [.images, .videos])) {
                     Label("Add Photos or Videos", systemImage: "photo.on.rectangle.angled")
-                        .font(.body)
                         .frame(maxWidth: .infinity)
-                        .foregroundStyle(.indigo)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(.thinMaterial)
-                        )
+                        .frame(height: 32)
+                        .foregroundStyle(colorScheme == .light ? .indigo : .white)
                 }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
             }
         }
         .listRowSeparator(.hidden)
@@ -497,7 +615,7 @@ struct EditSessionView: View {
                 Color.black.opacity(0.3)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 if selectedMediaIds.contains(mediaItem.id ?? UUID()) {
-                    Image(systemName: "checkmark.circle.fill")
+                    Image(systemName: "checkmark.circle")
                         .foregroundColor(.white)
                         .font(.title)
                 }

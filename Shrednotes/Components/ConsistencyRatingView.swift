@@ -178,9 +178,6 @@ struct HeatMapView: View {
     let sessions: [SkateSession]
     let weeks: Int // Number of weeks to display
     
-    @State private var animateAppearance = false
-    @State private var availableWidth: CGFloat = 0
-    
     private var practiceData: [Date: Int] {
         var data: [Date: Int] = [:]
         let calendar = Calendar.current
@@ -201,25 +198,14 @@ struct HeatMapView: View {
     private var dateRange: [Date] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
-        let startDate = calendar.date(byAdding: .weekOfYear, value: -weeks, to: today)!
-        
+        let startDate = calendar.date(byAdding: .weekOfYear, value: -weeks, to: today) ?? today
         var dates: [Date] = []
         var currentDate = startDate
-        
         while currentDate <= today {
             dates.append(currentDate)
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
         }
-        
         return dates
-    }
-    
-    private var gridItemSize: CGFloat {
-        // Calculate item size based on available width
-        // 7 columns (days) + 6 gaps of 2 points each
-        let totalGaps: CGFloat = 6 * 2
-        let itemSize = (availableWidth - totalGaps) / 7
-        return max(itemSize, 10) // Minimum size of 10
     }
     
     private func colorForIntensity(_ count: Int) -> Color {
@@ -233,48 +219,20 @@ struct HeatMapView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Practice Frequency")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        HStack(alignment: .top, spacing: 4) {
+            // The grid
+            HeatMapGrid(
+                dateRange: dateRange, 
+                sessionData: practiceData, 
+                columns: 7, 
+                colorForIntensity: colorForIntensity
+            )
             
-            GeometryReader { geometry in
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.fixed(gridItemSize), spacing: 2), count: 7),
-                    spacing: 2
-                ) {
-                    ForEach(Array(dateRange.enumerated()), id: \.offset) { index, date in
-                        let practiceCount = practiceData[date] ?? 0
-                        
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(colorForIntensity(practiceCount))
-                            .frame(width: gridItemSize, height: gridItemSize)
-                            .opacity(animateAppearance ? 1 : 0)
-                            .animation(
-                                .easeInOut(duration: 0.3)
-                                .delay(Double(index) * 0.002),
-                                value: animateAppearance
-                            )
-                    }
-                }
-                .onAppear {
-                    availableWidth = geometry.size.width
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        animateAppearance = true
-                    }
-                }
-                .onChange(of: geometry.size.width) { _, newWidth in
-                    availableWidth = newWidth
-                }
-            }
-            .frame(height: CGFloat(dateRange.count / 7 + 1) * (gridItemSize + 2))
+            Spacer()
             
             // Legend
             HStack(spacing: 12) {
-                Text("Less")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                
+                Text("Less").font(.caption2).foregroundStyle(.secondary)
                 HStack(spacing: 2) {
                     ForEach(0..<5) { intensity in
                         RoundedRectangle(cornerRadius: 2)
@@ -282,14 +240,37 @@ struct HeatMapView: View {
                             .frame(width: 10, height: 10)
                     }
                 }
-                
-                Text("More")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                
+                Text("More").font(.caption2).foregroundStyle(.secondary)
                 Spacer()
             }
         }
+    }
+}
+
+private struct HeatMapGrid: View {
+    let dateRange: [Date]
+    let sessionData: [Date: Int]
+    let columns: Int
+    let colorForIntensity: (Int) -> Color
+
+    var body: some View {
+        // Use a fixed or default width for grid items
+        let itemSize: CGFloat = 18 // Reasonable default for most screens
+        let rows = dateRange.count / columns + 1
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.fixed(itemSize), spacing: 2), count: columns),
+            spacing: 2
+        ) {
+            ForEach(Array(dateRange.enumerated()), id: \.offset) { _, date in
+                let count = sessionData[date] ?? 0
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(colorForIntensity(count))
+                    .frame(width: itemSize, height: itemSize)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: CGFloat(rows) * (itemSize + 2))
+        .frame(minHeight: 100)
     }
 }
 

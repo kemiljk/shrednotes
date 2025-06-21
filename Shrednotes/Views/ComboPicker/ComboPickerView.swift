@@ -18,13 +18,15 @@ struct ComboPicker: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading) {
-                HStack {
-                    Text("Select Combos")
-                        .fontWidth(.expanded)
-                        .font(.title)
-                        .fontWeight(.bold)
+                if #unavailable(iOS 26) {
+                    HStack {
+                        Text("Select Combos")
+                            .fontWidth(.expanded)
+                            .font(.title)
+                            .fontWeight(.bold)
+                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
                 
                 List {
                     if allCombos.isEmpty {
@@ -41,33 +43,72 @@ struct ComboPicker: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Done")
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .largeTitle) {
+                        Text("Select Combos")
+                            .fontWidth(.expanded)
+                            .font(.title)
                             .fontWeight(.bold)
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if #available(iOS 26.0, *) {
+                        Button(role: .confirm) {
+                            dismiss()
+                        }
+                    } else {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Done")
+                                .fontWeight(.bold)
+                        }
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    if #available(iOS 26.0, *) {
+                        Button(role: .cancel) {
+                            dismiss()
+                        }
+                    } else {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("Cancel")
+                                .fontWeight(.bold)
+                        }
+                    }
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        showingAddCombo.toggle()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .tint(.accentColor)
+                    .sensoryFeedback(.impact, trigger: showingAddCombo)
+                }
             }
             .safeAreaInset(edge: .bottom) {
-                GradientButton<Bool, Bool, Never>(
-                    label: "Add Combo",
-                    hasImage: true,
-                    image: "plus.circle.fill",
-                    binding: $showingAddCombo,
-                    value: true,
-                    fullWidth: false,
-                    hapticTrigger: showingAddCombo,
-                    hapticFeedbackType: .impact
-                )
-                .padding(.bottom)
+                if #unavailable(iOS 26) {
+                    GradientButton<Bool, Bool, Never>(
+                        label: "Add Combo",
+                        hasImage: true,
+                        image: "plus.circle",
+                        binding: $showingAddCombo,
+                        value: true,
+                        fullWidth: false,
+                        hapticTrigger: showingAddCombo,
+                        hapticFeedbackType: .impact
+                    )
+                    .padding(.bottom)
+                }
             }
             .sheet(isPresented: $showingAddCombo) {
                 NavigationStack {
                     ComboBuilderView()
                         .presentationDragIndicator(.visible)
-                        .presentationCornerRadius(24)
+                        
                         .modelContext(modelContext)
                 }
             }

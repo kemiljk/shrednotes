@@ -44,12 +44,14 @@ struct MediaGalleryView: View {
                     Spacer()
                     
                     Button(action: { dismiss() }) {
-                        Image(systemName: "xmark.circle.fill")
+                        Image(systemName: "xmark")
                             .font(.title)
                             .foregroundStyle(.white)
                             .background(Circle().fill(.black.opacity(0.6)))
                             .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                     }
+                    .frame(width: 44, height: 44)
+                    .contentShape(.circle)
                     .padding(.trailing, 16)
                     .padding(.top, 48)
                 }

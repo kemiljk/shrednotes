@@ -111,6 +111,7 @@ enum ElementType: String, Codable {
 enum ProgressState: String, CaseIterable {
     case notStarted = "Not Started"
     case learning = "Learning"
+    case paused = "Paused"
     case learned = "Learned"
 }
 
@@ -294,7 +295,7 @@ struct StreakView: View {
     
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: "flame.fill")
+            Image(systemName: "flame")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(streakColor)
             

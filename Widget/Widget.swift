@@ -180,38 +180,59 @@ struct QuickGlanceView: View {
     
     var body: some View {
         if let latestSession = sessions.first {
-            let sessionData = try? JSONEncoder().encode(latestSession)
+            let reference = SessionReference(latestSession)
+            let sessionData = try? JSONEncoder().encode(reference)
             let sessionString = sessionData?.base64EncodedString() ?? ""
             let deepLinkURL = URL(string: "shrednotes://sessionDetail/\(sessionString)")!
             
             VStack(alignment: .leading) {
                 HStack {
-                    VStack(alignment: .leading, spacing: family != .accessoryRectangular ? 0 : 8) {
-                        Text("Latest Session")
-                            .textCase(.uppercase)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        
-                        Text(latestSession.title ?? "Untitled Session")
-                            .font(.headline)
-                            .fontWidth(family == .accessoryRectangular ? .standard : .expanded)
-                            .lineLimit(1)
-                        
-                        if family != .accessoryRectangular {
-                            let summarizer = TextSummarizer(tricks: latestSession.tricks ?? [])
-                            let summary = summarizer.summarizeSession(
-                                notes: latestSession.note ?? "",
-                                landedTricks: latestSession.tricks ?? [],
-                                date: latestSession.date ?? .now
-                            )
-                            
-                            Text(summary)
-                                .font(.caption)
+                    if family == .accessoryRectangular {
+                        VStack(alignment: .leading) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text("Lastest Session")
+                                        .textCase(.uppercase)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    
+                                    if let title = latestSession.title {
+                                        Text(title)
+                                            .font(.headline)
+                                            .font(.body)
+                                            .fontWeight(.semibold)
+                                    }
+                                    
+                                    
+                                    Text(latestSession.date?.timeAgo() ?? "")
+                                        .font(.subheadline)
+                                }
+                                Spacer()
+                            }
                         }
-                        
-                        Text(latestSession.date?.timeAgo() ?? "")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        .widgetURL(deepLinkURL)
+                    } else {
+                        VStack(alignment: .leading, spacing: family != .accessoryRectangular ? 0 : 8) {
+                            Text("Latest Session")
+                                .textCase(.uppercase)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                            Text(latestSession.title ?? "Untitled Session")
+                                .font(.headline)
+                                .fontWidth(family == .accessoryRectangular ? .standard : .expanded)
+                                .lineLimit(1)
+                            
+                            if let note = latestSession.note {
+                                Text(note)
+                                    .font(.caption)
+                                    .lineLimit(4)
+                            }
+                            
+                            Text(latestSession.date?.timeAgo() ?? "")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                 }
@@ -483,7 +504,7 @@ struct LearnNextView: View {
     func difficultyStars(count: Int) -> some View {
         HStack(spacing: 2) {
             ForEach(0..<count, id: \.self) { _ in
-                Image(systemName: "star.fill")
+                Image(systemName: "star")
                     .imageScale(.small)
             }
         }
@@ -519,11 +540,11 @@ struct SmallInsightsView: View {
                         value: "\(sessions.count)",
                         label: "Sessions")
                 
-                StatRow(icon: "checkmark.circle.fill",
+                StatRow(icon: "checkmark.circle",
                         value: "\(tricks.filter { $0.isLearned }.count)",
                         label: "Tricks Learned")
                 
-                StatRow(icon: "clock.fill",
+                StatRow(icon: "clock",
                         value: formatTotalTime(),
                         label: "Time Skating")
                 
@@ -531,11 +552,11 @@ struct SmallInsightsView: View {
                         value: formatAverageSessionTime(),
                         label: "Avg Session")
                 
-                StatRow(icon: "photo.fill",
+                StatRow(icon: "photo",
                         value: "\(totalMediaCount())",
                         label: "Media")
                 
-                StatRow(icon: "flame.fill",
+                StatRow(icon: "flame",
                         value: calculateStreak(),
                         label: "Streak")
                 
@@ -637,16 +658,16 @@ struct MediumInsightsView: View {
             
             // Right column - Stats
             VStack(alignment: .trailing, spacing: 8) {
-                StatRow(icon: "checkmark.circle.fill",
+                StatRow(icon: "checkmark.circle",
                         value: "\(tricks.filter { $0.isLearned }.count)",
                         label: "Tricks Learned")
-                StatRow(icon: "clock.fill",
+                StatRow(icon: "clock",
                         value: formatTotalTime(),
                         label: "Time Skating")
-                StatRow(icon: "photo.fill",
+                StatRow(icon: "photo",
                         value: "\(totalMediaCount())",
                         label: "Media Items")
-                StatRow(icon: "flame.fill",
+                StatRow(icon: "flame",
                         value: calculateStreak(),
                         label: "Current Streak")
                 StatRow(icon: "timer",
@@ -751,16 +772,16 @@ struct LargeInsightsView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 8) {
-                StatCard(icon: "checkmark.circle.fill",
+                StatCard(icon: "checkmark.circle",
                         value: "\(tricks.filter { $0.isLearned }.count)",
                         label: "Tricks Learned")
-                StatCard(icon: "clock.fill",
+                StatCard(icon: "clock",
                         value: formatTotalTime(),
                         label: "Time Skating")
-                StatCard(icon: "photo.fill",
+                StatCard(icon: "photo",
                         value: "\(totalMediaCount())",
                         label: "Media Items")
-                StatCard(icon: "flame.fill",
+                StatCard(icon: "flame",
                         value: calculateStreak(),
                         label: "Current Streak")
                 StatCard(icon: "timer",

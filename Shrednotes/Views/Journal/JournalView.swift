@@ -10,6 +10,7 @@ import SwiftData
 import PhotosUI
 import TipKit
 import WidgetKit
+import FoundationModels
 
 struct JournalView: View {
     @Query(sort: \SkateSession.date, order: .reverse) private var sessions: [SkateSession]
@@ -25,8 +26,16 @@ struct JournalView: View {
     @State private var isLoading = true
     @State private var frequentTrickTip: FrequentTrickTip?
     @State private var frequentTrickNames: [String] = []
+    @State private var searchText = ""
+    @State private var isGenerating: Bool = false
+    @State private var selectedMonth: Int?
+    @State private var selectedYear: Int?
     
     @MainActor @AppStorage("lastTipDismissalDate") private var lastTipDismissalDate: Date = .distantPast
+    @MainActor @AppStorage(
+        "sessionSummary"
+    ) private var summary: String = ""
+    @MainActor @AppStorage("lastSessionCount") private var lastSessionCount: Int = 0
     
     var body: some View {
         NavigationStack {
@@ -37,7 +46,7 @@ struct JournalView: View {
                             GradientButton<Bool, Bool, Never>(
                                 label: "Add Session",
                                 hasImage: true,
-                                image: "plus.circle.fill",
+                                image: "plus.circle",
                                 binding: $showingAddSession,
                                 value: true,
                                 fullWidth: false,
@@ -52,7 +61,44 @@ struct JournalView: View {
                             TipView(tip)
                                 .listRowSeparator(.hidden)
                         }
-                        ForEach(groupedSessions.isEmpty ? placeholderGroupedSessions : groupedSessions, id: \.key) { month, sessions in
+                        if #available(iOS 26, *) {
+                            if sessions.count >= 2 {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    HStack {
+                                        Image(systemName: "apple.intelligence")
+                                            .foregroundStyle(.blue)
+                                            .onTapGesture {
+                                                Task {
+                                                    await generateSummary()
+                                                    lastSessionCount = sessions.count
+                                                }
+                                            }
+                                            .symbolEffect(
+                                                .pulse,
+                                                isActive: isGenerating == true
+                                            )
+                                        Text("Summary")
+                                            .foregroundStyle(
+                                                LinearGradient(
+                                                    gradient: Gradient(colors: [Color.orange, Color.red, Color.purple, Color.blue]),
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                        Spacer()
+                                    }
+                                    .fontWeight(.bold)
+                                    .fontWidth(.expanded)
+                                    .frame(maxWidth: .infinity)
+                                    
+                                    Text(summary)
+                                }
+                                .listRowSeparator(.hidden)
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                        
+                        ForEach(filteredGroupedSessions.isEmpty ? placeholderGroupedSessions : filteredGroupedSessions, id: \.key) { month, sessions in
                             Section(header: monthHeader(for: month)) {
                                 ForEach(sessions.sorted(by: { $0.date ?? Date() > $1.date ?? Date() }), id: \.self) { session in
                                     SessionCard(session: session, mediaState: mediaState, onTap: {
@@ -80,94 +126,187 @@ struct JournalView: View {
                             }
                         }
                     }
+                    .searchable(text: $searchText, prompt: "Filter sessions")
                     .listStyle(.plain)
-                    .safeAreaInset(edge: .bottom) {
-                        ZStack {
-                            VariableBlurView(maxBlurRadius: 4, direction: .blurredBottomClearTop)
-                                .frame(height: 120)
-                                .ignoresSafeArea(edges: .bottom)
-                                .padding(.bottom, -44)
-                            HStack {
-                                Spacer()
-                                GradientButton<Bool, Bool, Never>(
-                                    label: "Add Session",
-                                    hasImage: true,
-                                    image: "plus.circle.fill",
-                                    binding: $showingAddSession,
-                                    value: true,
-                                    fullWidth: false,
-                                    hapticTrigger: showingAddSession,
-                                    hapticFeedbackType: .impact
-                                )
-                                .frame(maxHeight: 44)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding([.bottom, .horizontal])
-                        }
-                    }
+                    .background(.background)
                 }
             }
             .onAppear {
                 loadSessions()
                 checkForFrequentTricks()
+                if #available(iOS 26, *) {
+                    Task {
+                        if summary.isEmpty {
+                            await generateSummary()
+                            lastSessionCount = sessions.count
+                        }
+                    }
+                }
             }
             .onChange(of: sessions) {
                 updateGroupedSessions()
                 checkForFrequentTricks()
                 updateLatestSession()
+                if #available(iOS 26, *) {
+                    Task {
+                        if sessions.count != lastSessionCount {
+                            await generateSummary()
+                            lastSessionCount = sessions.count
+                        }
+                    }
+                }
             }
+            .navigationTitle("^[\(sessions.count) session](inflect: true)")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        dismiss()
+                        self.showingAddSession = true
                     } label: {
-                        Image(systemName: "chevron.down.circle")
-                            .symbolRenderingMode(.hierarchical)
-                            .symbolVariant(.fill)
+                        Image(systemName: "plus")
                     }
+                    .tint(.accentColor)
+                    .sensoryFeedback(
+                        .impact(weight: .medium),
+                        trigger: showingAddSession
+                    )
                 }
-                ToolbarItem(placement: .topBarLeading) {
-                    Text("^[\(sessions.count) session](inflect: true)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if selectedMonth != nil || selectedYear != nil {
+                            Button(role: .destructive) {
+                                selectedMonth = nil
+                                selectedYear = nil
+                            } label: {
+                                Label("Clear Filters", systemImage: "xmark.circle.fill")
+                            }
+                            Divider()
+                        }
+                        
+                        Menu {
+                            ForEach(availableMonths, id: \.number) { month in
+                                Button(month.name) {
+                                    selectedMonth = month.number
+                                    selectedYear = nil
+                                }
+                            }
+                        } label: {
+                            Label(selectedMonthName ?? "Filter by Month", systemImage: "calendar")
+                        }
+
+                        Menu {
+                            ForEach(availableYears, id: \.self) { year in
+                                Button(String(year)) {
+                                    selectedYear = year
+                                    selectedMonth = nil
+                                }
+                            }
+                        } label: {
+                            Label(selectedYear.map { String($0) } ?? "Filter by Year", systemImage: "calendar.badge.clock")
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingInsightView.toggle()
                     } label: {
                         HStack {
-                            Image(systemName: "lightbulb")
-                                .symbolRenderingMode(.hierarchical)
-                                .symbolVariant(.fill)
-                            Text("Insight")
+                            Image(systemName: "sparkles")
                         }
                     }
-                    .controlSize(.mini)
-                    .buttonBorderShape(.capsule)
-                    .buttonStyle(.bordered)
-                    .tint(.accentColor)
                     .sensoryFeedback(.increase, trigger: showingInsightView)
                 }
             }
             .sheet(isPresented: $showingAddSession) {
-                AddSessionView()
-                    .presentationCornerRadius(24)
+                AddSessionView(mediaState: mediaState)
+                    
                     .modelContext(modelContext)
             }
             .sheet(item: $sessionToEdit) { session in
-                EditSessionView(session: session)
-                    .presentationCornerRadius(24)
+                EditSessionView(session: session, mediaState: mediaState)
+                    
             }
             .fullScreenCover(item: $selectedSession) { session in
-                SessionDetailView(session: session, mediaState: mediaState)
-                    .navigationTransition(.zoom(sourceID: session.id, in: detailView))
-                    
+                NavigationStack {
+                    SessionDetailView(session: session, mediaState: mediaState, fullScreenCover: true)
+                }
+                .navigationTransition(.zoom(sourceID: session.id, in: detailView))
             }
             .sheet(isPresented: $showingInsightView) {
                 InsightDetailView()
-                    .presentationCornerRadius(24)
+                    
             }
         }
+    }
+    
+    private var availableYears: [Int] {
+        let years = sessions.compactMap { $0.date }.map {
+            Calendar.current.component(.year, from: $0)
+        }
+        return Array(Set(years)).sorted(by: >)
+    }
+    
+    private var availableMonths: [(number: Int, name: String)] {
+        let monthNumbers = sessions.compactMap { $0.date }.map {
+            Calendar.current.component(.month, from: $0)
+        }
+        
+        let uniqueMonthNumbers = Set(monthNumbers)
+        let dateFormatter = DateFormatter()
+        
+        let monthDetails = uniqueMonthNumbers.map { monthNumber in
+            (number: monthNumber, name: dateFormatter.monthSymbols[monthNumber - 1])
+        }
+        
+        return monthDetails.sorted { $0.number < $1.number }
+    }
+    
+    private var selectedMonthName: String? {
+        guard let monthNumber = selectedMonth else { return nil }
+        let dateFormatter = DateFormatter()
+        guard monthNumber > 0 && monthNumber <= dateFormatter.monthSymbols.count else { return nil }
+        return dateFormatter.monthSymbols[monthNumber - 1]
+    }
+    
+    private var filteredGroupedSessions: [(key: DateComponents, value: [SkateSession])] {
+        var dateFilteredGroups = groupedSessions
+
+        if let year = selectedYear {
+            dateFilteredGroups = dateFilteredGroups.filter { $0.key.year == year }
+        }
+
+        if let month = selectedMonth {
+            dateFilteredGroups = dateFilteredGroups.filter { $0.key.month == month }
+        }
+        
+        if searchText.isEmpty {
+            return dateFilteredGroups
+        }
+
+        var filteredGroups: [(key: DateComponents, value: [SkateSession])] = []
+
+        for (month, sessionsInMonth) in dateFilteredGroups {
+            let filteredSessions = sessionsInMonth.filter { session in
+                let searchTextLowercased = searchText.lowercased()
+                
+                let titleMatch = session.title?.lowercased().contains(searchTextLowercased) ?? false
+                let noteMatch = session.note?.lowercased().contains(searchTextLowercased) ?? false
+                
+                let tricksMatch = session.tricks?.contains { trick in
+                    trick.name.lowercased().contains(searchTextLowercased)
+                } ?? false
+                
+                return titleMatch || noteMatch || tricksMatch
+            }
+
+            if !filteredSessions.isEmpty {
+                filteredGroups.append((key: month, value: filteredSessions))
+            }
+        }
+
+        return filteredGroups
     }
     
     private func loadSessions() {
@@ -175,6 +314,42 @@ struct JournalView: View {
             updateGroupedSessions()
             updateLatestSession()
             isLoading = false
+        }
+    }
+    
+    @available(iOS 26, *)
+    private func generateSummary() async {
+        do {
+            isGenerating = true
+            let instructions = Instructions {
+                """
+                You are an AI assistant specializing in summarizing skateboarding sessions. Your primary goal is to highlight the skater's progress, improvements, and key achievements, creating an encouraging and personal overview of their journey.
+
+                - **Data Usage:** Use the provided data (session title, date, notes, feelings, and workout metrics like duration, distance, etc.) to create a concise and insightful summary. If specific data points are missing, simply exclude them from the summary – do not invent information.
+                - **Focus on Progress:** Emphasize improvements in trick progression (e.g., "You're landing kickflips more consistently!"), consistency (e.g., "Your ollies are becoming much more reliable."), confidence (e.g., "You seemed much more confident tackling that new ramp."), and stamina (e.g., "You skated for a full hour without tiring!").
+                - **Tone and Style:**
+                    - Maintain an encouraging and positive tone throughout the summary.
+                    - Keep the summary concise, aiming for a single paragraph of no more than five sentences.
+                    - Refer to the skater directly using "you" to create a personal connection. For example, "Today, you nailed that new grind you've been working on!"
+                - **Important Exclusions:**
+                    - Do not include any conversational elements, introductions, or acknowledgements of being an AI. Provide the summary directly.
+                    - Do not mention the SwiftUI model or any other internal data structures.
+                - **Formatting and Readability:** Ensure dates and other information from the SkateSession model are presented in a human-readable format (e.g., "June 21, 2025" instead of "2025-06-21").
+                - **Example Output:**  "On June 21, 2025, you had a fantastic session at the park! Your kickflips are looking much cleaner, and you landed three in a row. You also pushed yourself to try the bigger ramp and, although you didn't quite land it, your confidence is clearly growing. Keep up the great work!"
+                """
+            }
+            let prompt = Prompt("Provide a single, overarching summary of sessions based on all the available data in \(sessions). Exclude any chat-like responses or introductions; provide the summary directly.")
+            let session = LanguageModelSession(instructions: instructions)
+            let stream = session.streamResponse(to: prompt)
+            
+            for try await partial in stream {
+                await MainActor.run {
+                    self.summary = partial
+                }
+            }
+            isGenerating = false
+        } catch {
+            print(error.localizedDescription)
         }
     }
     
@@ -298,5 +473,53 @@ struct FrequentTrickTip: Tip {
     
     var image: Image? {
         Image(systemName: "sparkles")
+    }
+}
+
+struct BlurUpTextRenderer: TextRenderer, Animatable {
+    var elapsedTime: TimeInterval
+    var elementDuration: TimeInterval
+    var totalDuration: TimeInterval
+
+    var animatableData: Double {
+        get { elapsedTime }
+        set { elapsedTime = newValue }
+    }
+
+    func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
+        for (index, line) in layout.enumerated() {
+            let delay = elementDuration * Double(index)
+            let time = max(0, min(elapsedTime - delay, elementDuration))
+            let progress = time / elementDuration
+
+            var copy = ctx
+            let blur = (1 - progress) * 10
+            let offsetY = (1 - progress) * 20
+            copy.addFilter(.blur(radius: blur))
+            copy.opacity = progress
+            copy.translateBy(x: 0, y: -offsetY)
+            copy.draw(line, options: .disablesSubpixelQuantization)
+        }
+    }
+}
+
+struct BlurUpTextTransition: Transition {
+    let duration: TimeInterval = 0.7
+    let elementDuration: TimeInterval = 0.2
+
+    func body(content: Content, phase: TransitionPhase) -> some View {
+        let elapsedTime = phase.isIdentity ? duration : 0
+        let renderer = BlurUpTextRenderer(
+            elapsedTime: elapsedTime,
+            elementDuration: elementDuration,
+            totalDuration: duration
+        )
+        content.transaction { transaction in
+            if !transaction.disablesAnimations {
+                transaction.animation = .linear(duration: duration)
+            }
+        } body: { view in
+            view.textRenderer(renderer)
+        }
     }
 }

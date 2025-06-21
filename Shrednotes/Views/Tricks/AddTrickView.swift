@@ -5,6 +5,10 @@ import PhotosUI
 struct AddTrickView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    
+    // Editing support
+    var trickToEdit: Trick?
     
     // Form state
     @State private var trickName: String = ""
@@ -29,6 +33,25 @@ struct AddTrickView: View {
     @State private var toastIcon = ""
     
     var difficultyLevels: Range<Int> = 1..<6  // Represents difficulties 1-5
+    
+    init(trickToEdit: Trick? = nil) {
+        self.trickToEdit = trickToEdit
+        // Pre-fill state if editing
+        if let trick = trickToEdit {
+            _trickName = State(initialValue: trick.name)
+            _selectedDifficulty = State(initialValue: trick.difficulty)
+            _selectedType = State(initialValue: trick.type)
+            _consistency = State(initialValue: trick.consistency)
+            _isLearning = State(initialValue: trick.isLearning)
+            _isLearned = State(initialValue: trick.isLearned)
+            _learnedDate = State(initialValue: trick.isLearnedDate ?? Date())
+            _progress = State(initialValue: trick.isLearned ? .learned : (trick.isLearning ? .learning : .notStarted))
+            if let notes = trick.notes, let first = notes.first {
+                _newNoteText = State(initialValue: first.text)
+            }
+            // Media is not pre-filled for simplicity (could be added)
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -58,6 +81,10 @@ struct AddTrickView: View {
                     .onChange(of: progress) {
                         isLearned = (progress == .learned)
                         isLearning = (progress == .learning)
+                        if progress == .paused || progress == .notStarted {
+                            isLearned = false
+                            isLearning = false
+                        }
                     }
                     
                     if progress == .learned {
@@ -86,28 +113,48 @@ struct AddTrickView: View {
                     PhotosPicker(selection: $selectedItems, matching: .any(of: [.images, .videos])) {
                         Label("Add Photos or Videos", systemImage: "photo.on.rectangle.angled")
                             .frame(maxWidth: .infinity)
+                            .frame(height: 32)
+                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
                     }
                     .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 16))
+                    .buttonBorderShape(.capsule)
                     .controlSize(.large)
                 }
                 .listRowSeparator(.hidden)
             }
             .listStyle(.plain)
-            .navigationTitle("New Trick")
+            .navigationTitle(trickToEdit == nil ? "New Trick" : "Edit Trick")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(role: .cancel) {
+                            dismiss()
+                        }
                     }
+                } else {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            dismiss()
+                        }
+                    }
+                    
                 }
                 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveNewTrick()
+                if #available(iOS 26, *) {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(role: .confirm) {
+                            saveTrick()
+                        }
+                        .disabled(trickName.isEmpty)
                     }
-                    .disabled(trickName.isEmpty)
+                } else {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(trickToEdit == nil ? "Save" : "Update") {
+                            saveTrick()
+                        }
+                        .disabled(trickName.isEmpty)
+                    }
                 }
                 
                 ToolbarItem(placement: .keyboard) {
@@ -128,49 +175,66 @@ struct AddTrickView: View {
         )
     }
     
-    private func saveNewTrick() {
-        let newTrick = Trick(
-            name: trickName,
-            difficulty: selectedDifficulty,  // Now passing the Int directly
-            type: selectedType
-        )
-        
-        newTrick.isLearning = isLearning
-        newTrick.isLearned = isLearned
-        newTrick.isLearnedDate = isLearned ? learnedDate : nil
-        newTrick.consistency = consistency
-        
-        if !newNoteText.isEmpty {
-            let note = Note(text: newNoteText)
-            newTrick.notes = [note]
-        }
-        
-        // Process any media items that were selected
-        if !selectedItems.isEmpty {
-            Task {
-                let mediaItems = await processNewMediaItems()
-                await MainActor.run {
-                    newTrick.media = mediaItems
-                    modelContext.insert(newTrick)
-                    try? modelContext.save()
-                    showCompletionToast()
+    private func saveTrick() {
+        if let trick = trickToEdit {
+            // Update existing trick
+            trick.name = trickName
+            trick.difficulty = selectedDifficulty
+            trick.type = selectedType
+            trick.consistency = consistency
+            trick.isLearning = isLearning
+            trick.isLearned = isLearned
+            trick.isLearnedDate = isLearned ? learnedDate : nil
+            // Only update the first note for simplicity
+            if !newNoteText.isEmpty {
+                if let notes = trick.notes, let first = notes.first {
+                    first.text = newNoteText
+                } else {
+                    trick.notes = [Note(text: newNoteText)]
                 }
             }
-        } else {
-            modelContext.insert(newTrick)
+            // Media editing not implemented for simplicity
             try? modelContext.save()
             showCompletionToast()
+        } else {
+            // Create new trick
+            let newTrick = Trick(
+                name: trickName,
+                difficulty: selectedDifficulty,
+                type: selectedType
+            )
+            newTrick.isLearning = isLearning
+            newTrick.isLearned = isLearned
+            newTrick.isLearnedDate = isLearned ? learnedDate : nil
+            newTrick.consistency = consistency
+            if !newNoteText.isEmpty {
+                let note = Note(text: newNoteText)
+                newTrick.notes = [note]
+            }
+            if !selectedItems.isEmpty {
+                Task {
+                    let mediaItems = await processNewMediaItems()
+                    await MainActor.run {
+                        newTrick.media = mediaItems
+                        modelContext.insert(newTrick)
+                        try? modelContext.save()
+                        showCompletionToast()
+                    }
+                }
+            } else {
+                modelContext.insert(newTrick)
+                try? modelContext.save()
+                showCompletionToast()
+            }
         }
     }
     
     private func showCompletionToast() {
-        toastMessage = "Trick saved!"
-        toastIcon = "checkmark.circle.fill"
+        toastMessage = trickToEdit == nil ? "Trick saved!" : "Trick updated!"
+        toastIcon = "checkmark.circle"
         withAnimation {
             showToast = true
         }
-        
-        // Dismiss after a delay to allow the user to see the toast
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             dismiss()
         }
@@ -179,15 +243,11 @@ struct AddTrickView: View {
     @MainActor
     private func processNewMediaItems() async -> [MediaItem] {
         var newMediaItems: [MediaItem] = []
-        
         for item in selectedItems {
             if let mediaItem = await item.toMediaItem() {
                 newMediaItems.append(mediaItem)
-                
-                // Pre-generate thumbnails for videos
                 if mediaItem.isVideo {
                     loadingMedia.insert(mediaItem.id ?? UUID())
-                    
                     PhotosHelper.shared.getVideoURL(for: mediaItem) { url in
                         if let url = url {
                             generateThumbnail(for: url) { thumbnail in
@@ -202,7 +262,6 @@ struct AddTrickView: View {
                     }
                 } else if let identifier = mediaItem.assetIdentifier,
                           let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) {
-                    // Pre-cache images
                     loadingMedia.insert(mediaItem.id ?? UUID())
                     PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 400, height: 400)) { image in
                         DispatchQueue.main.async {
@@ -215,7 +274,6 @@ struct AddTrickView: View {
                 }
             }
         }
-        
         return newMediaItems
     }
 }
