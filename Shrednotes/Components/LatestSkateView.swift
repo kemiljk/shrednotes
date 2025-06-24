@@ -48,7 +48,7 @@ struct LiveWorkoutView: View {
                               startPoint: .topLeading,
                               endPoint: .bottomTrailing)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         }
     }
 }
@@ -92,7 +92,7 @@ struct StoredWorkoutView: View {
                                   startPoint: .topLeading,
                                   endPoint: .bottomTrailing)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             }
         } else {
             VStack(alignment: .leading) {
@@ -138,11 +138,11 @@ struct StoredWorkoutView: View {
                 .padding()
                 .background(.background.secondary)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .stroke(colorScheme == .light ? .black : .white, lineWidth: 1)
                         .blendMode(.overlay)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             }
         }
     }

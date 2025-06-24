@@ -28,8 +28,8 @@ struct JournalView: View {
     @State private var frequentTrickNames: [String] = []
     @State private var searchText = ""
     @State private var isGenerating: Bool = false
-    @State private var selectedMonth: Int?
-    @State private var selectedYear: Int?
+    @State private var selectedMonths = Set<Int>()
+    @State private var selectedYears = Set<Int>()
     
     @MainActor @AppStorage("lastTipDismissalDate") private var lastTipDismissalDate: Date = .distantPast
     @MainActor @AppStorage(
@@ -161,39 +161,67 @@ struct JournalView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
-                        if selectedMonth != nil || selectedYear != nil {
+                        if hasActiveFilters {
                             Button(role: .destructive) {
-                                selectedMonth = nil
-                                selectedYear = nil
+                                selectedMonths.removeAll()
+                                selectedYears.removeAll()
                             } label: {
-                                Label("Clear Filters", systemImage: "xmark.circle.fill")
+                                Label("Clear All Filters", systemImage: "xmark.circle.fill")
                             }
                             Divider()
                         }
                         
-                        Menu {
+                        // Month filter section
+                        Section(header: Text("Filter by Month")) {
                             ForEach(availableMonths, id: \.number) { month in
-                                Button(month.name) {
-                                    selectedMonth = month.number
-                                    selectedYear = nil
+                                Button {
+                                    if selectedMonths.contains(month.number) {
+                                        selectedMonths.remove(month.number)
+                                    } else {
+                                        selectedMonths.insert(month.number)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(month.name)
+                                        Spacer()
+                                        if selectedMonths.contains(month.number) {
+                                            Image(systemName: "checkmark")
+                                        } else {
+                                            EmptyView()
+                                        }
+                                    }
                                 }
+                                .menuActionDismissBehavior(.disabled)
                             }
-                        } label: {
-                            Label(selectedMonthName ?? "Filter by Month", systemImage: "calendar")
                         }
-
-                        Menu {
+                        
+                        // Year filter section
+                        Section(header: Text("Filter by Year")) {
                             ForEach(availableYears, id: \.self) { year in
-                                Button(String(year)) {
-                                    selectedYear = year
-                                    selectedMonth = nil
+                                Button {
+                                    if selectedYears.contains(year) {
+                                        selectedYears.remove(year)
+                                    } else {
+                                        selectedYears.insert(year)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(String(year))
+                                        Spacer()
+                                        if selectedYears.contains(year) {
+                                            Image(systemName: "checkmark")
+                                        } else {
+                                            EmptyView()
+                                        }
+                                    }
                                 }
+                                .menuActionDismissBehavior(.disabled)
                             }
-                        } label: {
-                            Label(selectedYear.map { String($0) } ?? "Filter by Year", systemImage: "calendar.badge.clock")
                         }
                     } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
+                        Image(systemName: hasActiveFilters ? 
+                            "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
+                            .foregroundStyle(hasActiveFilters ? .accent : .primary)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -276,21 +304,31 @@ struct JournalView: View {
     }
     
     private var selectedMonthName: String? {
-        guard let monthNumber = selectedMonth else { return nil }
+        guard let monthNumber = selectedMonths.first else { return nil }
         let dateFormatter = DateFormatter()
         guard monthNumber > 0 && monthNumber <= dateFormatter.monthSymbols.count else { return nil }
         return dateFormatter.monthSymbols[monthNumber - 1]
     }
     
+    private var hasActiveFilters: Bool {
+        !selectedMonths.isEmpty || !selectedYears.isEmpty
+    }
+    
     private var filteredGroupedSessions: [(key: DateComponents, value: [SkateSession])] {
         var dateFilteredGroups = groupedSessions
 
-        if let year = selectedYear {
-            dateFilteredGroups = dateFilteredGroups.filter { $0.key.year == year }
+        if !selectedYears.isEmpty {
+            dateFilteredGroups = dateFilteredGroups.filter { group in
+                guard let year = group.key.year else { return false }
+                return selectedYears.contains(year)
+            }
         }
 
-        if let month = selectedMonth {
-            dateFilteredGroups = dateFilteredGroups.filter { $0.key.month == month }
+        if !selectedMonths.isEmpty {
+            dateFilteredGroups = dateFilteredGroups.filter { group in
+                guard let month = group.key.month else { return false }
+                return selectedMonths.contains(month)
+            }
         }
         
         if searchText.isEmpty {

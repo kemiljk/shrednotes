@@ -118,7 +118,7 @@ struct SessionCard: View {
                 }
             }
         }
-        .padding()
+        .padding(20)
         .background {
             if let media = session.media?.first,
                let uiImage = UIImage(data: media.data) {
@@ -130,19 +130,19 @@ struct SessionCard: View {
                         .opacity(0.2)
                         .overlay {
                             Rectangle()
-                                .fill(.ultraThinMaterial)
+                                .containerShape(.containerRelative)
                         }
                 }
             } else {
-                RoundedRectangle(cornerRadius: 24)
+                Rectangle()
                     .fill(.ultraThinMaterial)
             }
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: 28)
                 .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .clipShape(.rect(cornerRadius: 28))
         .onAppear {
             getLocationName()
         }
@@ -159,14 +159,14 @@ struct SessionCard: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(minWidth: fullWidth ? 320 : 60, maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 
         } else if let thumbnail = mediaState.videoThumbnails[item.id ?? UUID()] {
             Image(uiImage: thumbnail)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(minWidth: fullWidth ? 320 : 60, maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     Image(systemName: "play.circle")
                         .foregroundColor(.white)
@@ -177,7 +177,7 @@ struct SessionCard: View {
                 Rectangle()
                     .fill(Color.gray.opacity(0.2))
                     .frame(minWidth: fullWidth ? 320 : 60, maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 
                 ProgressView()
             }

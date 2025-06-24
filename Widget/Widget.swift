@@ -304,20 +304,20 @@ struct LatestSessionView: View {
                             .background(.secondary.opacity(0.2))
                             .clipShape(Capsule())
                     }
-                    
-                    if let note = latestSession.note, !note
-                        .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        let lines = note.components(separatedBy: .newlines)
-                        let truncatedNote = lines.prefix(3).joined(separator: "\n")
-                        let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
-                        
-                        Text(displayText)
-                            .font(.body)
-                            .multilineTextAlignment(.leading)
-                            .padding(.top, 8)
-                    }
                 }
                 .padding(.bottom, 4)
+                
+                if let note = latestSession.note, !note
+                    .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let lines = note.components(separatedBy: .newlines)
+                    let truncatedNote = lines.prefix(3).joined(separator: "\n")
+                    let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
+                    
+                    Text(displayText)
+                        .font(.body)
+                        .multilineTextAlignment(.leading)
+                        .padding(.top, 8)
+                }
                 
                 Spacer()
                 

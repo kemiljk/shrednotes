@@ -61,6 +61,7 @@ struct SettingsView: View {
                                 }
                             }
                             .tint(.primary)
+                            .menuActionDismissBehavior(.disabled)
                         }
                         Toggle(isOn: $hideRecommendations) {
                             Label("Hide Recommendations", systemImage: "sparkles.rectangle.stack")
