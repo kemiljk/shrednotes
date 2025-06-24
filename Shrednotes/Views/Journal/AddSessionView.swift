@@ -135,21 +135,32 @@ struct AddSessionView: View {
                             )
                             .focused($noteIsFocused)
                         
-                        if #available(iOS 26, *) {
-                            Button {
-                                Task {
-                                    await generateTrickSuggestions()
-                                }
-                            } label: {
-                                HStack {
-                                    Label("Suggest Tricks", systemImage: "sparkles")
-                                    if isSuggestingTricks {
-                                        Spacer()
-                                        ProgressView()
+                        if !note.isEmpty {
+                            Group {
+                                if #available(iOS 26, *) {
+                                    Button(action: {
+                                        Task {
+                                            await generateTrickSuggestions()
+                                        }
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: isSuggestingTricks ? "sparkles" : "wand.and.stars")
+                                            Text(isSuggestingTricks ? "Finding tricks..." : "Find tricks in note")
+                                        }
+                                        .font(.caption)
                                     }
+                                    .disabled(note.isEmpty || isSuggestingTricks)
+                                } else {
+                                    Button(action: {}) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "wand.and.stars")
+                                            Text("AI suggestions require iOS 26+")
+                                        }
+                                        .font(.caption)
+                                    }
+                                    .disabled(true)
                                 }
                             }
-                            .disabled(note.isEmpty || isSuggestingTricks)
                             .listRowSeparator(.hidden)
                             .foregroundStyle(colorScheme == .light ? .indigo : .white)
                             .buttonStyle(.bordered)
@@ -355,9 +366,9 @@ struct AddSessionView: View {
     @available(iOS 26, *)
     private func generateTrickSuggestions() async {
         isSuggestingTricks = true
-        self.suggestedTricks = []
+        suggestedTricks = []
         
-        do {
+        let result = await AIModelAvailability.withAvailability {
             let instructions = Instructions {
                 """
                 Extract skateboarding trick names from the session note.
@@ -379,7 +390,6 @@ struct AddSessionView: View {
             
             let prompt = Prompt("Extract trick names from: \(note)")
             let session = LanguageModelSession(instructions: instructions)
-            
             let response = try await session.respond(to: prompt)
             
             print("LLM Response: \(response.content)")
@@ -434,17 +444,23 @@ struct AddSessionView: View {
             }
             
             print("Matched tricks: \(matchedTricks.map { $0.name })")
+            return matchedTricks
             
-            self.suggestedTricks = matchedTricks
-            
-        } catch {
-            print("Error generating trick suggestions: \(error.localizedDescription)")
-            
-            // If LLM fails (including sensitive content), fall back to basic matching
+        } onUnavailable: { error in
+            print("AI feature unavailable: \(error.localizedDescription)")
+            await self.performBasicTrickMatching()
+            return
+        }
+        
+        if let matchedTricks = result, !matchedTricks.isEmpty {
+            await MainActor.run {
+                self.suggestedTricks = matchedTricks
+            }
+        } else {
             await performBasicTrickMatching()
         }
         
-        self.isSuggestingTricks = false
+        isSuggestingTricks = false
     }
     
     @MainActor

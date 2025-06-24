@@ -203,7 +203,6 @@ struct QuickGlanceView: View {
                                             .fontWeight(.semibold)
                                     }
                                     
-                                    
                                     Text(latestSession.date?.timeAgo() ?? "")
                                         .font(.subheadline)
                                 }
@@ -223,10 +222,16 @@ struct QuickGlanceView: View {
                                 .fontWidth(family == .accessoryRectangular ? .standard : .expanded)
                                 .lineLimit(1)
                             
-                            if let note = latestSession.note {
-                                Text(note)
-                                    .font(.caption)
-                                    .lineLimit(4)
+                            if let note = latestSession.note, !note
+                                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                let lines = note.components(separatedBy: .newlines)
+                                let truncatedNote = lines.prefix(3).joined(separator: "\n")
+                                let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
+                                
+                                Text(displayText)
+                                    .font(.body)
+                                    .multilineTextAlignment(.leading)
+                                    .padding(.top, 8)
                             }
                             
                             Text(latestSession.date?.timeAgo() ?? "")
@@ -299,21 +304,20 @@ struct LatestSessionView: View {
                             .background(.secondary.opacity(0.2))
                             .clipShape(Capsule())
                     }
+                    
+                    if let note = latestSession.note, !note
+                        .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        let lines = note.components(separatedBy: .newlines)
+                        let truncatedNote = lines.prefix(3).joined(separator: "\n")
+                        let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
+                        
+                        Text(displayText)
+                            .font(.body)
+                            .multilineTextAlignment(.leading)
+                            .padding(.top, 8)
+                    }
                 }
                 .padding(.bottom, 4)
-                
-                VStack {
-                    let summarizer = TextSummarizer(tricks: latestSession.tricks ?? [])
-                    let summary = summarizer.summarizeSession(
-                        notes: latestSession.note ?? "",
-                        landedTricks: latestSession.tricks ?? [],
-                        date: latestSession.date ?? .now
-                    )
-                    
-                    Text(summary)
-                        .font(.caption)
-                        .multilineTextAlignment(.leading)
-                }
                 
                 Spacer()
                 

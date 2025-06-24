@@ -19,6 +19,7 @@ struct SKATEGameView: View {
     @State private var searchText = ""
     @State private var selectedTrickType: TrickType?
     @State private var gameMode: GameMode = .skate
+    @State private var showingExitConfirmation = false
     
     @FocusState private var focusedField: FocusedField?
     
@@ -155,8 +156,17 @@ struct SKATEGameView: View {
                 }
             }
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: {
+                        showingExitConfirmation = true
+                    }) {
+                        Text("Exit")
+                            .foregroundStyle(.red)
+                    }
+                }
+                
                 if gamePhase == .attemptingTrick || gamePhase == .settingTrick || gamePhase == .setterAttempting {
-                    ToolbarItem(placement: .cancellationAction) {
+                    ToolbarItem(placement: .destructiveAction) {
                         Button("End Game") {
                             endGame()
                         }
@@ -176,6 +186,15 @@ struct SKATEGameView: View {
                     }
                 }
             }
+        }
+        .alert("Exit Game", isPresented: $showingExitConfirmation) {
+            Button("Exit", role: .destructive) {
+                resetGameState()
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to exit the game? All progress will be lost.")
         }
         .onAppear {
             // Initialize focus state array to match players count
@@ -207,7 +226,7 @@ struct SKATEGameView: View {
                         .foregroundStyle(.accent)
                     
                     VStack(spacing: 8) {
-                        Text("S.K.A.T.E Game")
+                        Text("Game of S.K.A.T.E")
                             .font(.largeTitle.bold())
                             .fontWidth(.expanded)
                         
@@ -656,6 +675,8 @@ struct SKATEGameView: View {
                                             (gamePhase == .setterAttempting && index == currentTrickSetter) ||
                                             (gamePhase == .attemptingTrick && index == currentAttemptingPlayer)
                         
+                        let isStartingPlayer = gamePhase == .readyToStart && index == currentTrickSetter
+                        
                         VStack(spacing: 12) {
                             Text(player.name)
                                 .font(.subheadline.bold())
@@ -690,8 +711,13 @@ struct SKATEGameView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(isCurrentPlayer ? .accent : Color(.systemGray6))
                         )
-                        .scaleEffect(isCurrentPlayer ? 1.05 : 1.0)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(.accent, lineWidth: isStartingPlayer ? 3 : 0)
+                        )
+                        .scaleEffect(isCurrentPlayer ? 1.05 : (isStartingPlayer ? 1.02 : 1.0))
                         .animation(.easeInOut(duration: 0.2), value: isCurrentPlayer)
+                        .animation(.easeInOut(duration: 0.2), value: isStartingPlayer)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -881,6 +907,7 @@ struct SKATEGameView: View {
         currentTrickSetter = 0
         currentAttemptingPlayer = 0
         playersAttempting.removeAll()
+        gamePhase = .setup
     }
     
     private func handleSetterResult(landed: Bool) {

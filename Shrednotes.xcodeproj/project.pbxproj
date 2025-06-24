@@ -161,7 +161,6 @@
 				Models/SharedModelContainer.swift,
 				Models/Tricks.swift,
 				Models/WatchModelContainer.swift,
-				Utilities/TextSummarizer.swift,
 				Utilities/Utils.swift,
 			);
 			target = CF9F28C22CE5FACE007379D5 /* WidgetExtension */;

@@ -39,38 +39,78 @@ struct SkateboardTrickApp: App {
     
     var body: some Scene {
         WindowGroup {
-            TabView(selection: $selectedTab) {
-                Tab(
-                    "Home",
-                    systemImage: "square.grid.2x2",
-                    value: TabIdentifier.home
-                ) {
-                    MainView()
-                }
-                
-                Tab(
-                    "Journal",
-                    systemImage: "book",
-                    value: TabIdentifier.journal
-                ) {
-                    JournalView()
-                }
-                
-                Tab(
-                    "SKATE",
-                    systemImage: "skateboard",
-                    value: TabIdentifier.skate
-                ) {
-                    SKATEGameView()
-                }
-                
-                Tab(
-                    "Search",
-                    systemImage: "magnifyingglass",
-                    value: TabIdentifier.search,
-                    role: .search
-                ) {
-                    SearchView(searchText: $searchText)
+            Group {
+                if #available(iOS 26, *) {
+                    TabView(selection: $selectedTab) {
+                        Tab(
+                            "Home",
+                            systemImage: "square.grid.2x2",
+                            value: TabIdentifier.home
+                        ) {
+                            MainView()
+                        }
+                        
+                        Tab(
+                            "Journal",
+                            systemImage: "book",
+                            value: TabIdentifier.journal
+                        ) {
+                            JournalView()
+                        }
+                        
+                        Tab(
+                            "S.K.A.T.E",
+                            systemImage: "skateboard",
+                            value: TabIdentifier.skate
+                        ) {
+                            SKATEGameView()
+                        }
+                        
+                        Tab(
+                            "Search",
+                            systemImage: "magnifyingglass",
+                            value: TabIdentifier.search,
+                            role: .search
+                        ) {
+                            SearchView(searchText: $searchText)
+                        }
+                    }
+                    .tabBarMinimizeBehavior(.onScrollDown)
+                } else {
+                    TabView(selection: $selectedTab) {
+                        Tab(
+                            "Home",
+                            systemImage: "square.grid.2x2",
+                            value: TabIdentifier.home
+                        ) {
+                            MainView()
+                        }
+                        
+                        Tab(
+                            "Journal",
+                            systemImage: "book",
+                            value: TabIdentifier.journal
+                        ) {
+                            JournalView()
+                        }
+                        
+                        Tab(
+                            "S.K.A.T.E",
+                            systemImage: "skateboard",
+                            value: TabIdentifier.skate
+                        ) {
+                            SKATEGameView()
+                        }
+                        
+                        Tab(
+                            "Search",
+                            systemImage: "magnifyingglass",
+                            value: TabIdentifier.search,
+                            role: .search
+                        ) {
+                            SearchView(searchText: $searchText)
+                        }
+                    }
                 }
             }
             .learnedTrickPrompt()

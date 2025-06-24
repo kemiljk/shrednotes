@@ -321,21 +321,18 @@ struct EditSessionView: View {
         let minute = calendar.component(.minute, from: duration)
         
         print("Converting duration - Hours: \(hour), Minutes: \(minute)")
-        let seconds = TimeInterval(hour * 3600 + minute * 60)
-        print("Total seconds: \(seconds)")
-        
-        return seconds
+        return TimeInterval(hour * 3600 + minute * 60)
     }
     
     @available(iOS 26, *)
     private func generateTrickSuggestions() async {
         isSuggestingTricks = true
-        self.suggestedTricks = []
         
-        do {
+        let result = await AIModelAvailability.withAvailability {
             let instructions = Instructions {
                 """
-                Extract skateboarding trick names from the session note.
+                You are an expert skateboarder who understands all skateboard tricks and their variations.
+                Extract trick names from the given text.
                 
                 Rules:
                 - Return ONLY a comma-separated list of trick names
@@ -354,7 +351,6 @@ struct EditSessionView: View {
             
             let prompt = Prompt("Extract trick names from: \(debouncedNote)")
             let session = LanguageModelSession(instructions: instructions)
-            
             let response = try await session.respond(to: prompt)
             
             print("LLM Response: \(response.content)")
@@ -395,53 +391,60 @@ struct EditSessionView: View {
                     continue
                 }
                 
-                // Try fuzzy matching for close matches
-                let bestMatch = allTricks
-                    .map { trick in
-                        (trick: trick, score: similarityScore(normalizedExtracted, trick.name.lowercased()))
-                    }
-                    .filter { $0.score > 0.8 } // 80% similarity threshold
-                    .max { $0.score < $1.score }
+                // Then try fuzzy matching
+                let fuzzyMatches = allTricks.filter { trick in
+                    let distance = normalizedExtracted.levenshteinDistance(to: trick.name.lowercased())
+                    let maxDistance = min(3, max(1, trick.name.count / 4))
+                    return distance <= maxDistance
+                }
                 
-                if let match = bestMatch {
-                    matchedTricks.append(match.trick)
+                if let bestMatch = fuzzyMatches.first {
+                    matchedTricks.append(bestMatch)
                 }
             }
             
-            print("Matched tricks: \(matchedTricks.map { $0.name })")
+            // Remove duplicates while preserving order
+            var uniqueTricks: [Trick] = []
+            var seenTrickIds = Set<UUID>()
+            for trick in matchedTricks {
+                if let id = trick.id, !seenTrickIds.contains(id) {
+                    seenTrickIds.insert(id)
+                    uniqueTricks.append(trick)
+                }
+            }
             
-            self.suggestedTricks = matchedTricks
+            return uniqueTricks
             
-        } catch {
-            print("Error generating trick suggestions: \(error.localizedDescription)")
-            
-            // If LLM fails (including sensitive content), fall back to basic matching
+        } onUnavailable: { error in
+            print("AI feature unavailable: \(error.localizedDescription)")
+            await self.performBasicTrickMatching()
+            return
+        }
+        
+        if let matchedTricks = result, !matchedTricks.isEmpty {
+            await MainActor.run {
+                self.suggestedTricks = matchedTricks
+            }
+        } else {
             await performBasicTrickMatching()
         }
         
-        self.isSuggestingTricks = false
+        isSuggestingTricks = false
     }
     
-    @MainActor
     private func performBasicTrickMatching() async {
-        // Simple word-based matching as fallback
-        let words = debouncedNote.lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .flatMap { $0.components(separatedBy: .punctuationCharacters) }
-            .filter { !$0.isEmpty }
-        
         var matchedTricks: [Trick] = []
+        let noteText = debouncedNote.lowercased()
         
+        // Simple word-based matching as fallback
         for trick in allTricks {
-            let trickWords = trick.name.lowercased().components(separatedBy: .whitespaces)
+            let trickName = trick.name.lowercased()
+            let trickWords = Set(trickName.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty })
             
-            // Check if all trick words appear in the note
+            // Check if all words in trick name appear in note
             var allWordsFound = true
-            for trickWord in trickWords {
-                if !words.contains(where: { word in
-                    word == trickWord || 
-                    (word.hasPrefix(trickWord) && word.dropFirst(trickWord.count).allSatisfy { $0 == "s" })
-                }) {
+            for word in trickWords {
+                if !noteText.contains(word) {
                     allWordsFound = false
                     break
                 }
@@ -460,7 +463,6 @@ struct EditSessionView: View {
             ("nose slide", "BS Noseslide")
         ]
         
-        let noteText = debouncedNote.lowercased()
         for (pattern, trickName) in aliasPatterns {
             if noteText.contains(pattern),
                let trick = allTricks.first(where: { $0.name == trickName }),
@@ -481,33 +483,8 @@ struct EditSessionView: View {
         
         if maxLen == 0 { return 1.0 }
         
-        let distance = levenshteinDistance(str1, str2)
+        let distance = str1.levenshteinDistance(to: str2)
         return 1.0 - (Double(distance) / Double(maxLen))
-    }
-    
-    private func levenshteinDistance(_ str1: String, _ str2: String) -> Int {
-        let s1 = Array(str1)
-        let s2 = Array(str2)
-        let len1 = s1.count
-        let len2 = s2.count
-        
-        var matrix = [[Int]](repeating: [Int](repeating: 0, count: len2 + 1), count: len1 + 1)
-        
-        for i in 0...len1 { matrix[i][0] = i }
-        for j in 0...len2 { matrix[0][j] = j }
-        
-        for i in 1...len1 {
-            for j in 1...len2 {
-                let cost = s1[i-1] == s2[j-1] ? 0 : 1
-                matrix[i][j] = min(
-                    matrix[i-1][j] + 1,      // deletion
-                    matrix[i][j-1] + 1,      // insertion
-                    matrix[i-1][j-1] + cost  // substitution
-                )
-            }
-        }
-        
-        return matrix[len1][len2]
     }
     
     private var mediaSection: some View {
@@ -810,5 +787,40 @@ extension Binding {
             get: { self.wrappedValue ?? defaultValue },
             set: { self.wrappedValue = $0 }
         )
+    }
+}
+
+// MARK: - String Extension for Levenshtein Distance
+extension String {
+    func levenshteinDistance(to target: String) -> Int {
+        let source = Array(self.unicodeScalars)
+        let target = Array(target.unicodeScalars)
+        
+        if source.isEmpty { return target.count }
+        if target.isEmpty { return source.count }
+        
+        var distance = Array(repeating: Array(repeating: 0, count: target.count + 1),
+                           count: source.count + 1)
+        
+        for i in 0...source.count {
+            distance[i][0] = i
+        }
+        
+        for j in 0...target.count {
+            distance[0][j] = j
+        }
+        
+        for i in 1...source.count {
+            for j in 1...target.count {
+                let cost = source[i-1] == target[j-1] ? 0 : 1
+                distance[i][j] = Swift.min(
+                    distance[i-1][j] + 1,      // deletion
+                    distance[i][j-1] + 1,      // insertion
+                    distance[i-1][j-1] + cost  // substitution
+                )
+            }
+        }
+        
+        return distance[source.count][target.count]
     }
 }

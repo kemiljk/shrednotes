@@ -321,8 +321,10 @@ struct TrickDetailView: View {
     
     @available(iOS 26, *)
     private func generateTrickTip() async {
-        do {
-            isGenerating = true
+        isGenerating = true
+        defer { isGenerating = false }
+        
+        let result = await AIModelAvailability.withAvailability {
             let instructions = Instructions {
                 """
                 You are a skateboarding professional with over 30 years of experience on the board. Your job is to provide useful tips for this specific trick.
@@ -357,14 +359,20 @@ struct TrickDetailView: View {
                 Once you're comfortable with stationary Ollies, try them rolling, then over small objects."
                 """
             }
+            
             let prompt = Prompt("Provide a single, short and simple set of trick tips for \(trick.name). Exclude any chat-like responses or introductions; provide the tip directly.")
             let session = LanguageModelSession(instructions: instructions)
             let response = try await session.respond(to: prompt)
-            self.trick.tip = response.content
+            return response.content
             
-            isGenerating = false
-        } catch {
-            print(error.localizedDescription)
+        } onUnavailable: { error in
+            return
+        }
+        
+        if let tip = result {
+            await MainActor.run {
+                self.trick.tip = tip
+            }
         }
     }
      
@@ -375,22 +383,27 @@ struct TrickDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     Spacer()
-                Button {
-                    if #available(iOS 26, *) {
+                
+                if #available(iOS 26, *) {
+                    Button {
                         Task {
-                          await generateTrickTip()
+                            await generateTrickTip()
                         }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "wand.and.sparkles")
+                            Text("Regenerate")
+                        }
+                        .font(.caption)
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "wand.and.sparkles")
-                        Text("Regenerate")
-                    }
-                    .font(.caption)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.small)
+                } else {
+                    Text("AI tips require iOS 26+")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
             }
 
             if isGenerating {

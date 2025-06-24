@@ -75,12 +75,12 @@ struct JournalView: View {
                                             }
                                             .symbolEffect(
                                                 .pulse,
-                                                isActive: isGenerating == true
+                                                isActive: isGenerating
                                             )
                                         Text("Summary")
                                             .foregroundStyle(
                                                 LinearGradient(
-                                                    gradient: Gradient(colors: [Color.orange, Color.red, Color.purple, Color.blue]),
+                                                    gradient: Gradient(colors: [Color.orange, Color.red, Color.purple, Color.cyan]),
                                                     startPoint: .leading,
                                                     endPoint: .trailing
                                                 )
@@ -90,7 +90,7 @@ struct JournalView: View {
                                     .fontWeight(.bold)
                                     .fontWidth(.expanded)
                                     .frame(maxWidth: .infinity)
-                                    
+
                                     Text(summary)
                                 }
                                 .listRowSeparator(.hidden)
@@ -160,18 +160,6 @@ struct JournalView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        self.showingAddSession = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .tint(.accentColor)
-                    .sensoryFeedback(
-                        .impact(weight: .medium),
-                        trigger: showingAddSession
-                    )
-                }
-                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         if selectedMonth != nil || selectedYear != nil {
                             Button(role: .destructive) {
@@ -217,6 +205,30 @@ struct JournalView: View {
                         }
                     }
                     .sensoryFeedback(.increase, trigger: showingInsightView)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if #available(iOS 26, *) {
+                        Button(role: .confirm) {
+                            self.showingAddSession = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .sensoryFeedback(
+                            .impact(weight: .medium),
+                            trigger: showingAddSession
+                        )
+                    } else {
+                        Button {
+                            self.showingAddSession = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .tint(.accentColor)
+                        .sensoryFeedback(
+                            .impact(weight: .medium),
+                            trigger: showingAddSession
+                        )
+                    }
                 }
             }
             .sheet(isPresented: $showingAddSession) {
@@ -319,8 +331,9 @@ struct JournalView: View {
     
     @available(iOS 26, *)
     private func generateSummary() async {
-        do {
-            isGenerating = true
+        isGenerating = true
+        
+        let _ = await AIModelAvailability.withAvailability {
             let instructions = Instructions {
                 """
                 You are an AI assistant specializing in summarizing skateboarding sessions. Your primary goal is to highlight the skater's progress, improvements, and key achievements, creating an encouraging and personal overview of their journey.
@@ -338,6 +351,7 @@ struct JournalView: View {
                 - **Example Output:**  "On June 21, 2025, you had a fantastic session at the park! Your kickflips are looking much cleaner, and you landed three in a row. You also pushed yourself to try the bigger ramp and, although you didn't quite land it, your confidence is clearly growing. Keep up the great work!"
                 """
             }
+            
             let prompt = Prompt("Provide a single, overarching summary of sessions based on all the available data in \(sessions). Exclude any chat-like responses or introductions; provide the summary directly.")
             let session = LanguageModelSession(instructions: instructions)
             let stream = session.streamResponse(to: prompt)
@@ -347,10 +361,14 @@ struct JournalView: View {
                     self.summary = partial
                 }
             }
-            isGenerating = false
-        } catch {
-            print(error.localizedDescription)
+            return true
+            
+        } onUnavailable: { error in
+            print("AI feature unavailable: \(error.localizedDescription)")
+            return
         }
+        
+        isGenerating = false
     }
     
     @MainActor
@@ -394,12 +412,26 @@ struct JournalView: View {
     }
     
     private func monthHeader(for month: DateComponents) -> some View {
-        Text(monthYearString(from: month))
-            .font(.headline)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 16)
-            .foregroundStyle(.secondary)
+        Group {
+            if #available(iOS 26, *) {
+                Text(monthYearString(from: month))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .foregroundStyle(.secondary)
+                    .glassEffect(in: .capsule)
+            } else {
+                Text(monthYearString(from: month))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .foregroundStyle(.secondary)
+                    .backgroundStyle(.ultraThinMaterial)
+                    .clipShape(.capsule)
+            }
+        }
     }
     
     private func monthYearString(from components: DateComponents) -> String {
@@ -473,53 +505,5 @@ struct FrequentTrickTip: Tip {
     
     var image: Image? {
         Image(systemName: "sparkles")
-    }
-}
-
-struct BlurUpTextRenderer: TextRenderer, Animatable {
-    var elapsedTime: TimeInterval
-    var elementDuration: TimeInterval
-    var totalDuration: TimeInterval
-
-    var animatableData: Double {
-        get { elapsedTime }
-        set { elapsedTime = newValue }
-    }
-
-    func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
-        for (index, line) in layout.enumerated() {
-            let delay = elementDuration * Double(index)
-            let time = max(0, min(elapsedTime - delay, elementDuration))
-            let progress = time / elementDuration
-
-            var copy = ctx
-            let blur = (1 - progress) * 10
-            let offsetY = (1 - progress) * 20
-            copy.addFilter(.blur(radius: blur))
-            copy.opacity = progress
-            copy.translateBy(x: 0, y: -offsetY)
-            copy.draw(line, options: .disablesSubpixelQuantization)
-        }
-    }
-}
-
-struct BlurUpTextTransition: Transition {
-    let duration: TimeInterval = 0.7
-    let elementDuration: TimeInterval = 0.2
-
-    func body(content: Content, phase: TransitionPhase) -> some View {
-        let elapsedTime = phase.isIdentity ? duration : 0
-        let renderer = BlurUpTextRenderer(
-            elapsedTime: elapsedTime,
-            elementDuration: elementDuration,
-            totalDuration: duration
-        )
-        content.transaction { transaction in
-            if !transaction.disablesAnimations {
-                transaction.animation = .linear(duration: duration)
-            }
-        } body: { view in
-            view.textRenderer(renderer)
-        }
     }
 }
