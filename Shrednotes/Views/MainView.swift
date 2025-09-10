@@ -57,7 +57,7 @@ struct MainView: View {
     @AppStorage("didMigrateTrickIDs") private var didMigrateTrickIDs: Bool = false
     
     enum ActiveSheet: Identifiable {
-        case settings, fullTrickList, onboarding
+        case settings, fullTrickList, onboarding, comboBuilder
         
         var id: Int { hashValue }
     }
@@ -246,27 +246,27 @@ struct MainView: View {
                 }
                 .sensoryFeedback(.increase, trigger: activeSheet)
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
-                    Button(action: {
+                    Button {
                         navigationModel.showAddSession = true
-                    }) {
-                        Label("Add Session", systemImage: "calendar.badge.plus")
+                    } label: {
+                        Label("Add Session", systemImage: "book")
                     }
                     
-                    Button(action: {
-                        showingComboBuilder = true
-                    }) {
-                        Label("Add Combo", systemImage: "list.bullet")
+                    Button {
+                        activeSheet = .comboBuilder
+                    } label: {
+                        Label("Add Combo", systemImage: "rectangle.stack")
                     }
                     
-                    Button(action: {
+                    Button {
                         showingAddTrick = true
-                    }) {
+                    } label: {
                         Label("Add Trick", systemImage: "figure.skateboarding")
                     }
                 } label: {
-                    Image(systemName: "ellipsis")
+                    Image(systemName: "plus")
                 }
             }
         }
@@ -280,7 +280,6 @@ struct MainView: View {
             switch item {
             case .settings:
                 SettingsView(visibleTrickTypes: $visibleTrickTypes)
-                    
                     .environmentObject(healthKitManager)
                     .onDisappear {
                         loadVisibleTrickTypes()
@@ -302,10 +301,13 @@ struct MainView: View {
                 }
             case .onboarding:
                 OnboardingView(isOnboardingComplete: $isOnboardingComplete)
-                    
                     .presentationDetents([.medium, .large])
                     .environmentObject(healthKitManager)
                     .interactiveDismissDisabled(!isOnboardingComplete)
+            case .comboBuilder:
+                NavigationStack {
+                    ComboBuilderView(isPresentedInNavigationStack: false)
+                }
             }
         }
         .sheet(isPresented: $showingAddTrick) {

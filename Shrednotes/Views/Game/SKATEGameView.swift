@@ -157,11 +157,13 @@ struct SKATEGameView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(action: {
-                        showingExitConfirmation = true
-                    }) {
-                        Text("Exit")
-                            .foregroundStyle(.red)
+                    if gamePhase == .readyToStart || gamePhase == .settingTrick || gamePhase == .setterAttempting || gamePhase == .attemptingTrick {
+                        Button(action: {
+                            showingExitConfirmation = true
+                        }) {
+                            Text("Exit")
+                                .foregroundStyle(.red)
+                        }
                     }
                 }
                 

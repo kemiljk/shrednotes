@@ -374,23 +374,84 @@ struct JournalView: View {
         let _ = await AIModelAvailability.withAvailability {
             let instructions = Instructions {
                 """
-                You are an AI assistant specializing in summarizing skateboarding sessions. Your primary goal is to highlight the skater's progress, improvements, and key achievements, creating an encouraging and personal overview of their journey.
+                You are an AI assistant that creates personalized skateboarding session summaries. Your task is to analyze the provided session data and generate an encouraging, accurate summary based ONLY on the actual information provided.
 
-                - **Data Usage:** Use the provided data (session title, date, notes, feelings, and workout metrics like duration, distance, etc.) to create a concise and insightful summary. If specific data points are missing, simply exclude them from the summary – do not invent information.
-                - **Focus on Progress:** Emphasize improvements in trick progression (e.g., "You're landing kickflips more consistently!"), consistency (e.g., "Your ollies are becoming much more reliable."), confidence (e.g., "You seemed much more confident tackling that new ramp."), and stamina (e.g., "You skated for a full hour without tiring!").
-                - **Tone and Style:**
-                    - Maintain an encouraging and positive tone throughout the summary.
-                    - Keep the summary concise, aiming for a single paragraph of no more than five sentences.
-                    - Refer to the skater directly using "you" to create a personal connection. For example, "Today, you nailed that new grind you've been working on!"
-                - **Important Exclusions:**
-                    - Do not include any conversational elements, introductions, or acknowledgements of being an AI. Provide the summary directly.
-                    - Do not mention the SwiftUI model or any other internal data structures.
-                - **Formatting and Readability:** Ensure dates and other information from the SkateSession model are presented in a human-readable format (e.g., "June 21, 2025" instead of "2025-06-21").
-                - **Example Output:**  "On June 21, 2025, you had a fantastic session at the park! Your kickflips are looking much cleaner, and you landed three in a row. You also pushed yourself to try the bigger ramp and, although you didn't quite land it, your confidence is clearly growing. Keep up the great work!"
+                **CRITICAL REQUIREMENTS:**
+                - Use ONLY the data provided in the sessions array - never invent, assume, or add information not present in the data
+                - If specific data points are missing or empty, simply exclude them from the summary
+                - Never include example text, placeholder content, or generic statements
+                - Base all observations on actual trick names, feelings, notes, and metrics from the data
+
+                **DATA TO ANALYZE:**
+                - Session titles, dates, and personal notes
+                - Trick names and their learning status (isLearned, isLearning, consistency ratings)
+                - Feelings: stoked, exhausted, pumped, thrilled, hyped, wrecked, amped, bummed, confident, sketchy, dialed, flowing, fired up, gnarly, chill, rad, mellow, blissed, fizzled, slammed
+                - Workout metrics: duration, energy burned
+                - Location information if available
+                - Combo tricks and their elements
+
+                **OUTPUT FORMAT:**
+                - Single paragraph, 3-5 sentences maximum
+                - Direct, personal tone using "you"
+                - Focus on specific achievements, progress, and experiences from the actual data
+                - Use human-readable date formatting
+                - No AI acknowledgments, introductions, or conversational elements
+
+                **PROHIBITED:**
+                - Never output example text or placeholder content
+                - Never mention being an AI or assistant
+                - Never include generic statements not based on actual data
+                - Never invent trick names, locations, or experiences not in the data
                 """
             }
             
-            let prompt = Prompt("Provide a single, overarching summary of sessions based on all the available data in \(sessions). Exclude any chat-like responses or introductions; provide the summary directly.")
+            let sessionData = sessions.map { session in
+                var data: [String: Any] = [:]
+                
+                if let title = session.title, !title.isEmpty {
+                    data["title"] = title
+                }
+                if let date = session.date {
+                    data["date"] = date
+                }
+                if let note = session.note, !note.isEmpty {
+                    data["note"] = note
+                }
+                if let feelings = session.feeling, !feelings.isEmpty {
+                    data["feelings"] = feelings.map { $0.rawValue }
+                }
+                if let tricks = session.tricks, !tricks.isEmpty {
+                    data["tricks"] = tricks.map { trick in
+                        var trickData: [String: Any] = ["name": trick.name]
+                        if trick.isLearned { trickData["isLearned"] = true }
+                        if trick.isLearning { trickData["isLearning"] = true }
+                        if trick.consistency > 0 { trickData["consistency"] = trick.consistency }
+                        return trickData
+                    }
+                }
+                if let combos = session.combos, !combos.isEmpty {
+                    data["combos"] = combos.map { combo in
+                        var comboData: [String: Any] = ["name": combo.name]
+                        if let elements = combo.comboElements, !elements.isEmpty {
+                            comboData["elements"] = elements.map { $0.name }
+                        }
+                        return comboData
+                    }
+                }
+                if let duration = session.workoutDuration {
+                    data["duration"] = duration
+                }
+                if let energy = session.workoutEnergyBurned {
+                    data["energyBurned"] = energy
+                }
+                if let location = session.location {
+                    data["location"] = location.name
+                }
+                
+                return data
+            }
+            
+            let prompt = Prompt("Analyze this skateboarding session data and create a personalized summary: \(sessionData). Base the summary entirely on the provided data - do not add any information not present in the data.")
             let session = LanguageModelSession(instructions: instructions)
             let stream = session.streamResponse(to: prompt)
             

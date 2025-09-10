@@ -229,7 +229,7 @@ struct QuickGlanceView: View {
                                 let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
                                 
                                 Text(displayText)
-                                    .font(.body)
+                                    .font(.caption)
                                     .multilineTextAlignment(.leading)
                                     .padding(.top, 8)
                             }
@@ -305,7 +305,7 @@ struct LatestSessionView: View {
                             .clipShape(Capsule())
                     }
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
                 
                 if let note = latestSession.note, !note
                     .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -314,12 +314,12 @@ struct LatestSessionView: View {
                     let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
                     
                     Text(displayText)
-                        .font(.body)
+                        .font(.caption)
                         .multilineTextAlignment(.leading)
-                        .padding(.top, 8)
+                        .lineLimit(3)
                 }
                 
-                Spacer()
+                Spacer(minLength: 0)
                 
                 HStack {
                     Text(latestSession.date?.formatted(date: .numeric, time: .omitted) ?? "")
@@ -648,6 +648,8 @@ struct MediumInsightsView: View {
         HStack {
             // Left column
             VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: "skateboard")
+                    .font(.title)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(sessions.count)")
                         .font(.title)
@@ -876,6 +878,8 @@ struct StatRow: View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .foregroundStyle(.secondary)
+                .frame(width: 16, height: 16)
+                .contentShape(.rect)
             Text(value)
                 .fontWeight(.medium)
             Text(label)

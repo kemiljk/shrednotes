@@ -8,7 +8,7 @@ import WidgetKit
 import UIKit
 
 enum TabIdentifier {
-    case home, journal, skate, search
+    case home, journal, skate, tricks, search
 }
 
 @main
@@ -23,6 +23,9 @@ struct SkateboardTrickApp: App {
     @State private var isLoading = false
     @State private var isOnboardingComplete = UserDefaults.standard.bool(forKey: "isOnboardingComplete")
     @State private var searchText = ""
+    @State private var visibleTrickTypes: Set<TrickType> = Set(TrickType.allCases)
+    @State private var expandedGroups: [String: Bool] = [:]
+    @State private var selectedType: TrickType? = nil
     private var sceneNavigationModel: NavigationModel
     
     @Query(sort: [SortDescriptor(\SkateSession.date, order: .reverse)], animation: .bouncy) private var skateSessions: [SkateSession]
@@ -35,6 +38,13 @@ struct SkateboardTrickApp: App {
         let navModel = NavigationModel.shared
         sceneNavigationModel = navModel
         AppDependencyManager.shared.add(dependency: navModel)
+    }
+    
+    func loadVisibleTrickTypes() {
+        if let data = UserDefaults.standard.data(forKey: "visibleTrickTypes"),
+           let decodedSet = try? JSONDecoder().decode(Set<TrickType>.self, from: data) {
+            visibleTrickTypes = decodedSet
+        }
     }
     
     var body: some Scene {
@@ -56,6 +66,20 @@ struct SkateboardTrickApp: App {
                             value: TabIdentifier.journal
                         ) {
                             JournalView()
+                        }
+                        
+                        Tab(
+                            "Tricks",
+                            systemImage: "figure.skating",
+                            value: TabIdentifier.tricks
+                        ) {
+                            FullTrickListView(
+                                visibleTrickTypes: $visibleTrickTypes,
+                                searchText: $searchText,
+                                expandedGroups: $expandedGroups,
+                                selectedType: $selectedType,
+                                isTabItem: true
+                            )
                         }
                         
                         Tab(
@@ -92,6 +116,20 @@ struct SkateboardTrickApp: App {
                             value: TabIdentifier.journal
                         ) {
                             JournalView()
+                        }
+                        
+                        Tab(
+                            "Tricks",
+                            systemImage: "figure.skating",
+                            value: TabIdentifier.tricks
+                        ) {
+                            FullTrickListView(
+                                visibleTrickTypes: $visibleTrickTypes,
+                                searchText: $searchText,
+                                expandedGroups: $expandedGroups,
+                                selectedType: $selectedType,
+                                isTabItem: true
+                            )
                         }
                         
                         Tab(
@@ -132,6 +170,7 @@ struct SkateboardTrickApp: App {
                     let tempSize = TempFileCleanup.shared.getTempDirectorySize()
                     print("Temp directory size: \(TempFileCleanup.shared.formatBytes(tempSize))")
                 }
+                loadVisibleTrickTypes()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                 TempFileCleanup.shared.cleanupOldVideoFiles()

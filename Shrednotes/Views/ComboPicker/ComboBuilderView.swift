@@ -153,9 +153,6 @@ struct ComboBuilderView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         if isPresentedInNavigationStack {
-            ToolbarItem(placement: .topBarTrailing) {
-                EditButton()
-            }
             if #unavailable(iOS 26) {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -185,9 +182,6 @@ struct ComboBuilderView: View {
                         dismiss()
                     }
                 }
-            }
-            ToolbarItem(placement: .secondaryAction) {
-                EditButton()
             }
             if #unavailable(iOS 26) {
                 ToolbarItem(placement: .topBarTrailing) {
