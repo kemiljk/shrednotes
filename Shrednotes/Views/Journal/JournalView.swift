@@ -431,9 +431,10 @@ struct JournalView: View {
                 }
                 if let combos = session.combos, !combos.isEmpty {
                     data["combos"] = combos.map { combo in
-                        var comboData: [String: Any] = ["name": combo.name]
+                        var comboData: [String: Any] = ["name": combo.name ?? "Combo"]
                         if let elements = combo.comboElements, !elements.isEmpty {
-                            comboData["elements"] = elements.map { $0.name }
+                            comboData["elements"] = elements
+                                .map { $0.combo?.name }
                         }
                         return comboData
                     }
@@ -457,7 +458,7 @@ struct JournalView: View {
             
             for try await partial in stream {
                 await MainActor.run {
-                    self.summary = partial
+                    self.summary = partial.content
                 }
             }
             return true
