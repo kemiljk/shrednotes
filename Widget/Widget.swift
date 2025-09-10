@@ -203,7 +203,6 @@ struct QuickGlanceView: View {
                                             .fontWeight(.semibold)
                                     }
                                     
-                                    
                                     Text(latestSession.date?.timeAgo() ?? "")
                                         .font(.subheadline)
                                 }
@@ -223,10 +222,16 @@ struct QuickGlanceView: View {
                                 .fontWidth(family == .accessoryRectangular ? .standard : .expanded)
                                 .lineLimit(1)
                             
-                            if let note = latestSession.note {
-                                Text(note)
+                            if let note = latestSession.note, !note
+                                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                let lines = note.components(separatedBy: .newlines)
+                                let truncatedNote = lines.prefix(3).joined(separator: "\n")
+                                let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
+                                
+                                Text(displayText)
                                     .font(.caption)
-                                    .lineLimit(4)
+                                    .multilineTextAlignment(.leading)
+                                    .padding(.top, 8)
                             }
                             
                             Text(latestSession.date?.timeAgo() ?? "")
@@ -300,22 +305,21 @@ struct LatestSessionView: View {
                             .clipShape(Capsule())
                     }
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
                 
-                VStack {
-                    let summarizer = TextSummarizer(tricks: latestSession.tricks ?? [])
-                    let summary = summarizer.summarizeSession(
-                        notes: latestSession.note ?? "",
-                        landedTricks: latestSession.tricks ?? [],
-                        date: latestSession.date ?? .now
-                    )
+                if let note = latestSession.note, !note
+                    .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let lines = note.components(separatedBy: .newlines)
+                    let truncatedNote = lines.prefix(3).joined(separator: "\n")
+                    let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
                     
-                    Text(summary)
+                    Text(displayText)
                         .font(.caption)
                         .multilineTextAlignment(.leading)
+                        .lineLimit(3)
                 }
                 
-                Spacer()
+                Spacer(minLength: 0)
                 
                 HStack {
                     Text(latestSession.date?.formatted(date: .numeric, time: .omitted) ?? "")
@@ -644,6 +648,8 @@ struct MediumInsightsView: View {
         HStack {
             // Left column
             VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: "skateboard")
+                    .font(.title)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(sessions.count)")
                         .font(.title)
@@ -872,6 +878,8 @@ struct StatRow: View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .foregroundStyle(.secondary)
+                .frame(width: 16, height: 16)
+                .contentShape(.rect)
             Text(value)
                 .fontWeight(.medium)
             Text(label)

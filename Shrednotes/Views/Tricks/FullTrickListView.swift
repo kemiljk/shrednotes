@@ -17,6 +17,7 @@ struct FullTrickListView: View {
     @Binding var selectedType: TrickType?
     @FocusState private var searchIsFocused: Bool
     @State private var isShowingAddTrickView: Bool = false
+    var isTabItem: Bool = false
     
     var onTrickSelected: ((Trick) -> Void)? = nil
     
@@ -255,11 +256,13 @@ struct FullTrickListView: View {
                     }
                 }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        searchText = ""
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
+                    if !isTabItem {
+                        Button {
+                            searchText = ""
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -315,6 +318,7 @@ struct FullTrickListView: View {
                 )
             }
             .padding(.horizontal)
+            .padding(.bottom, isTabItem ? 8 : 0)
         }
     }
 }

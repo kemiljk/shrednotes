@@ -11,6 +11,7 @@ import PhotosUI
 import SwiftData
 import AVKit
 import MapKit
+import FoundationModels
 
 struct EditSessionView: View {
     @Environment(\.modelContext) private var modelContext
@@ -144,6 +145,26 @@ struct EditSessionView: View {
                                 debounceUpdateNote(newValue)
                             }
                         
+                        if #available(iOS 26, *) {
+                            Button {
+                                Task {
+                                    await generateTrickSuggestions()
+                                }
+                            } label: {
+                                HStack {
+                                    Label(isSuggestingTricks ? "Thinking..." : "Suggest Tricks", systemImage: "sparkles")
+                                        .transition(.opacity)
+                                }
+                            }
+                            .disabled(debouncedNote.isEmpty || isSuggestingTricks)
+                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
+                            .buttonStyle(.bordered)
+                            .buttonBorderShape(.capsule)
+                            .controlSize(.mini)
+                            .animation(.linear, value: isSuggestingTricks)
+                            .listRowSeparator(.hidden)
+                        }
+                        
                         if !suggestedTricks.isEmpty {
                             TrickSuggestionPickerView(
                                 suggestedTricks: $suggestedTricks,
@@ -225,18 +246,29 @@ struct EditSessionView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .cancellationAction) {
-                    
+                    if #available(iOS 26.0, *) {
+                        Button(role: .cancel) {
+                            dismiss()
+                        }
+                    } else {
                         Button("Cancel") {
                             dismiss()
                         }
+                    }
                 }
                 ToolbarItemGroup(placement: .confirmationAction) {
+                    if #available(iOS 26.0, *) {
+                        Button(role: .confirm) {
+                            saveSession()
+                        }
+                    } else {
                         Button("Save") {
                             saveSession()
                         }
                         .fontWeight(.bold)
                         .sensoryFeedback(.success, trigger: isSaved)
                     }
+                }
             }
             .navigationTitle("Edit Session")
             .navigationBarTitleDisplayMode(.inline)
@@ -289,32 +321,130 @@ struct EditSessionView: View {
         let minute = calendar.component(.minute, from: duration)
         
         print("Converting duration - Hours: \(hour), Minutes: \(minute)")
-        let seconds = TimeInterval(hour * 3600 + minute * 60)
-        print("Total seconds: \(seconds)")
-        
-        return seconds
+        return TimeInterval(hour * 3600 + minute * 60)
     }
     
-    @MainActor
-    private func performBasicTrickMatching() async {
-        // Simple word-based matching as fallback
-        let words = debouncedNote.lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .flatMap { $0.components(separatedBy: .punctuationCharacters) }
-            .filter { !$0.isEmpty }
+    @available(iOS 26, *)
+    private func generateTrickSuggestions() async {
+        isSuggestingTricks = true
         
-        var matchedTricks: [Trick] = []
-        
-        for trick in allTricks {
-            let trickWords = trick.name.lowercased().components(separatedBy: .whitespaces)
+        let result = await AIModelAvailability.withAvailability {
+            let instructions = Instructions {
+                """
+                You are an expert skateboarder who understands all skateboard tricks and their variations.
+                Extract trick names from the given text.
+                
+                Rules:
+                - Return ONLY a comma-separated list of trick names
+                - Include common variations (e.g., "kickflip", "kickflips", "kick flip" all count as the same trick)
+                - Common abbreviations: fs = frontside, bs = backside
+                - NO explanations, just the trick names
+                
+                Examples:
+                - "Landed some kickflips" → Kickflip
+                - "pop shove it" → Pop Shove It
+                - "bs flip" → BS Flip
+                - "nose manual" → Nose Manual
+                - "manual" → Manual (not Nose Manual)
+                """
+            }
             
-            // Check if all trick words appear in the note
+            let prompt = Prompt("Extract trick names from: \(debouncedNote)")
+            let session = LanguageModelSession(instructions: instructions)
+            let response = try await session.respond(to: prompt)
+            
+            print("LLM Response: \(response.content)")
+            
+            // Extract trick names from response
+            let extractedNames = response.content
+                .components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            
+            print("Extracted names: \(extractedNames)")
+            
+            // Now match against our database with fuzzy matching
+            var matchedTricks: [Trick] = []
+            
+            for extractedName in extractedNames {
+                let normalizedExtracted = extractedName.lowercased()
+                
+                // First try exact match (case insensitive)
+                if let exactMatch = allTricks.first(where: { $0.name.lowercased() == normalizedExtracted }) {
+                    matchedTricks.append(exactMatch)
+                    continue
+                }
+                
+                // Check aliases
+                let aliases: [String: String] = [
+                    "bs flip": "BS 180 Kickflip",
+                    "fs flip": "FS 180 Kickflip",
+                    "tre flip": "Tre Flip",
+                    "360 flip": "Tre Flip",
+                    "noseslide": "BS Noseslide",
+                    "nose slide": "BS Noseslide"
+                ]
+                
+                if let aliasMatch = aliases[normalizedExtracted],
+                   let trick = allTricks.first(where: { $0.name == aliasMatch }) {
+                    matchedTricks.append(trick)
+                    continue
+                }
+                
+                // Then try fuzzy matching
+                let fuzzyMatches = allTricks.filter { trick in
+                    let distance = normalizedExtracted.levenshteinDistance(to: trick.name.lowercased())
+                    let maxDistance = min(3, max(1, trick.name.count / 4))
+                    return distance <= maxDistance
+                }
+                
+                if let bestMatch = fuzzyMatches.first {
+                    matchedTricks.append(bestMatch)
+                }
+            }
+            
+            // Remove duplicates while preserving order
+            var uniqueTricks: [Trick] = []
+            var seenTrickIds = Set<UUID>()
+            for trick in matchedTricks {
+                if let id = trick.id, !seenTrickIds.contains(id) {
+                    seenTrickIds.insert(id)
+                    uniqueTricks.append(trick)
+                }
+            }
+            
+            return uniqueTricks
+            
+        } onUnavailable: { error in
+            print("AI feature unavailable: \(error.localizedDescription)")
+            await self.performBasicTrickMatching()
+            return
+        }
+        
+        if let matchedTricks = result, !matchedTricks.isEmpty {
+            await MainActor.run {
+                self.suggestedTricks = matchedTricks
+            }
+        } else {
+            await performBasicTrickMatching()
+        }
+        
+        isSuggestingTricks = false
+    }
+    
+    private func performBasicTrickMatching() async {
+        var matchedTricks: [Trick] = []
+        let noteText = debouncedNote.lowercased()
+        
+        // Simple word-based matching as fallback
+        for trick in allTricks {
+            let trickName = trick.name.lowercased()
+            let trickWords = Set(trickName.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty })
+            
+            // Check if all words in trick name appear in note
             var allWordsFound = true
-            for trickWord in trickWords {
-                if !words.contains(where: { word in
-                    word == trickWord || 
-                    (word.hasPrefix(trickWord) && word.dropFirst(trickWord.count).allSatisfy { $0 == "s" })
-                }) {
+            for word in trickWords {
+                if !noteText.contains(word) {
                     allWordsFound = false
                     break
                 }
@@ -333,7 +463,6 @@ struct EditSessionView: View {
             ("nose slide", "BS Noseslide")
         ]
         
-        let noteText = debouncedNote.lowercased()
         for (pattern, trickName) in aliasPatterns {
             if noteText.contains(pattern),
                let trick = allTricks.first(where: { $0.name == trickName }),
@@ -354,33 +483,8 @@ struct EditSessionView: View {
         
         if maxLen == 0 { return 1.0 }
         
-        let distance = levenshteinDistance(str1, str2)
+        let distance = str1.levenshteinDistance(to: str2)
         return 1.0 - (Double(distance) / Double(maxLen))
-    }
-    
-    private func levenshteinDistance(_ str1: String, _ str2: String) -> Int {
-        let s1 = Array(str1)
-        let s2 = Array(str2)
-        let len1 = s1.count
-        let len2 = s2.count
-        
-        var matrix = [[Int]](repeating: [Int](repeating: 0, count: len2 + 1), count: len1 + 1)
-        
-        for i in 0...len1 { matrix[i][0] = i }
-        for j in 0...len2 { matrix[0][j] = j }
-        
-        for i in 1...len1 {
-            for j in 1...len2 {
-                let cost = s1[i-1] == s2[j-1] ? 0 : 1
-                matrix[i][j] = min(
-                    matrix[i-1][j] + 1,      // deletion
-                    matrix[i][j-1] + 1,      // insertion
-                    matrix[i-1][j-1] + cost  // substitution
-                )
-            }
-        }
-        
-        return matrix[len1][len2]
     }
     
     private var mediaSection: some View {
@@ -683,5 +787,40 @@ extension Binding {
             get: { self.wrappedValue ?? defaultValue },
             set: { self.wrappedValue = $0 }
         )
+    }
+}
+
+// MARK: - String Extension for Levenshtein Distance
+extension String {
+    func levenshteinDistance(to target: String) -> Int {
+        let source = Array(self.unicodeScalars)
+        let target = Array(target.unicodeScalars)
+        
+        if source.isEmpty { return target.count }
+        if target.isEmpty { return source.count }
+        
+        var distance = Array(repeating: Array(repeating: 0, count: target.count + 1),
+                           count: source.count + 1)
+        
+        for i in 0...source.count {
+            distance[i][0] = i
+        }
+        
+        for j in 0...target.count {
+            distance[0][j] = j
+        }
+        
+        for i in 1...source.count {
+            for j in 1...target.count {
+                let cost = source[i-1] == target[j-1] ? 0 : 1
+                distance[i][j] = Swift.min(
+                    distance[i-1][j] + 1,      // deletion
+                    distance[i][j-1] + 1,      // insertion
+                    distance[i-1][j-1] + cost  // substitution
+                )
+            }
+        }
+        
+        return distance[source.count][target.count]
     }
 }

@@ -57,7 +57,7 @@ struct MainView: View {
     @AppStorage("didMigrateTrickIDs") private var didMigrateTrickIDs: Bool = false
     
     enum ActiveSheet: Identifiable {
-        case settings, fullTrickList, onboarding
+        case settings, fullTrickList, onboarding, comboBuilder
         
         var id: Int { hashValue }
     }
@@ -151,7 +151,7 @@ struct MainView: View {
         .background(
             LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .padding(.bottom, 16)
     }
     
@@ -246,27 +246,27 @@ struct MainView: View {
                 }
                 .sensoryFeedback(.increase, trigger: activeSheet)
             }
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
-                    Button(action: {
+                    Button {
                         navigationModel.showAddSession = true
-                    }) {
-                        Label("Add Session", systemImage: "calendar.badge.plus")
+                    } label: {
+                        Label("Add Session", systemImage: "book")
                     }
                     
-                    Button(action: {
-                        showingComboBuilder = true
-                    }) {
-                        Label("Add Combo", systemImage: "list.bullet")
+                    Button {
+                        activeSheet = .comboBuilder
+                    } label: {
+                        Label("Add Combo", systemImage: "rectangle.stack")
                     }
                     
-                    Button(action: {
+                    Button {
                         showingAddTrick = true
-                    }) {
+                    } label: {
                         Label("Add Trick", systemImage: "figure.skateboarding")
                     }
                 } label: {
-                    Image(systemName: "ellipsis")
+                    Image(systemName: "plus")
                 }
             }
         }
@@ -280,7 +280,6 @@ struct MainView: View {
             switch item {
             case .settings:
                 SettingsView(visibleTrickTypes: $visibleTrickTypes)
-                    
                     .environmentObject(healthKitManager)
                     .onDisappear {
                         loadVisibleTrickTypes()
@@ -302,10 +301,13 @@ struct MainView: View {
                 }
             case .onboarding:
                 OnboardingView(isOnboardingComplete: $isOnboardingComplete)
-                    
                     .presentationDetents([.medium, .large])
                     .environmentObject(healthKitManager)
                     .interactiveDismissDisabled(!isOnboardingComplete)
+            case .comboBuilder:
+                NavigationStack {
+                    ComboBuilderView(isPresentedInNavigationStack: false)
+                }
             }
         }
         .sheet(isPresented: $showingAddTrick) {
@@ -580,7 +582,7 @@ struct MainView: View {
         .background(
             LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
     
     @ViewBuilder
@@ -718,9 +720,9 @@ struct MainView: View {
             .padding(.horizontal)
         }
         .padding(.vertical)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2)
         )
         .padding(.bottom, 24)
@@ -809,9 +811,9 @@ struct MainView: View {
             }
         }
         .padding(.vertical)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2)
         )
         .padding(.bottom, 24)
@@ -832,16 +834,16 @@ struct MainView: View {
                 }
                 .padding(.vertical)
                 .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .foregroundStyle(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing))
                         .opacity(colorScheme == .dark ? 0.125 : 0.05)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .stroke(colorScheme == .light ? .black : .white, lineWidth: 2)
                         .blendMode(.overlay)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             } else {
@@ -920,16 +922,16 @@ struct MainView: View {
                 }
                 .padding(.vertical)
                 .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .foregroundStyle(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing))
                         .opacity(colorScheme == .dark ? 0.125 : 0.05)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .stroke(colorScheme == .light ? .black : .white, lineWidth: 2)
                         .blendMode(.overlay)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .padding(.bottom, 24)
             }
         }

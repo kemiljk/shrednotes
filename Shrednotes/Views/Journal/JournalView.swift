@@ -10,6 +10,7 @@ import SwiftData
 import PhotosUI
 import TipKit
 import WidgetKit
+import FoundationModels
 
 struct JournalView: View {
     @Query(sort: \SkateSession.date, order: .reverse) private var sessions: [SkateSession]
@@ -27,8 +28,8 @@ struct JournalView: View {
     @State private var frequentTrickNames: [String] = []
     @State private var searchText = ""
     @State private var isGenerating: Bool = false
-    @State private var selectedMonth: Int?
-    @State private var selectedYear: Int?
+    @State private var selectedMonths = Set<Int>()
+    @State private var selectedYears = Set<Int>()
     
     @MainActor @AppStorage("lastTipDismissalDate") private var lastTipDismissalDate: Date = .distantPast
     @MainActor @AppStorage(
@@ -59,6 +60,42 @@ struct JournalView: View {
                         if let tip = frequentTrickTip {
                             TipView(tip)
                                 .listRowSeparator(.hidden)
+                        }
+                        if #available(iOS 26, *) {
+                            if sessions.count >= 2 {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    HStack {
+                                        Image(systemName: "apple.intelligence")
+                                            .foregroundStyle(.blue)
+                                            .onTapGesture {
+                                                Task {
+                                                    await generateSummary()
+                                                    lastSessionCount = sessions.count
+                                                }
+                                            }
+                                            .symbolEffect(
+                                                .pulse,
+                                                isActive: isGenerating
+                                            )
+                                        Text("Summary")
+                                            .foregroundStyle(
+                                                LinearGradient(
+                                                    gradient: Gradient(colors: [Color.orange, Color.red, Color.purple, Color.cyan]),
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                        Spacer()
+                                    }
+                                    .fontWeight(.bold)
+                                    .fontWidth(.expanded)
+                                    .frame(maxWidth: .infinity)
+
+                                    Text(summary)
+                                }
+                                .listRowSeparator(.hidden)
+                                .frame(maxWidth: .infinity)
+                            }
                         }
                         
                         ForEach(filteredGroupedSessions.isEmpty ? placeholderGroupedSessions : filteredGroupedSessions, id: \.key) { month, sessions in
@@ -97,62 +134,94 @@ struct JournalView: View {
             .onAppear {
                 loadSessions()
                 checkForFrequentTricks()
+                if #available(iOS 26, *) {
+                    Task {
+                        if summary.isEmpty {
+                            await generateSummary()
+                            lastSessionCount = sessions.count
+                        }
+                    }
+                }
             }
             .onChange(of: sessions) {
                 updateGroupedSessions()
                 checkForFrequentTricks()
                 updateLatestSession()
+                if #available(iOS 26, *) {
+                    Task {
+                        if sessions.count != lastSessionCount {
+                            await generateSummary()
+                            lastSessionCount = sessions.count
+                        }
+                    }
+                }
             }
             .navigationTitle("^[\(sessions.count) session](inflect: true)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        self.showingAddSession = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .tint(.accentColor)
-                    .sensoryFeedback(
-                        .impact(weight: .medium),
-                        trigger: showingAddSession
-                    )
-                }
-                ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        if selectedMonth != nil || selectedYear != nil {
+                        if hasActiveFilters {
                             Button(role: .destructive) {
-                                selectedMonth = nil
-                                selectedYear = nil
+                                selectedMonths.removeAll()
+                                selectedYears.removeAll()
                             } label: {
-                                Label("Clear Filters", systemImage: "xmark.circle.fill")
+                                Label("Clear All Filters", systemImage: "xmark.circle.fill")
                             }
                             Divider()
                         }
                         
-                        Menu {
+                        // Month filter section
+                        Section(header: Text("Filter by Month")) {
                             ForEach(availableMonths, id: \.number) { month in
-                                Button(month.name) {
-                                    selectedMonth = month.number
-                                    selectedYear = nil
+                                Button {
+                                    if selectedMonths.contains(month.number) {
+                                        selectedMonths.remove(month.number)
+                                    } else {
+                                        selectedMonths.insert(month.number)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(month.name)
+                                        Spacer()
+                                        if selectedMonths.contains(month.number) {
+                                            Image(systemName: "checkmark")
+                                        } else {
+                                            EmptyView()
+                                        }
+                                    }
                                 }
+                                .menuActionDismissBehavior(.disabled)
                             }
-                        } label: {
-                            Label(selectedMonthName ?? "Filter by Month", systemImage: "calendar")
                         }
-
-                        Menu {
+                        
+                        // Year filter section
+                        Section(header: Text("Filter by Year")) {
                             ForEach(availableYears, id: \.self) { year in
-                                Button(String(year)) {
-                                    selectedYear = year
-                                    selectedMonth = nil
+                                Button {
+                                    if selectedYears.contains(year) {
+                                        selectedYears.remove(year)
+                                    } else {
+                                        selectedYears.insert(year)
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(String(year))
+                                        Spacer()
+                                        if selectedYears.contains(year) {
+                                            Image(systemName: "checkmark")
+                                        } else {
+                                            EmptyView()
+                                        }
+                                    }
                                 }
+                                .menuActionDismissBehavior(.disabled)
                             }
-                        } label: {
-                            Label(selectedYear.map { String($0) } ?? "Filter by Year", systemImage: "calendar.badge.clock")
                         }
                     } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
+                        Image(systemName: hasActiveFilters ? 
+                            "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
+                            .foregroundStyle(hasActiveFilters ? .accent : .primary)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -164,6 +233,30 @@ struct JournalView: View {
                         }
                     }
                     .sensoryFeedback(.increase, trigger: showingInsightView)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if #available(iOS 26, *) {
+                        Button(role: .confirm) {
+                            self.showingAddSession = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .sensoryFeedback(
+                            .impact(weight: .medium),
+                            trigger: showingAddSession
+                        )
+                    } else {
+                        Button {
+                            self.showingAddSession = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .tint(.accentColor)
+                        .sensoryFeedback(
+                            .impact(weight: .medium),
+                            trigger: showingAddSession
+                        )
+                    }
                 }
             }
             .sheet(isPresented: $showingAddSession) {
@@ -211,21 +304,31 @@ struct JournalView: View {
     }
     
     private var selectedMonthName: String? {
-        guard let monthNumber = selectedMonth else { return nil }
+        guard let monthNumber = selectedMonths.first else { return nil }
         let dateFormatter = DateFormatter()
         guard monthNumber > 0 && monthNumber <= dateFormatter.monthSymbols.count else { return nil }
         return dateFormatter.monthSymbols[monthNumber - 1]
     }
     
+    private var hasActiveFilters: Bool {
+        !selectedMonths.isEmpty || !selectedYears.isEmpty
+    }
+    
     private var filteredGroupedSessions: [(key: DateComponents, value: [SkateSession])] {
         var dateFilteredGroups = groupedSessions
 
-        if let year = selectedYear {
-            dateFilteredGroups = dateFilteredGroups.filter { $0.key.year == year }
+        if !selectedYears.isEmpty {
+            dateFilteredGroups = dateFilteredGroups.filter { group in
+                guard let year = group.key.year else { return false }
+                return selectedYears.contains(year)
+            }
         }
 
-        if let month = selectedMonth {
-            dateFilteredGroups = dateFilteredGroups.filter { $0.key.month == month }
+        if !selectedMonths.isEmpty {
+            dateFilteredGroups = dateFilteredGroups.filter { group in
+                guard let month = group.key.month else { return false }
+                return selectedMonths.contains(month)
+            }
         }
         
         if searchText.isEmpty {
@@ -264,6 +367,109 @@ struct JournalView: View {
         }
     }
     
+    @available(iOS 26, *)
+    private func generateSummary() async {
+        isGenerating = true
+        
+        let _ = await AIModelAvailability.withAvailability {
+            let instructions = Instructions {
+                """
+                You are an AI assistant that creates personalized skateboarding session summaries. Your task is to analyze the provided session data and generate an encouraging, accurate summary based ONLY on the actual information provided.
+
+                **CRITICAL REQUIREMENTS:**
+                - Use ONLY the data provided in the sessions array - never invent, assume, or add information not present in the data
+                - If specific data points are missing or empty, simply exclude them from the summary
+                - Never include example text, placeholder content, or generic statements
+                - Base all observations on actual trick names, feelings, notes, and metrics from the data
+
+                **DATA TO ANALYZE:**
+                - Session titles, dates, and personal notes
+                - Trick names and their learning status (isLearned, isLearning, consistency ratings)
+                - Feelings: stoked, exhausted, pumped, thrilled, hyped, wrecked, amped, bummed, confident, sketchy, dialed, flowing, fired up, gnarly, chill, rad, mellow, blissed, fizzled, slammed
+                - Workout metrics: duration, energy burned
+                - Location information if available
+                - Combo tricks and their elements
+
+                **OUTPUT FORMAT:**
+                - Single paragraph, 3-5 sentences maximum
+                - Direct, personal tone using "you"
+                - Focus on specific achievements, progress, and experiences from the actual data
+                - Use human-readable date formatting
+                - No AI acknowledgments, introductions, or conversational elements
+
+                **PROHIBITED:**
+                - Never output example text or placeholder content
+                - Never mention being an AI or assistant
+                - Never include generic statements not based on actual data
+                - Never invent trick names, locations, or experiences not in the data
+                """
+            }
+            
+            let sessionData = sessions.map { session in
+                var data: [String: Any] = [:]
+                
+                if let title = session.title, !title.isEmpty {
+                    data["title"] = title
+                }
+                if let date = session.date {
+                    data["date"] = date
+                }
+                if let note = session.note, !note.isEmpty {
+                    data["note"] = note
+                }
+                if let feelings = session.feeling, !feelings.isEmpty {
+                    data["feelings"] = feelings.map { $0.rawValue }
+                }
+                if let tricks = session.tricks, !tricks.isEmpty {
+                    data["tricks"] = tricks.map { trick in
+                        var trickData: [String: Any] = ["name": trick.name]
+                        if trick.isLearned { trickData["isLearned"] = true }
+                        if trick.isLearning { trickData["isLearning"] = true }
+                        if trick.consistency > 0 { trickData["consistency"] = trick.consistency }
+                        return trickData
+                    }
+                }
+                if let combos = session.combos, !combos.isEmpty {
+                    data["combos"] = combos.map { combo in
+                        var comboData: [String: Any] = ["name": combo.name ?? "Combo"]
+                        if let elements = combo.comboElements, !elements.isEmpty {
+                            comboData["elements"] = elements
+                                .map { $0.combo?.name }
+                        }
+                        return comboData
+                    }
+                }
+                if let duration = session.workoutDuration {
+                    data["duration"] = duration
+                }
+                if let energy = session.workoutEnergyBurned {
+                    data["energyBurned"] = energy
+                }
+                if let location = session.location {
+                    data["location"] = location.name
+                }
+                
+                return data
+            }
+            
+            let prompt = Prompt("Analyze this skateboarding session data and create a personalized summary: \(sessionData). Base the summary entirely on the provided data - do not add any information not present in the data.")
+            let session = LanguageModelSession(instructions: instructions)
+            let stream = session.streamResponse(to: prompt)
+            
+            for try await partial in stream {
+                await MainActor.run {
+                    self.summary = partial.content
+                }
+            }
+            return true
+            
+        } onUnavailable: { error in
+            print("AI feature unavailable: \(error.localizedDescription)")
+            return
+        }
+        
+        isGenerating = false
+    }
     
     @MainActor
     private func updateLastTipDismissalDate() {
@@ -306,12 +512,26 @@ struct JournalView: View {
     }
     
     private func monthHeader(for month: DateComponents) -> some View {
-        Text(monthYearString(from: month))
-            .font(.headline)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 16)
-            .foregroundStyle(.secondary)
+        Group {
+            if #available(iOS 26, *) {
+                Text(monthYearString(from: month))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .foregroundStyle(.secondary)
+                    .glassEffect(in: .capsule)
+            } else {
+                Text(monthYearString(from: month))
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 16)
+                    .foregroundStyle(.secondary)
+                    .backgroundStyle(.ultraThinMaterial)
+                    .clipShape(.capsule)
+            }
+        }
     }
     
     private func monthYearString(from components: DateComponents) -> String {
@@ -385,53 +605,5 @@ struct FrequentTrickTip: Tip {
     
     var image: Image? {
         Image(systemName: "sparkles")
-    }
-}
-
-struct BlurUpTextRenderer: TextRenderer, Animatable {
-    var elapsedTime: TimeInterval
-    var elementDuration: TimeInterval
-    var totalDuration: TimeInterval
-
-    var animatableData: Double {
-        get { elapsedTime }
-        set { elapsedTime = newValue }
-    }
-
-    func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
-        for (index, line) in layout.enumerated() {
-            let delay = elementDuration * Double(index)
-            let time = max(0, min(elapsedTime - delay, elementDuration))
-            let progress = time / elementDuration
-
-            var copy = ctx
-            let blur = (1 - progress) * 10
-            let offsetY = (1 - progress) * 20
-            copy.addFilter(.blur(radius: blur))
-            copy.opacity = progress
-            copy.translateBy(x: 0, y: -offsetY)
-            copy.draw(line, options: .disablesSubpixelQuantization)
-        }
-    }
-}
-
-struct BlurUpTextTransition: Transition {
-    let duration: TimeInterval = 0.7
-    let elementDuration: TimeInterval = 0.2
-
-    func body(content: Content, phase: TransitionPhase) -> some View {
-        let elapsedTime = phase.isIdentity ? duration : 0
-        let renderer = BlurUpTextRenderer(
-            elapsedTime: elapsedTime,
-            elementDuration: elementDuration,
-            totalDuration: duration
-        )
-        content.transaction { transaction in
-            if !transaction.disablesAnimations {
-                transaction.animation = .linear(duration: duration)
-            }
-        } body: { view in
-            view.textRenderer(renderer)
-        }
     }
 }
