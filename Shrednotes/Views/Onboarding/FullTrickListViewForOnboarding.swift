@@ -65,29 +65,31 @@ struct FullTrickListViewForOnboarding: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading) {
-                Group {
-                    HStack {
-                        Image(systemName: "magnifyingglass.circle")
-                            .font(.title3)
-                            .foregroundStyle(searchIsFocused ? .indigo : .secondary)
-                        TextField("Search tricks", text: $searchText)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading) {
+                    Group {
+                        HStack {
+                            Image(systemName: "magnifyingglass.circle")
+                                .font(.title3)
+                                .foregroundStyle(searchIsFocused ? .indigo : .secondary)
+                            TextField("Search tricks", text: $searchText)
+                        }
+                        .padding()
                     }
-                    .padding()
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(searchIsFocused ? LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(gradient: Gradient(colors: [Color.secondary.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: searchIsFocused ? 2 : 1)
-                )
-                .padding(.vertical, 8)
-                .focused($searchIsFocused)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(searchIsFocused ? LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(gradient: Gradient(colors: [Color.secondary.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: searchIsFocused ? 2 : 1)
+                    )
+                    .padding(.vertical, 8)
+                    .padding(.horizontal)
+                    .focused($searchIsFocused)
                 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
                         Button(action: {
                             selectedType = nil
-                            expandedGroups = [:] // Close all groups when "All" is selected
+                            expandedGroups = [:]
                         }) {
                             Text("All")
                                 .padding(.vertical, 8)
@@ -106,7 +108,7 @@ struct FullTrickListViewForOnboarding: View {
                             if !groupedFilteredTricks(by: type).isEmpty {
                                 Button(action: {
                                     selectedType = type
-                                    expandedGroups = [type.rawValue: true] // Open the selected group and hide others
+                                    expandedGroups = [type.rawValue: true]
                                 }) {
                                     Text(type.rawValue)
                                         .padding(.vertical, 8)
@@ -124,6 +126,7 @@ struct FullTrickListViewForOnboarding: View {
                             }
                         }
                     }
+                    .padding(.horizontal)
                 }
                 
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -182,8 +185,42 @@ struct FullTrickListViewForOnboarding: View {
                     }
                 }
                 .padding(.vertical, 8)
+                .padding(.horizontal)
                 
+                }
             }
+            
+            HStack {
+                GroupBox {
+                    HStack {
+                        Text("\(filteredTricks.count)")
+                            .fontWeight(.bold)
+                            .foregroundStyle(.indigo)
+                        Text("available")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary, lineWidth: 1)
+                        .opacity(0.2)
+                )
+                GroupBox {
+                    HStack {
+                        Text("\(tricks.filter { $0.isLearned }.count)")
+                            .fontWeight(.bold)
+                            .foregroundStyle(.indigo)
+                        Text("learned")
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.secondary, lineWidth: 1)
+                        .opacity(0.2)
+                )
+            }
+            .padding()
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -208,37 +245,5 @@ struct FullTrickListViewForOnboarding: View {
                 }
             }
         }
-        Spacer()
-        HStack {
-            GroupBox {
-                HStack {
-                    Text("\(filteredTricks.count)")
-                        .fontWeight(.bold)
-                        .foregroundStyle(.indigo)
-                    Text("available")
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.secondary, lineWidth: 1)
-                    .opacity(0.2)
-            )
-            GroupBox {
-                HStack {
-                    Text("\(tricks.filter { $0.isLearned }.count)")
-                        .fontWeight(.bold)
-                        .foregroundStyle(.indigo)
-                    Text("learned")
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.secondary, lineWidth: 1)
-                    .opacity(0.2)
-            )
-        }
-        .padding(.horizontal)
     }
 }

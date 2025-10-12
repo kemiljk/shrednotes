@@ -32,7 +32,6 @@ struct OnboardingView: View {
 
     @State private var showingLearnedTricks = false
     @State private var showingLearningTricks = false
-    @State private var searchText = ""
     
     var body: some View {
         VStack(alignment: .center) {
@@ -341,25 +340,24 @@ struct OnboardingView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingLearnedTricks, onDismiss: { searchText = "" }) {
+        .sheet(isPresented: $showingLearnedTricks) {
             NavigationStack {
                 FullTrickListViewForOnboarding(
                     visibleTrickTypes: $visibleTrickTypes,
                     learnedTricks: $learnedTricks,
                     learningTricks: $learningTricks,
-                    mode: .learned,
+                    mode: .learned
                 )
                 .navigationTitle("Learned Tricks")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
+                    ToolbarItem(placement: .confirmationAction) {
                         Button("Done") {
                             showingLearnedTricks = false
                         }
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search tricks")
         }
     }
     
@@ -402,25 +400,24 @@ struct OnboardingView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingLearningTricks, onDismiss: { searchText = "" }) {
+        .sheet(isPresented: $showingLearningTricks) {
             NavigationStack {
                 FullTrickListViewForOnboarding(
                     visibleTrickTypes: $visibleTrickTypes,
                     learnedTricks: $learnedTricks,
                     learningTricks: $learningTricks,
-                    mode: .learning,
+                    mode: .learning
                 )
                 .navigationTitle("Learning Tricks")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
+                    ToolbarItem(placement: .confirmationAction) {
                         Button("Done") {
                             showingLearningTricks = false
                         }
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search tricks")
         }
     }
     

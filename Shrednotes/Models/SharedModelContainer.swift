@@ -27,13 +27,18 @@ var sharedModelContainer: ModelContainer = {
         // Initialize default tricks if needed
         if isFirstTimeLaunch && !hasBeenOnboarded {
             let context = container.mainContext
-            let tricks = generateTricks() // Your trick generation function
+            let tricks = generateTricks()
             tricks.forEach { context.insert($0) }
-            isFirstTimeLaunch = false
             
-            // Clean up tricks if needed
-            Task {
-                _ = await cleanUpTricks()
+            do {
+                try context.save()
+                isFirstTimeLaunch = false
+                
+                Task {
+                    _ = await cleanUpTricks()
+                }
+            } catch {
+                print("Failed to save tricks on first launch: \(error)")
             }
         }
         

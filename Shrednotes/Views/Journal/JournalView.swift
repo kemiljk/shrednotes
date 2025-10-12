@@ -65,18 +65,19 @@ struct JournalView: View {
                             if sessions.count >= 2 {
                                 VStack(alignment: .leading, spacing: 16) {
                                     HStack {
-                                        Image(systemName: "apple.intelligence")
-                                            .foregroundStyle(.blue)
-                                            .onTapGesture {
-                                                Task {
-                                                    await generateSummary()
-                                                    lastSessionCount = sessions.count
-                                                }
+                                        Button {
+                                            Task {
+                                                await generateSummary()
+                                                lastSessionCount = sessions.count
                                             }
-                                            .symbolEffect(
-                                                .pulse,
-                                                isActive: isGenerating
-                                            )
+                                        } label: {
+                                            Image(systemName: "apple.intelligence")
+                                                .foregroundStyle(.blue)
+                                                .symbolEffect(
+                                                    .pulse,
+                                                    isActive: isGenerating
+                                                )
+                                        }
                                         Text("Summary")
                                             .foregroundStyle(
                                                 LinearGradient(
@@ -368,107 +369,101 @@ struct JournalView: View {
     }
     
     @available(iOS 26, *)
+    @MainActor
     private func generateSummary() async {
         isGenerating = true
-        
-        let _ = await AIModelAvailability.withAvailability {
-            let instructions = Instructions {
-                """
-                You are an AI assistant that creates personalized skateboarding session summaries. Your task is to analyze the provided session data and generate an encouraging, accurate summary based ONLY on the actual information provided.
+        summary = ""
+        defer { isGenerating = false }
 
-                **CRITICAL REQUIREMENTS:**
-                - Use ONLY the data provided in the sessions array - never invent, assume, or add information not present in the data
-                - If specific data points are missing or empty, simply exclude them from the summary
-                - Never include example text, placeholder content, or generic statements
-                - Base all observations on actual trick names, feelings, notes, and metrics from the data
-
-                **DATA TO ANALYZE:**
-                - Session titles, dates, and personal notes
-                - Trick names and their learning status (isLearned, isLearning, consistency ratings)
-                - Feelings: stoked, exhausted, pumped, thrilled, hyped, wrecked, amped, bummed, confident, sketchy, dialed, flowing, fired up, gnarly, chill, rad, mellow, blissed, fizzled, slammed
-                - Workout metrics: duration, energy burned
-                - Location information if available
-                - Combo tricks and their elements
-
-                **OUTPUT FORMAT:**
-                - Single paragraph, 3-5 sentences maximum
-                - Direct, personal tone using "you"
-                - Focus on specific achievements, progress, and experiences from the actual data
-                - Use human-readable date formatting
-                - No AI acknowledgments, introductions, or conversational elements
-
-                **PROHIBITED:**
-                - Never output example text or placeholder content
-                - Never mention being an AI or assistant
-                - Never include generic statements not based on actual data
-                - Never invent trick names, locations, or experiences not in the data
-                """
-            }
-            
-            let sessionData = sessions.map { session in
-                var data: [String: Any] = [:]
-                
-                if let title = session.title, !title.isEmpty {
-                    data["title"] = title
-                }
-                if let date = session.date {
-                    data["date"] = date
-                }
-                if let note = session.note, !note.isEmpty {
-                    data["note"] = note
-                }
-                if let feelings = session.feeling, !feelings.isEmpty {
-                    data["feelings"] = feelings.map { $0.rawValue }
-                }
-                if let tricks = session.tricks, !tricks.isEmpty {
-                    data["tricks"] = tricks.map { trick in
-                        var trickData: [String: Any] = ["name": trick.name]
-                        if trick.isLearned { trickData["isLearned"] = true }
-                        if trick.isLearning { trickData["isLearning"] = true }
-                        if trick.consistency > 0 { trickData["consistency"] = trick.consistency }
-                        return trickData
-                    }
-                }
-                if let combos = session.combos, !combos.isEmpty {
-                    data["combos"] = combos.map { combo in
-                        var comboData: [String: Any] = ["name": combo.name ?? "Combo"]
-                        if let elements = combo.comboElements, !elements.isEmpty {
-                            comboData["elements"] = elements
-                                .map { $0.combo?.name }
-                        }
-                        return comboData
-                    }
-                }
-                if let duration = session.workoutDuration {
-                    data["duration"] = duration
-                }
-                if let energy = session.workoutEnergyBurned {
-                    data["energyBurned"] = energy
-                }
-                if let location = session.location {
-                    data["location"] = location.name
-                }
-                
-                return data
-            }
-            
-            let prompt = Prompt("Analyze this skateboarding session data and create a personalized summary: \(sessionData). Base the summary entirely on the provided data - do not add any information not present in the data.")
-            let session = LanguageModelSession(instructions: instructions)
-            let stream = session.streamResponse(to: prompt)
-            
-            for try await partial in stream {
-                await MainActor.run {
-                    self.summary = partial.content
-                }
-            }
-            return true
-            
-        } onUnavailable: { error in
-            print("AI feature unavailable: \(error.localizedDescription)")
+        // Check model availability to provide helpful feedback on unsupported devices
+        let model = SystemLanguageModel.default
+        switch model.availability {
+        case .available:
+            break
+        case .unavailable(.appleIntelligenceNotEnabled):
+            summary = "Enable Apple Intelligence in Settings to see your personalized summary."
+            return
+        case .unavailable(.deviceNotEligible):
+            summary = "This device doesn't support on‑device summaries."
+            return
+        case .unavailable(.modelNotReady):
+            summary = "Preparing the on‑device model. Try again in a moment."
+            return
+        case .unavailable:
+            summary = "Summary is currently unavailable."
             return
         }
-        
-        isGenerating = false
+
+        // Keep instructions short to save tokens
+        let instructions = """
+        Write a concise 3–5 sentence summary using only the session lines provided.
+        Do not invent facts; ignore any missing fields.
+        Use a direct, encouraging tone addressed to "you".
+        Avoid introductions or meta commentary.
+        """
+
+        // Helper to sanitize and compress text
+        func sanitize(_ text: String, max: Int) -> String {
+            let collapsed = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            return String(collapsed.prefix(max))
+        }
+
+        // Build ultra-compact, line-based payload under a character budget
+        let charBudget = 2000 // leave room for instructions and prompt
+        var totalChars = 0
+        var lines: [String] = []
+        let maxSessions = 8
+
+        for session in sessions.prefix(50) { // iterate in recency order; budget will cap
+            var parts: [String] = []
+            if let title = session.title, !title.isEmpty {
+                parts.append("Title: \(sanitize(title, max: 60))")
+            }
+            if let note = session.note, !note.isEmpty {
+                parts.append("Note: \(sanitize(note, max: 100))")
+            }
+            if let tricks = session.tricks, !tricks.isEmpty {
+                var seen = Set<String>()
+                var uniqueNames: [String] = []
+                for name in tricks.map({ $0.name }) {
+                    if seen.insert(name).inserted { uniqueNames.append(name) }
+                    if uniqueNames.count >= 5 { break }
+                }
+                if !uniqueNames.isEmpty {
+                    parts.append("Tricks: \(uniqueNames.joined(separator: ", "))")
+                }
+            }
+
+            if parts.isEmpty { continue }
+            let line = "- " + parts.joined(separator: " | ")
+            if totalChars + line.count > charBudget { break }
+            lines.append(line)
+            totalChars += line.count + 1
+            if lines.count >= maxSessions { break }
+        }
+
+        // If there's nothing meaningful to summarize, provide guidance and return
+        if lines.isEmpty {
+            summary = "Add some session notes or tricks to see a personalized summary."
+            return
+        }
+
+        let sessionsText = lines.joined(separator: "\n")
+        let prompt = """
+        Use only the following session lines to write the summary. Do not add any information not present here.
+        \n\(sessionsText)
+        """
+
+        // Create a model session and generate a response
+        let session = LanguageModelSession(instructions: instructions)
+        do {
+            let response = try await session.respond(to: prompt, options: GenerationOptions(temperature: 0.2))
+            self.summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch let error as LanguageModelSession.GenerationError {
+            self.summary = "Summary couldn't be generated: \(error.localizedDescription)"
+        } catch {
+            self.summary = "Summary couldn't be generated."
+        }
     }
     
     @MainActor
@@ -607,3 +602,4 @@ struct FrequentTrickTip: Tip {
         Image(systemName: "sparkles")
     }
 }
+

@@ -78,19 +78,36 @@ struct LocationPickerView: View {
                         MapScaleView()
                     }
                     .frame(height: 300)
-                    .cornerRadius(16)
+                    .cornerRadius(32)
                     .onTapGesture { location in
                         guard !locationSearchIsFocused else {
                             locationSearchIsFocused = false
                             return
                         }
                         if let coordinate = proxy.convert(location, from: .local) {
-                            // Create a new location at the tapped coordinate
                             Task {
                                 await reverseGeocode(coordinate: coordinate)
                             }
                         }
                     }
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.5)
+                            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
+                            .onEnded { value in
+                                switch value {
+                                case .second(true, let drag):
+                                    if let location = drag?.location,
+                                       let coordinate = proxy.convert(location, from: .local) {
+                                        locationSearchIsFocused = false
+                                        Task {
+                                            await reverseGeocode(coordinate: coordinate)
+                                        }
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                    )
                 }
                 .onChange(of: selectedLocation) { _, newLocation in
                     if let loc = newLocation {
@@ -114,8 +131,13 @@ struct LocationPickerView: View {
                     }
                     .padding(.vertical, 12)
                     .padding(.horizontal, 16)
-                    .background(.thinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .glassEffect(
+                        .regular,
+                        in: ConcentricRectangle(
+                            corners: .concentric,
+                            isUniform: true
+                        )
+                    )
                     .onChange(of: searchText) {
                         searchLocations()
                     }
@@ -145,7 +167,12 @@ struct LocationPickerView: View {
                                         }
                                         .padding()
                                         .background(.thinMaterial)
-                                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                        .clipShape(
+                                            ConcentricRectangle(
+                                                corners: .concentric,
+                                                isUniform: true
+                                            )
+                                        )
                                         .foregroundStyle(.primary)
                                     }
                                 }
@@ -156,6 +183,7 @@ struct LocationPickerView: View {
                 }
                 .padding()
             }
+            .containerShape(.rect(cornerRadius: 32))
             
             // Add Go to My Location button
             if let userCoordinate = locationManager.currentLocation {
@@ -173,12 +201,12 @@ struct LocationPickerView: View {
                         )
                     }
                 }) {
-                    Label("Use Current Location", systemImage: "mappin")
+                    Label("Use Current Location", systemImage: "location.fill")
                         .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 32)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonSizing(.flexible)
+                .controlSize(.large)
+                .buttonStyle(.glassProminent)
                 .buttonBorderShape(.capsule)
             }
         }
