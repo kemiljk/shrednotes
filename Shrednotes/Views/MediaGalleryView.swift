@@ -125,7 +125,7 @@ struct MediaItemView: View {
             }
             
             if asset.mediaType == .image {
-                PhotosHelper.shared.loadImage(from: asset, targetSize: UIScreen.main.bounds.size) { image in
+                PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 1920, height: 1920)) { image in
                     DispatchQueue.main.async {
                         self.loadedImage = image
                         self.isLoading = false

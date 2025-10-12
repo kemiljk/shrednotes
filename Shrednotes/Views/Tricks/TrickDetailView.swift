@@ -474,17 +474,21 @@ struct TrickDetailView: View {
              }
          }) {
              if let media = trick.media, !media.isEmpty {
-                 LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 3), spacing: 16) {
-                     ForEach(media, id: \.id) { mediaItem in
-                         mediaItemView(for: mediaItem)
+                 GeometryReader { geometry in
+                     let size = geometry.size.width / 3 - 16
+                     LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 3), spacing: 16) {
+                         ForEach(media, id: \.id) { mediaItem in
+                             mediaItemView(for: mediaItem, size: size)
+                         }
+                         
+                         // Add media button
+                         PhotosPicker(selection: $selectedItems, matching: .any(of: [.images, .videos])) {
+                             addMediaButton(size: size)
+                         }
                      }
-                     
-                     // Add media button
-                     PhotosPicker(selection: $selectedItems, matching: .any(of: [.images, .videos])) {
-                         addMediaButton()
-                     }
+                     .padding(.top, 16)
                  }
-                 .padding(.top, 16)
+                 .frame(minHeight: 200)
              } else {
                  // Ensure the PhotosPicker is shown if there's no media at all
                  PhotosPicker(selection: $selectedItems, matching: .any(of: [.images, .videos])) {
@@ -557,8 +561,7 @@ struct TrickDetailView: View {
          return newMediaItems
      }
 
-     private func mediaItemView(for mediaItem: MediaItem) -> some View {
-         let size = UIScreen.main.bounds.width / 3 - 16
+     private func mediaItemView(for mediaItem: MediaItem, size: CGFloat) -> some View {
          return Group {
              if let uiImage = mediaState.imageCache[mediaItem.id ?? UUID()] {
                  // Already cached image

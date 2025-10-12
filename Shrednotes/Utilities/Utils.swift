@@ -171,8 +171,7 @@ func generateThumbnail(for url: URL, completion: @escaping (UIImage?) -> Void) {
     }
 }
 
-func addMediaButton() -> some View {
-    let size = UIScreen.main.bounds.width / 3 - 16
+func addMediaButton(size: CGFloat) -> some View {
     return Image(systemName: "plus")
         .font(.largeTitle)
         .foregroundStyle(.indigo)

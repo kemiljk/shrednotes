@@ -8,6 +8,8 @@
 import SwiftUI
 import PhotosUI
 import CoreLocation
+import MapKit
+import CoreImage
 
 struct SessionCard: View {
     let session: SkateSession
@@ -18,6 +20,7 @@ struct SessionCard: View {
     let onSelect: (() -> Void)
     
     @State private var mediaData: Data?
+    @State private var dominantColor: Color?
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -120,8 +123,25 @@ struct SessionCard: View {
         }
         .padding(20)
         .background {
-            if let media = session.media?.first,
-               let uiImage = UIImage(data: media.data) {
+            if let dominantColor = dominantColor {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                dominantColor.opacity(0.3),
+                                dominantColor.opacity(0.1),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay {
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                    }
+            } else if let media = session.media?.first,
+                      let uiImage = UIImage(data: media.data) {
                 GeometryReader { geometry in
                     Image(uiImage: uiImage)
                         .resizable()
@@ -130,7 +150,7 @@ struct SessionCard: View {
                         .opacity(0.2)
                         .overlay {
                             Rectangle()
-                                .containerShape(.containerRelative)
+                                .fill(.ultraThinMaterial)
                         }
                 }
             } else {
@@ -145,6 +165,7 @@ struct SessionCard: View {
         .clipShape(.rect(cornerRadius: 28))
         .onAppear {
             getLocationName()
+            extractDominantColor()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onTapGesture {
@@ -210,27 +231,25 @@ struct SessionCard: View {
     private func getLocationName() {
         guard let latitude = session.latitude, let longitude = session.longitude else { return }
         
-        let location = CLLocation(latitude: latitude, longitude: longitude)
-        let geocoder = CLGeocoder()
+        let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         
-        geocoder.reverseGeocodeLocation(location) { placemarks, error in
-            if let error = error {
-                print("Reverse geocoding error: \(error.localizedDescription)")
-                return
-            }
-            
-            if let placemark = placemarks?.first {
-                let name = [placemark.name, placemark.subThoroughfare, placemark.thoroughfare]
-                    .compactMap { $0 }
-                    .joined(separator: " ")
+        guard let request = MKReverseGeocodingRequest(location: location) else { return }
+        
+        Task {
+            do {
+                let mapItems = try await request.mapItems
+                guard let mapItem = mapItems.first else { return }
                 
-                if !name.isEmpty {
-                    self.locationName = name
-                } else if let locality = placemark.locality {
-                    self.locationName = locality
-                } else if let administrativeArea = placemark.administrativeArea {
-                    self.locationName = administrativeArea
+                await MainActor.run {
+                    if let name = mapItem.name, !name.isEmpty {
+                        self.locationName = name
+                    } else if let address = mapItem.address {
+                        self.locationName = address.fullAddress
+                    }
                 }
+            } catch {
+                print("Reverse geocoding error: \(error.localizedDescription)")
             }
         }
     }
@@ -244,4 +263,70 @@ struct SessionCard: View {
             return "\(minutes)m"
         }
     }
+    
+    private func extractDominantColor() {
+        guard let media = session.media?.first else { return }
+        
+        Task {
+            let color: Color?
+            
+            if let uiImage = UIImage(data: media.data) {
+                color = await extractColorFromImage(uiImage)
+            } else if let identifier = media.assetIdentifier,
+                      let asset = PhotosHelper.shared.fetchAsset(identifier: identifier) {
+                color = await extractColorFromAsset(asset)
+            } else {
+                color = nil
+            }
+            
+            await MainActor.run {
+                self.dominantColor = color
+            }
+        }
+    }
+    
+    private func extractColorFromImage(_ image: UIImage) async -> Color? {
+        return await Task.detached(priority: .utility) {
+            guard let inputImage = CIImage(image: image) else { return nil }
+            
+            let extentVector = CIVector(x: inputImage.extent.origin.x,
+                                       y: inputImage.extent.origin.y,
+                                       z: inputImage.extent.size.width,
+                                       w: inputImage.extent.size.height)
+            
+            guard let filter = CIFilter(name: "CIAreaAverage",
+                                       parameters: [kCIInputImageKey: inputImage,
+                                                  kCIInputExtentKey: extentVector]) else { return nil }
+            guard let outputImage = filter.outputImage else { return nil }
+            
+            var bitmap = [UInt8](repeating: 0, count: 4)
+            let context = CIContext(options: [.workingColorSpace: kCFNull as Any])
+            context.render(outputImage,
+                         toBitmap: &bitmap,
+                         rowBytes: 4,
+                         bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                         format: .RGBA8,
+                         colorSpace: nil)
+            
+            return Color(red: Double(bitmap[0]) / 255,
+                        green: Double(bitmap[1]) / 255,
+                        blue: Double(bitmap[2]) / 255)
+        }.value
+    }
+    
+    private func extractColorFromAsset(_ asset: PHAsset) async -> Color? {
+        return await withCheckedContinuation { continuation in
+            PhotosHelper.shared.loadImage(from: asset, targetSize: CGSize(width: 100, height: 100)) { image in
+                if let image = image {
+                    Task {
+                        let color = await self.extractColorFromImage(image)
+                        continuation.resume(returning: color)
+                    }
+                } else {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
 }
+

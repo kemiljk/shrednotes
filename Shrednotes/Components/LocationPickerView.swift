@@ -48,8 +48,9 @@ struct LocationPickerView: View {
         let filteredLocations = Array(uniqueLocations).filter { locationMatchesSearch($0) }
 
         searchResults = filteredLocations.map { location in
-            let placemark = MKPlacemark(coordinate: location.coordinate)
-            let item = MKMapItem(placemark: placemark)
+            let clLocation = CLLocation(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+            let address = MKAddress(fullAddress: location.name, shortAddress: location.name)
+            let item = MKMapItem(location: clLocation, address: address)
             item.name = location.name
             return item
         }
@@ -260,37 +261,30 @@ struct LocationPickerView: View {
     private func formatLocationName(_ item: MKMapItem) -> String {
         var components: [String] = []
         
-        // Add the primary location name
         if let name = item.name {
             components.append(name)
         }
         
-        // Add city and/or state/country for context
-        if let locality = item.placemark.locality {
-            components.append(locality)
-        }
-        
-        if let adminArea = item.placemark.administrativeArea {
-            components.append(adminArea)
-        } else if let country = item.placemark.country {
-            components.append(country)
+        if let address = item.address, !address.fullAddress.isEmpty {
+            components.append(address.fullAddress)
         }
         
         return components.joined(separator: ", ")
     }
 
     private func selectLocation(_ item: MKMapItem) {
+        let coordinate = item.location.coordinate
+        
         let newLocation = IdentifiableLocation(
-            coordinate: item.placemark.coordinate,
+            coordinate: coordinate,
             name: item.name ?? "Unknown location"
         )
         selectedLocation = newLocation
         
-        // Update the map's camera position
         withAnimation {
             cameraPosition = .camera(
                 MapCamera(
-                    centerCoordinate: item.placemark.coordinate,
+                    centerCoordinate: coordinate,
                     distance: 1000,
                     heading: 0,
                     pitch: 0
@@ -304,52 +298,43 @@ struct LocationPickerView: View {
 
     @MainActor
     private func reverseGeocode(coordinate: CLLocationCoordinate2D) async {
-        let geocoder = CLGeocoder()
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        guard let request = MKReverseGeocodingRequest(location: location) else {
+            selectedLocation = IdentifiableLocation(coordinate: coordinate, name: "Selected Location")
+            return
+        }
         
         do {
-            let placemarks = try await geocoder.reverseGeocodeLocation(location)
-            if let placemark = placemarks.first {
-                let name = formatPlacemarkName(placemark)
-                selectedLocation = IdentifiableLocation(coordinate: coordinate, name: name)
-                
-                // Update camera position
-                withAnimation {
-                    cameraPosition = .camera(
-                        MapCamera(
-                            centerCoordinate: coordinate,
-                            distance: 1000,
-                            heading: 0,
-                            pitch: 0
-                        )
+            let mapItems = try await request.mapItems
+            guard let mapItem = mapItems.first else {
+                selectedLocation = IdentifiableLocation(coordinate: coordinate, name: "Selected Location")
+                return
+            }
+            
+            let name = formatMapItemName(mapItem)
+            selectedLocation = IdentifiableLocation(coordinate: coordinate, name: name)
+            
+            withAnimation {
+                cameraPosition = .camera(
+                    MapCamera(
+                        centerCoordinate: coordinate,
+                        distance: 1000,
+                        heading: 0,
+                        pitch: 0
                     )
-                }
+                )
             }
         } catch {
-            // If geocoding fails, use a generic name
             selectedLocation = IdentifiableLocation(coordinate: coordinate, name: "Selected Location")
         }
     }
     
-    private func formatPlacemarkName(_ placemark: CLPlacemark) -> String {
-        var components: [String] = []
-        
-        // Try to get a specific location name
-        if let name = placemark.name {
-            components.append(name)
-        } else if let thoroughfare = placemark.thoroughfare {
-            if let subThoroughfare = placemark.subThoroughfare {
-                components.append("\(subThoroughfare) \(thoroughfare)")
-            } else {
-                components.append(thoroughfare)
-            }
+    private func formatMapItemName(_ mapItem: MKMapItem) -> String {
+        if let name = mapItem.name {
+            return name
+        } else if let address = mapItem.address {
+            return address.fullAddress
         }
-        
-        // Add locality for context
-        if let locality = placemark.locality {
-            components.append(locality)
-        }
-        
-        return components.isEmpty ? "Selected Location" : components.joined(separator: ", ")
+        return "Selected Location"
     }
 }

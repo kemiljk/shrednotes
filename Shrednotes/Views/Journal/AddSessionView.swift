@@ -684,7 +684,17 @@ struct AddSessionView: View {
                     }
                     
                     PhotosPicker(selection: $selectedItems, matching: .any(of: [.images, .videos])) {
-                        addMediaButton()
+                        GeometryReader { geometry in
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.1))
+                                    .frame(width: geometry.size.width, height: geometry.size.width)
+                                Image(systemName: "plus")
+                                    .font(.title2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .aspectRatio(1, contentMode: .fit)
                     }
                 }
                 .padding(.top, 16)
