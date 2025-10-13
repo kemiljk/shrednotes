@@ -15,8 +15,10 @@ enum TabIdentifier {
 struct SkateboardTrickApp: App {
     @AppStorage("isFirstTimeLaunch") private var isFirstTimeLaunch: Bool = true
     @AppStorage("hasBeenOnboarded") private var hasBeenOnboarded: Bool = false
+    @AppStorage("trickDatabaseVersion") private var trickDatabaseVersion: Int = 1
     
     @State private var selectedTab: TabIdentifier = .home
+    @State private var showTrickUpdateAlert = false
     @StateObject private var sessionManager = SessionManager.shared
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var mediaState = MediaState()
@@ -45,6 +47,20 @@ struct SkateboardTrickApp: App {
            let decodedSet = try? JSONDecoder().decode(Set<TrickType>.self, from: data) {
             visibleTrickTypes = decodedSet
         }
+    }
+    
+    func checkTrickDatabaseUpdate() {
+        if trickDatabaseVersion < 2 && !isFirstTimeLaunch {
+            showTrickUpdateAlert = true
+        }
+    }
+    
+    @MainActor
+    func addNewTricks() async {
+        let context = sharedModelContainer.mainContext
+        let insertedCount = await insertNewTricksIfNeeded(context: context)
+        print("Inserted \(insertedCount) new tricks")
+        trickDatabaseVersion = 2
     }
     
     var body: some Scene {
@@ -171,6 +187,19 @@ struct SkateboardTrickApp: App {
                     print("Temp directory size: \(TempFileCleanup.shared.formatBytes(tempSize))")
                 }
                 loadVisibleTrickTypes()
+                checkTrickDatabaseUpdate()
+            }
+            .alert("New Tricks Available", isPresented: $showTrickUpdateAlert) {
+                Button("Add Tricks") {
+                    Task {
+                        await addNewTricks()
+                    }
+                }
+                Button("Not Now", role: .cancel) {
+                    trickDatabaseVersion = 2
+                }
+            } message: {
+                Text("We've added 18 new tricks including Casper Flip, Pressure Flip, Double Kickflip, No Comply, Darkslide, Hurricane Grind, and more. Would you like to add them?")
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                 TempFileCleanup.shared.cleanupOldVideoFiles()

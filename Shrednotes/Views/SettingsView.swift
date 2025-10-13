@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var toastMessage = ""
     @State private var toastIcon = "info.circle"
     @State private var showingDeleteConfirmation = false
+    @AppStorage("trickDatabaseVersion") private var trickDatabaseVersion: Int = 1
     
     var body: some View {
         NavigationStack {
@@ -195,20 +196,30 @@ struct SettingsView: View {
                     }
                     .listRowSeparator(.hidden)
                     
-                    Section(header: Text("Danger Zone").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        Button {
-                            Task {
-                                let count = await cleanUpTricks()
-                                toastMessage = "\(count) duplicate tricks removed."
-                                toastIcon = "trash.circle"
-                                withAnimation {
-                                    showToast = true
+                    if trickDatabaseVersion < 2 {
+                        Section(header: Text("Database").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
+                                Button {
+                                    Task {
+                                        let count = await addNewTricks()
+                                        if count > 0 {
+                                            toastMessage = "\(count) new tricks added!"
+                                        } else {
+                                            toastMessage = "All tricks already in your database"
+                                        }
+                                        toastIcon = "checkmark.circle"
+                                        withAnimation {
+                                            showToast = true
+                                        }
+                                    }
+                                } label: {
+                                    Label("Add New Tricks (18)", systemImage: "plus.circle")
                                 }
-                            }
-                        } label: {
-                            Label("De-duplicate tricks", systemImage: "trash")
+                                .tint(.green)
                         }
-                        .tint(.pink)
+                        .listRowSeparator(.hidden)
+                    }
+                    
+                    Section(header: Text("Danger Zone").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
                         
                         Button(role: .destructive) {
                             showingDeleteConfirmation = true
@@ -289,6 +300,13 @@ struct SettingsView: View {
                 UserDefaults.standard.set(notificationAccessGranted, forKey: "NotificationAccessGranted")
             }
         }
+    }
+    
+    @MainActor
+    private func addNewTricks() async -> Int {
+        let insertedCount = await insertNewTricksIfNeeded(context: modelContext)
+        trickDatabaseVersion = 2
+        return insertedCount
     }
 }
 

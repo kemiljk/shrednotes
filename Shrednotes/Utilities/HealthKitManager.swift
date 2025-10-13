@@ -112,13 +112,15 @@ class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
         
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        let datePredicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
+        let skatingSportsPredicate = HKQuery.predicateForWorkouts(with: .skatingSports)
+        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, skatingSportsPredicate])
+        
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: true)
         
-        // Explicitly declare workoutType
         let workoutType: HKSampleType = HKObjectType.workoutType()
         
-        let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (query, samples, error) in
+        let query = HKSampleQuery(sampleType: workoutType, predicate: compoundPredicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (query, samples, error) in
             guard let workouts = samples as? [HKWorkout] else {
                 completion([])
                 return

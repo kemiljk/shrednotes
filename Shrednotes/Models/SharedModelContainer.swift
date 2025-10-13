@@ -11,6 +11,7 @@ import SwiftData
 var sharedModelContainer: ModelContainer = {
     @AppStorage("isFirstTimeLaunch") var isFirstTimeLaunch: Bool = true
     @AppStorage("hasBeenOnboarded") var hasBeenOnboarded: Bool = false
+    @AppStorage("trickDatabaseVersion") var trickDatabaseVersion: Int = 1
     
     let schema = Schema([Trick.self, SkateSession.self, ComboTrick.self])
     
@@ -33,9 +34,13 @@ var sharedModelContainer: ModelContainer = {
             do {
                 try context.save()
                 isFirstTimeLaunch = false
+                trickDatabaseVersion = 2
                 
                 Task {
-                    _ = await cleanUpTricks()
+                    let deduplicatedCount = await cleanUpTricks()
+                    if deduplicatedCount > 0 {
+                        print("Removed \(deduplicatedCount) duplicate tricks on first launch")
+                    }
                 }
             } catch {
                 print("Failed to save tricks on first launch: \(error)")
@@ -71,43 +76,70 @@ let skateSessionExtensionModelContainer: ModelContainer = {
 @MainActor
 func cleanUpTricks() async -> Int {
     let context = sharedModelContainer.mainContext
-    var allTricks: [Trick] = []
     var deletedCount = 0
     
     do {
-        allTricks = try context.fetch(FetchDescriptor<Trick>())
-    } catch {
-        print("Failed to fetch tricks: \(error)")
-        return 0
-    }
-    
-    let groupedTricks = Dictionary(grouping: allTricks, by: { $0.name })
-    
-    for (_, tricks) in groupedTricks where tricks.count > 1 {
-        let tricksToKeep = tricks.filter { $0.isLearning || $0.isLearned }
+        let allTricks = try context.fetch(FetchDescriptor<Trick>())
         
-        if let trickToKeep = tricksToKeep.first {
-            // Keep one trick and delete the rest
-            for trick in tricks where trick != trickToKeep {
-                context.delete(trick)
-                deletedCount += 1
+        let groupedTricks = Dictionary(grouping: allTricks, by: { $0.name })
+        
+        for (_, tricks) in groupedTricks where tricks.count > 1 {
+            let tricksToKeep = tricks.filter { $0.isLearning || $0.isLearned }
+            let trickToKeepID: UUID?
+            
+            if let trickToKeep = tricksToKeep.first {
+                trickToKeepID = trickToKeep.id
+            } else {
+                trickToKeepID = tricks.first?.id
             }
-        } else {
-            // If no tricks are marked as learning or learned, keep the first one
-            for trick in tricks.dropFirst() {
+            
+            guard let keepID = trickToKeepID else { continue }
+            
+            for trick in tricks where trick.id != keepID {
                 context.delete(trick)
                 deletedCount += 1
             }
         }
-    }
-    
-    do {
+        
         if context.hasChanges {
             try context.save()
         }
     } catch {
-        print("Failed to save context after cleanup: \(error)")
+        print("Failed to cleanup tricks: \(error)")
     }
     
     return deletedCount
+}
+
+@MainActor
+func insertNewTricksIfNeeded(context: ModelContext) async -> Int {
+    var insertedCount = 0
+    
+    do {
+        let descriptor = FetchDescriptor<Trick>()
+        let existingTricks = try context.fetch(descriptor)
+        let existingNames = Set(existingTricks.map { $0.name.lowercased() })
+        
+        let newTricks = generateNewTricksV2()
+        
+        for trick in newTricks {
+            if !existingNames.contains(trick.name.lowercased()) {
+                context.insert(trick)
+                insertedCount += 1
+            }
+        }
+        
+        if context.hasChanges {
+            try context.save()
+        }
+        
+        let deduplicatedCount = await cleanUpTricks()
+        if deduplicatedCount > 0 {
+            print("Automatically removed \(deduplicatedCount) duplicate tricks")
+        }
+    } catch {
+        print("Failed to insert new tricks: \(error)")
+    }
+    
+    return insertedCount
 }

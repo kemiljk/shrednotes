@@ -291,7 +291,6 @@ struct MainView: View {
                     expandedGroups: $expandedGroups,
                     selectedType: $selectedType
                 )
-                
                 .onDisappear {
                     updateNextTrickInAppStorage()
                     inProgressTricks = computeInProgressTricks()
@@ -311,20 +310,15 @@ struct MainView: View {
             }
         }
         .sheet(isPresented: $showingAddTrick) {
-            FullTrickListView(
-                visibleTrickTypes: $visibleTrickTypes,
-                searchText: $searchText,
-                expandedGroups: $expandedGroups,
-                selectedType: $selectedType
-            )
-            
-            .onDisappear {
-                updateNextTrickInAppStorage()
-                inProgressTricks = computeInProgressTricks()
-                nextCombinationTricks = computeNextCombinationTricks()
-                filteredTricks = computeFilteredTricks()
-                WidgetCenter.shared.reloadAllTimelines()
-            }
+            AddTrickView()
+                .modelContext(modelContext)
+                .onDisappear {
+                    updateNextTrickInAppStorage()
+                    inProgressTricks = computeInProgressTricks()
+                    nextCombinationTricks = computeNextCombinationTricks()
+                    filteredTricks = computeFilteredTricks()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
         }
         .onChange(of: isOnboardingComplete) { _, newValue in
             if newValue {

@@ -327,40 +327,39 @@ struct TrickDetailView: View {
         let result = await AIModelAvailability.withAvailability {
             let instructions = Instructions {
                 """
-                You are a skateboarding professional with over 30 years of experience on the board. Your job is to provide useful tips for this specific trick.
+                You are a skateboarding professional with over 30 years of experience on the board. Your job is to provide useful tips for the SPECIFIC trick requested.
 
-                1.  **Receive Trick Input:** The prompt will provide the name of a specific skateboarding trick (e.g., "Ollie," "Kickflip," "50-50 Grind").
-                2.  **Skill Level Assessment (Implied):** Mentally categorize the trick's difficulty (Beginner, Intermediate, Advanced) to tailor the advice. Don't explicitly state the skill level.
-                3.  **Deconstruct the Trick:** Break the trick down into essential steps or phases.
-                4.  **Provide Targeted Tips for Each Step:** Offer concise, practical advice for each phase. Prioritize effectiveness and clarity.
-                    *   Use active voice and direct language.
-                    *   Focus on specific techniques and adjustments.
-                    *   Avoid overly generic statements.
-                5.  **Address Common Errors & Solutions:** Highlight typical mistakes skaters make when learning the trick and provide actionable solutions.
-                6.  **Safety Advice (Concise):** Include brief safety reminders where relevant, without being overly repetitive.
-                7.  **Progression Suggestions (Optional):** If appropriate, suggest logical next steps or related tricks to learn after mastering the current one.
-                8.  **Tone:** Direct, informative, and encouraging, but without excessive slang or a forced persona. Assume the user wants practical guidance.
-                9.  When returning newlines, always include the `\n` syntax
+                **CRITICAL FORMATTING RULES:**
+                - You MUST use numbered lists (1., 2., 3., etc.) for ALL tips
+                - You MUST use bold markdown (**text**) for key terms
+                - You MUST include `\n` for newlines between items
+                - DO NOT use bullet points (*), ONLY numbered lists
+                - Each tip should be concise and actionable
+                - DO NOT include any chat-like responses or introductions
+
+                **CRITICAL CONTENT RULES:**
+                - Generate ORIGINAL, TRICK-SPECIFIC tips based on the actual trick name provided
+                - DO NOT reuse or adapt the example content for other tricks
+                - Research the specific mechanics, technique, and common issues for the requested trick
+                - Each trick has unique characteristics - your tips must reflect those differences
+
+                **Structure Requirements:**
+                1. Start with a brief title using the actual trick name (e.g., "**[Trick Name] Tips:**\n\n")
+                2. Provide 3-5 numbered tips about technique specific to that trick
+                3. Optionally include 2-3 common mistakes specific to that trick
+                4. Keep the total response under 150 words
+
+                **Tone:** Direct, informative, and encouraging, but without excessive slang or a forced persona. Use active voice and focus on specific techniques.
+
+                **FORMATTING EXAMPLE ONLY (for "Ollie" - DO NOT reuse this content for other tricks):**
+
+                "**Ollie Tips:**\n\n1. **Foot Placement:** Back foot centered on the tail; front foot slightly behind the bolts, angled.\n2. **Pop:** Snap your back ankle down hard for maximum board lift. Focus on a quick, powerful motion.\n3. **Slide:** As the board rises, slide your front foot up the nose to level it out. A smooth, consistent slide is key.\n4. **Knee Bend:** Bend your knees upon landing to absorb impact and maintain balance.\n5. **Weight Distribution:** Keep your weight centered over the board. Engage your core to maintain balance.\n\n**Common Mistakes:**\n\n1. **Not Enough Height:** Pop harder and slide your front foot further up the board.\n2. **Leaning Back:** Keep your shoulders aligned with your board and engage your core.\n3. **Board Shoots Forward:** Ensure your front foot slides straight up, not outwards."
                 
-                **Example Response (for "Ollie"):**
-
-                "**Ollie Tips:**\n
-                *   **Foot Placement:** Back foot centered on the tail; front foot slightly behind the bolts, angled.\n
-                *   **Pop:** Snap your back ankle down hard for maximum board lift. Focus on a quick, powerful motion.\n
-                *   **Slide:** As the board rises, slide your front foot up the nose to level it out. A smooth, consistent slide is key.\n
-                *   **Knee Bend:** Bend your knees upon landing to absorb impact and maintain balance.\n\n
-
-                **Common Mistakes & Solutions:**\n
-                *   **Not Enough Height:** Pop harder and slide your front foot further.\n
-                *   **Leaning Back:** Keep your weight centered over the board. Engage your core.\n
-                *   **Board Shoots Forward:** Ensure your front foot slides straight up the board, not outwards.\n\n
-
-                **Safety:** Practice on a smooth, flat surface. Start slow and increase speed gradually.\n
-                Once you're comfortable with stationary Ollies, try them rolling, then over small objects."
+                NOTE: The above example demonstrates FORMATTING ONLY. You must generate completely different, trick-specific content based on the actual trick requested.
                 """
             }
             
-            let prompt = Prompt("Provide a single, short and simple set of trick tips for \(trick.name). Exclude any chat-like responses or introductions; provide the tip directly.")
+            let prompt = Prompt("Provide trick tips for \(trick.name) using STRICT numbered list formatting. Follow the format rules exactly.")
             let session = LanguageModelSession(instructions: instructions)
             let response = try await session.respond(to: prompt)
             return response.content

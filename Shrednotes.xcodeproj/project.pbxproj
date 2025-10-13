@@ -88,16 +88,6 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		CFA0871C2CEA0A9000467FE3 /* Embed ExtensionKit Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
-			dstSubfolderSpec = 16;
-			files = (
-			);
-			name = "Embed ExtensionKit Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -329,7 +319,6 @@
 				CF4C6E622CE38E6200F1A90D /* Sources */,
 				CF4C6E632CE38E6200F1A90D /* Frameworks */,
 				CF4C6E642CE38E6200F1A90D /* Resources */,
-				CFA0871C2CEA0A9000467FE3 /* Embed ExtensionKit Extensions */,
 				CF9F28D82CE5FAD0007379D5 /* Embed Foundation Extensions */,
 				CF656C712CE699B2002BD1B4 /* Embed Watch Content */,
 			);
@@ -640,7 +629,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -693,7 +682,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
@@ -844,7 +833,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.kejk.ShredNotes.Add-Session-From-Sharesheet";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -871,7 +860,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.kejk.ShredNotes.Add-Session-From-Sharesheet";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -906,7 +895,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -941,7 +930,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -972,7 +961,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.Widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1001,7 +990,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.Widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1030,7 +1019,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp.WatchWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1059,7 +1048,7 @@
 					"@executable_path/../../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 2025.1;
+				MARKETING_VERSION = 2025.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kejk.ShredNotes.watchkitapp.WatchWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
