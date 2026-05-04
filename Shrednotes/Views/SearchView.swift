@@ -19,46 +19,53 @@ struct SearchView: View {
                             }
                         }
                     }
-                    Section("Recent Sessions") {
-                        ForEach(sessions.prefix(5)) { session in
-                            NavigationLink(value: session) {
-                                Text(session.title!)
+                    if !sessions.isEmpty {
+                        Section("Recent Sessions") {
+                            ForEach(sessions.prefix(5)) { session in
+                                NavigationLink(value: session) {
+                                    Text(session.title ?? "Untitled session")
+                                }
                             }
                         }
                     }
-                    Section("Recent Combos") {
-                        ForEach(combos.prefix(5)) { combo in
-                            NavigationLink(value: combo) {
-                                Text(combo.name!)
+                    if !combos.isEmpty {
+                        Section("Recent Combos") {
+                            ForEach(combos.prefix(5)) { combo in
+                                NavigationLink(value: combo) {
+                                    Text(combo.name ?? "Untitled combo")
+                                }
                             }
                         }
                     }
                 } else {
-                    if !tricks.filter({ $0.name.localizedCaseInsensitiveContains(searchText) }).isEmpty {
+                    let trickMatches = tricks.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+                    if !trickMatches.isEmpty {
                         Section("Tricks") {
-                            ForEach(tricks.filter { $0.name.localizedCaseInsensitiveContains(searchText) }) { trick in
+                            ForEach(trickMatches) { trick in
                                 NavigationLink(value: trick) {
                                     Text(trick.name)
                                 }
                             }
                         }
                     }
-                    
-                    if !sessions.filter({ $0.title!.localizedCaseInsensitiveContains(searchText) }).isEmpty {
+
+                    let sessionMatches = sessions.filter { ($0.title ?? "").localizedCaseInsensitiveContains(searchText) }
+                    if !sessionMatches.isEmpty {
                         Section("Sessions") {
-                            ForEach(sessions.filter { $0.title!.localizedCaseInsensitiveContains(searchText) }) { session in
+                            ForEach(sessionMatches) { session in
                                 NavigationLink(value: session) {
-                                    Text(session.title!)
+                                    Text(session.title ?? "Untitled session")
                                 }
                             }
                         }
                     }
-                    
-                    if !combos.filter({ $0.name!.localizedCaseInsensitiveContains(searchText) }).isEmpty {
+
+                    let comboMatches = combos.filter { ($0.name ?? "").localizedCaseInsensitiveContains(searchText) }
+                    if !comboMatches.isEmpty {
                         Section("Combos") {
-                            ForEach(combos.filter { $0.name!.localizedCaseInsensitiveContains(searchText) }) { combo in
+                            ForEach(comboMatches) { combo in
                                 NavigationLink(value: combo) {
-                                    Text(combo.name!)
+                                    Text(combo.name ?? "Untitled combo")
                                 }
                             }
                         }

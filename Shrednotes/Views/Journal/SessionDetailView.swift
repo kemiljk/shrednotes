@@ -14,9 +14,9 @@ import MapKit
 struct SessionDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var healthKitManager: HealthKitManager
+    @Environment(HealthKitManager.self) private var healthKitManager: HealthKitManager
     @Bindable var session: SkateSession
-    @ObservedObject var mediaState: MediaState
+    @Bindable var mediaState: MediaState
     @State private var isHealthAccessGranted: Bool = UserDefaults.standard.bool(forKey: "isHealthAccessGranted")
     
     @State private var selectedMediaItem: MediaItem?

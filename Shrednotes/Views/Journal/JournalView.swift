@@ -16,7 +16,7 @@ struct JournalView: View {
     @Query(sort: \SkateSession.date, order: .reverse) private var sessions: [SkateSession]
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var mediaState = MediaState()
+    @State private var mediaState = MediaState()
     @Namespace private var detailView
     @State private var showingAddSession = false
     @State private var showingInsightView = false
@@ -101,7 +101,7 @@ struct JournalView: View {
                         
                         ForEach(filteredGroupedSessions.isEmpty ? placeholderGroupedSessions : filteredGroupedSessions, id: \.key) { month, sessions in
                             Section(header: monthHeader(for: month)) {
-                                ForEach(sessions.sorted(by: { $0.date ?? Date() > $1.date ?? Date() }), id: \.self) { session in
+                                ForEach(sessions, id: \.self) { session in
                                     SessionCard(session: session, mediaState: mediaState, onTap: {
                                         self.selectedSession = session
                                     }, onSelect: {
@@ -220,10 +220,11 @@ struct JournalView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: hasActiveFilters ? 
+                        Image(systemName: hasActiveFilters ?
                             "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
                             .foregroundStyle(hasActiveFilters ? .accent : .primary)
                     }
+                    .accessibilityLabel(hasActiveFilters ? "Filter sessions, filters active" : "Filter sessions")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -233,31 +234,20 @@ struct JournalView: View {
                             Image(systemName: "sparkles")
                         }
                     }
+                    .accessibilityLabel("View insights")
                     .sensoryFeedback(.increase, trigger: showingInsightView)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    if #available(iOS 26, *) {
-                        Button(role: .confirm) {
-                            self.showingAddSession = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .sensoryFeedback(
-                            .impact(weight: .medium),
-                            trigger: showingAddSession
-                        )
-                    } else {
-                        Button {
-                            self.showingAddSession = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .tint(.accentColor)
-                        .sensoryFeedback(
-                            .impact(weight: .medium),
-                            trigger: showingAddSession
-                        )
+                    Button(role: .confirm) {
+                        self.showingAddSession = true
+                    } label: {
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Add session")
+                    .sensoryFeedback(
+                        .impact(weight: .medium),
+                        trigger: showingAddSession
+                    )
                 }
             }
             .sheet(isPresented: $showingAddSession) {
@@ -289,26 +279,35 @@ struct JournalView: View {
         return Array(Set(years)).sorted(by: >)
     }
     
+    // Allocated once — DateFormatter is expensive and not thread-safe.
+    private static let monthSymbolFormatter = DateFormatter()
+    private static let monthYearFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "MMMM yyyy"
+        return f
+    }()
+
     private var availableMonths: [(number: Int, name: String)] {
         let monthNumbers = sessions.compactMap { $0.date }.map {
             Calendar.current.component(.month, from: $0)
         }
-        
+
         let uniqueMonthNumbers = Set(monthNumbers)
-        let dateFormatter = DateFormatter()
-        
-        let monthDetails = uniqueMonthNumbers.map { monthNumber in
-            (number: monthNumber, name: dateFormatter.monthSymbols[monthNumber - 1])
+        let symbols = Self.monthSymbolFormatter.monthSymbols ?? []
+
+        let monthDetails = uniqueMonthNumbers.compactMap { monthNumber -> (number: Int, name: String)? in
+            guard monthNumber > 0, monthNumber <= symbols.count else { return nil }
+            return (number: monthNumber, name: symbols[monthNumber - 1])
         }
-        
+
         return monthDetails.sorted { $0.number < $1.number }
     }
-    
+
     private var selectedMonthName: String? {
         guard let monthNumber = selectedMonths.first else { return nil }
-        let dateFormatter = DateFormatter()
-        guard monthNumber > 0 && monthNumber <= dateFormatter.monthSymbols.count else { return nil }
-        return dateFormatter.monthSymbols[monthNumber - 1]
+        let symbols = Self.monthSymbolFormatter.monthSymbols ?? []
+        guard monthNumber > 0 && monthNumber <= symbols.count else { return nil }
+        return symbols[monthNumber - 1]
     }
     
     private var hasActiveFilters: Bool {
@@ -533,9 +532,7 @@ struct JournalView: View {
         guard let date = Calendar.current.date(from: components) else {
             return "Unknown Date"
         }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: date)
+        return Self.monthYearFormatter.string(from: date)
     }
     
     private func compareDateComponents(_ lhs: DateComponents, _ rhs: DateComponents) -> Bool {

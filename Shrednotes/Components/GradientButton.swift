@@ -4,9 +4,19 @@
 //
 //  Created by Karl Koch on 12/11/2024.
 //
+//  Note: name is preserved for source compatibility with existing call sites.
+//  The visual style is now flat / native — primary uses `.glassProminent`,
+//  secondary uses `.glass`. This is the single source of truth for primary
+//  button styling across the app.
+//
 
 import SwiftUI
 import CoreHaptics
+
+enum PrimaryButtonVariant {
+    case primary
+    case secondary
+}
 
 struct GradientButton<T, HapticTrigger, Destination>: View where Destination: View {
     let label: String
@@ -19,12 +29,9 @@ struct GradientButton<T, HapticTrigger, Destination>: View where Destination: Vi
     let destination: Destination?
     let hapticTrigger: HapticTrigger?
     let hapticFeedbackType: HapticFeedbackType?
-    let variant: ButtonVariant
-    
-    enum ButtonVariant {
-        case primary
-        case secondary
-    }
+    let variant: PrimaryButtonVariant
+
+    typealias ButtonVariant = PrimaryButtonVariant
 
     // First convenience initializer for non-navigation buttons
     init(
@@ -78,82 +85,85 @@ struct GradientButton<T, HapticTrigger, Destination>: View where Destination: Vi
         self.hapticFeedbackType = hapticFeedbackType
         self.variant = variant
     }
-    
-    var gradientColors: AnyGradient {
-        switch variant {
-        case .primary:
-            return Color.indigo.gradient
-        case .secondary:
-            return Color(.systemGray5).gradient
-        }
-    }
-    
-    var textColor: Color {
-        if variant == .primary {
-            return .white
-        } else {
-            return .primary
-        }
-    }
-    
+
     var body: some View {
-        VStack {
+        Group {
             if let destination = destination {
                 NavigationLink(destination: destination) {
-                    buttonContent
+                    buttonLabel
                 }
             } else {
-                Button(action: {
+                Button {
                     if let binding = binding, let value = value {
                         binding.wrappedValue = value
                     } else {
                         action?()
                     }
                     triggerHapticFeedback()
-                }) {
-                    buttonContent
+                } label: {
+                    buttonLabel
                 }
             }
         }
-        .frame(maxWidth: fullWidth ? .infinity : nil)
+        .modifier(PrimaryButtonStyleModifier(variant: variant, fullWidth: fullWidth))
     }
 
     @ViewBuilder
-    private var buttonContent: some View {
+    private var buttonLabel: some View {
         if hasImage {
             Label(label, systemImage: image)
-                .font(.headline)
-                .padding()
-                .background(gradientColors)
-                .foregroundStyle(textColor)
-                .clipShape(Capsule())
         } else {
             Text(label)
-                .font(.headline)
-                .padding()
-                .background(gradientColors)
-                .foregroundStyle(textColor)
-                .clipShape(Capsule())
         }
     }
 
     private func triggerHapticFeedback() {
-        if let feedbackType = hapticFeedbackType {
-            switch feedbackType {
-            case .impact:
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
-            case .notification:
-                let generator = UINotificationFeedbackGenerator()
-                generator.notificationOccurred(.success)
-            case .selection:
-                let generator = UISelectionFeedbackGenerator()
-                generator.selectionChanged()
-            }
+        guard let feedbackType = hapticFeedbackType else { return }
+        switch feedbackType {
+        case .impact:
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case .notification:
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case .selection:
+            UISelectionFeedbackGenerator().selectionChanged()
         }
     }
 }
 
+/// Single source of truth for the app's primary / secondary button visual style.
+/// Apply with `.modifier(PrimaryButtonStyleModifier(variant: .primary))` or
+/// equivalently via the `.primaryButtonStyle()` view extension.
+struct PrimaryButtonStyleModifier: ViewModifier {
+    let variant: PrimaryButtonVariant
+    var fullWidth: Bool = false
+
+    func body(content: Content) -> some View {
+        if variant == .primary {
+            content
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+                .tint(.indigo)
+                .frame(maxWidth: fullWidth ? .infinity : nil)
+        } else {
+            content
+                .buttonStyle(.glass)
+                .controlSize(.large)
+                .frame(maxWidth: fullWidth ? .infinity : nil)
+        }
+    }
+}
+
+extension View {
+    /// Apply the app-standard primary button style (glassProminent + indigo tint, large size).
+    func primaryButtonStyle(fullWidth: Bool = false) -> some View {
+        modifier(PrimaryButtonStyleModifier(variant: .primary, fullWidth: fullWidth))
+    }
+
+    /// Apply the app-standard secondary button style (glass, large size).
+    func secondaryButtonStyle(fullWidth: Bool = false) -> some View {
+        modifier(PrimaryButtonStyleModifier(variant: .secondary, fullWidth: fullWidth))
+    }
+}
 
 enum HapticFeedbackType {
     case impact

@@ -7,10 +7,10 @@ struct ShareView: View {
     @State private var mediaItems: [MediaItem] = []
     var extensionContext: NSExtensionContext?
     @ObservedObject var coordinator: ShareCoordinator
-    @StateObject private var mediaState = MediaState()
+    @State private var mediaState = MediaState()
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             SEAddSessionView(coordinator: coordinator, mediaItems: mediaItems)
                 .environment(\.modelContext, modelContext)
         }

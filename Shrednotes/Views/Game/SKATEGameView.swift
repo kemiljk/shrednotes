@@ -360,9 +360,7 @@ struct SKATEGameView: View {
                     currentTrickSetter = Int.random(in: 0..<players.count)
                     gamePhase = .readyToStart
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.extraLarge)
-                .buttonBorderShape(.capsule)
+                .primaryButtonStyle()
                 .disabled(players.count < 2 || players.contains { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
                 .opacity(players.count < 2 || players.contains { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ? 0.6 : 1.0)
                 .padding(.horizontal, 20)
@@ -412,9 +410,7 @@ struct SKATEGameView: View {
                 Button("Begin Game") {
                     gamePhase = .settingTrick
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.extraLarge)
-                .buttonBorderShape(.capsule)
+                .primaryButtonStyle()
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
@@ -456,9 +452,7 @@ struct SKATEGameView: View {
                 Button("Choose Trick") {
                     showingTrickPicker = true
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.extraLarge)
-                .buttonBorderShape(.capsule)
+                .primaryButtonStyle()
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
@@ -496,31 +490,25 @@ struct SKATEGameView: View {
                         Button("Landed") {
                             handleSetterResult(landed: true)
                         }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.large)
-                        
+                        .primaryButtonStyle(fullWidth: true)
+
                         Button("Bailed") {
                             handleSetterResult(landed: false)
                         }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.large)
+                        .secondaryButtonStyle(fullWidth: true)
                     }
                     .padding(.horizontal, 20)
                 }
             }
-            
+
             Spacer()
-            
+
             if !gameHistory.isEmpty {
                 gameHistoryView
             }
         }
     }
-    
+
     @ViewBuilder
     private var attemptingView: some View {
         VStack(spacing: 0) {
@@ -552,18 +540,12 @@ struct SKATEGameView: View {
                         Button("Landed") {
                             handleTrickResult(landed: true)
                         }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.large)
-                        
+                        .primaryButtonStyle(fullWidth: true)
+
                         Button("Bailed") {
                             handleTrickResult(landed: false)
                         }
-                        .frame(maxWidth: .infinity)
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.large)
+                        .secondaryButtonStyle(fullWidth: true)
                     }
                     .padding(.horizontal, 20)
                 }
@@ -639,18 +621,14 @@ struct SKATEGameView: View {
                     Button("Play Again") {
                         resetGame()
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.extraLarge)
-                    .buttonBorderShape(.capsule)
-                    
+                    .secondaryButtonStyle()
+
                     Button("New Players") {
                         gamePhase = .setup
                         players.removeAll()
                         resetGameState()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.extraLarge)
-                    .buttonBorderShape(.capsule)
+                    .primaryButtonStyle()
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)

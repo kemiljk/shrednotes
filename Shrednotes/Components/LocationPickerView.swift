@@ -13,7 +13,7 @@ struct LocationPickerView: View {
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @FocusState.Binding var locationSearchIsFocused: Bool
-    @StateObject private var locationManager = LocationManager()
+    @State private var locationManager = LocationManager()
     @State private var cameraPosition: MapCameraPosition = .automatic
     
     private func locationMatchesSearch(_ location: IdentifiableLocation) -> Bool {

@@ -7,14 +7,15 @@
 import SwiftUI
 
 @MainActor
-class LearnedTrickManager: ObservableObject {
+@Observable
+final class LearnedTrickManager {
     static let shared = LearnedTrickManager()
-    
-    @Published var showingPrompt = false
-    @Published var learnedTrick: Trick?
-    
+
+    var showingPrompt = false
+    var learnedTrick: Trick?
+
     private init() {}
-    
+
     func trickLearned(_ trick: Trick) {
         self.learnedTrick = trick
         self.showingPrompt = true
@@ -22,9 +23,10 @@ class LearnedTrickManager: ObservableObject {
 }
 
 struct LearnedTrickPromptModifier: ViewModifier {
-    @StateObject private var manager = LearnedTrickManager.shared
-    
+    @State private var manager = LearnedTrickManager.shared
+
     func body(content: Content) -> some View {
+        @Bindable var manager = manager
         content
             .overlay(
                 ZStack {

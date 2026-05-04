@@ -11,8 +11,8 @@ import CoreLocation
 struct OnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var healthKitManager: HealthKitManager
-    @StateObject private var locationManager = LocationManager()
+    @Environment(HealthKitManager.self) private var healthKitManager: HealthKitManager
+    @State private var locationManager = LocationManager()
     @Binding var isOnboardingComplete: Bool
     @State private var currentStep = 0
     @State private var healthAccessGranted: Bool = UserDefaults.standard.bool(forKey: "HealthAccessGranted")
@@ -41,6 +41,7 @@ struct OnboardingView: View {
                 .fontWidth(.expanded)
                 .fontWeight(.bold)
                 .padding()
+                .padding(.top, 24)
             
             Spacer()
             
@@ -91,7 +92,7 @@ struct OnboardingView: View {
                 currentStep += 1
             }
         }
-        .onReceive(locationManager.$locationAccessGranted) { granted in
+        .onChange(of: locationManager.locationAccessGranted) { _, granted in
             if granted {
                 locationAccessGranted = true
                 currentStep += 1

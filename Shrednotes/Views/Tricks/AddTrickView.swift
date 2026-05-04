@@ -23,7 +23,7 @@ struct AddTrickView: View {
     @State private var progress: ProgressState = .notStarted
     
     // Media handling state
-    @StateObject private var mediaState = MediaState()
+    @State private var mediaState = MediaState()
     @State private var loadingMedia: Set<UUID> = []
     
     @FocusState private var noteIsFocused: Bool

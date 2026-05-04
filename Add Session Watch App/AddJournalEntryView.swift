@@ -92,7 +92,7 @@ enum ElementType: String, Codable {
 
 struct AddJournalEntryView: View {
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var sessionManager = SessionManager.shared
+    @State private var sessionManager = SessionManager.shared
     @State private var note: String = ""
     @State private var isSaved: Bool = false
     @FocusState private var isNoteFieldFocused: Bool

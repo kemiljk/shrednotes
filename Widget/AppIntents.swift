@@ -68,14 +68,14 @@ struct OpenViewJournalIntent: AppIntent {
     static var title: LocalizedStringResource = "View Journal"
     static var description = IntentDescription("Opens the app and shows the skate journal.")
     static var openAppWhenRun: Bool = true
-    
+
     @MainActor
     func perform() async throws -> some IntentResult {
-        navigationModel.showViewJournal = true
+        navigationModel.selectedTab = .journal
         navigationModel.selectedView = .journal
         return .result()
     }
-    
+
     @Dependency
     private var navigationModel: NavigationModel
 }
@@ -84,14 +84,15 @@ struct OpenPracticeTricksIntent: AppIntent {
     static var title: LocalizedStringResource = "Practice Tricks"
     static var description = IntentDescription("Opens the app and shows the trick practice mode.")
     static var openAppWhenRun: Bool = true
-    
+
     @MainActor
     func perform() async throws -> some IntentResult {
+        navigationModel.selectedTab = .tricks
         navigationModel.showPracticeTricks = true
         navigationModel.selectedView = .practice
         return .result()
     }
-    
+
     @Dependency
     private var navigationModel: NavigationModel
 }
@@ -100,27 +101,37 @@ struct OpenSKATEGameIntent: AppIntent {
     static var title: LocalizedStringResource = "Play S.K.A.T.E."
     static var description = IntentDescription("Opens the app and enters a new game of S.K.A.T.E.")
     static var openAppWhenRun: Bool = true
-    
+
     @MainActor
     func perform() async throws -> some IntentResult {
-        navigationModel.showSKATEGame = true
+        navigationModel.selectedTab = .skate
         navigationModel.selectedView = .skateGame
         return .result()
     }
-    
+
     @Dependency
     private var navigationModel: NavigationModel
+}
+
+/// Tab identifier shared between `ShrednoteApp` (main TabView) and App Intents.
+enum AppTabID: String, Hashable, Sendable {
+    case home
+    case journal
+    case skate
+    case tricks
+    case search
 }
 
 @MainActor
 @Observable class NavigationModel: @unchecked Sendable {
     static let shared = NavigationModel()
-    
+
     var showAddSession: Bool = false
     var showViewJournal: Bool = false
     var showPracticeTricks: Bool = false
     var showSKATEGame: Bool = false
     var selectedView: ViewType = .home
+    var selectedTab: AppTabID = .home
 }
 
 enum ViewType {

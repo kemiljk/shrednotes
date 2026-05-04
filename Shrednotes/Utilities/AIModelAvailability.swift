@@ -56,23 +56,28 @@ struct AIModelAvailability {
         }
     }
     
+    /// Runs an AI action when Apple Intelligence is available.
+    /// Re-throws `LanguageModelSession.GenerationError` so call sites can
+    /// pattern-match `.exceededContextWindowSize` / `.guardrailViolation`.
+    /// Other errors are reported via `onUnavailable`.
     static func withAvailability<T>(
         perform action: @escaping () async throws -> T,
         onUnavailable: @escaping (AIModelError) async -> Void
-    ) async -> T? {
+    ) async rethrows -> T? {
         switch checkAvailability() {
         case .success:
             do {
                 return try await action()
+            } catch let error as LanguageModelSession.GenerationError {
+                throw error
+            } catch let error as AIModelError {
+                await onUnavailable(error)
+                return nil
             } catch {
-                if let modelError = error as? AIModelError {
-                    await onUnavailable(modelError)
-                } else {
-                    await onUnavailable(.unavailable(error))
-                }
+                await onUnavailable(.unavailable(error))
                 return nil
             }
-            
+
         case .failure(let error):
             await onUnavailable(error)
             return nil

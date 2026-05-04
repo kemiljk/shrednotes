@@ -13,7 +13,7 @@ struct SEAddSessionView: View {
     @Query var sessions: [SkateSession]
     @State private var mediaItems: [MediaItem]
     @ObservedObject var coordinator: ShareCoordinator
-    @StateObject private var mediaState = MediaState()
+    @State private var mediaState = MediaState()
     @State private var title: String = ""
     @State private var date: Date = Date()
     @State private var feelings: [Feeling] = []

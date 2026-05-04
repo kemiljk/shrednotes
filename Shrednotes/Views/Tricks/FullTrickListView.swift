@@ -27,14 +27,56 @@ struct FullTrickListView: View {
     ]) private var tricks: [Trick]
     
     private var filteredTricks: [Trick] {
-        tricks.filter { trick in
-            let searchWords = searchText.lowercased().split(separator: " ")
+        let searchWords = searchText.lowercased().split(separator: " ")
+        let isSearchEmpty = searchText.isEmpty
+        return tricks.filter { trick in
             let trickName = trick.name.lowercased()
             let containsAllSearchWords = searchWords.allSatisfy { trickName.contains($0) }
-            
-            return (searchText.isEmpty || containsAllSearchWords) &&
+
+            return (isSearchEmpty || containsAllSearchWords) &&
                    (selectedType == nil || trick.type == selectedType) &&
                    visibleTrickTypes.contains(trick.type)
+        }
+    }
+
+    private var learnedCount: Int {
+        tricks.lazy.filter { $0.isLearned }.count
+    }
+
+    @ViewBuilder
+    private func statPill(value: String, label: String) -> some View {
+        HStack(spacing: 6) {
+            Text(value)
+                .fontWeight(.bold)
+                .foregroundStyle(.indigo)
+            Text(label)
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .glassEffect(.regular, in: .capsule)
+    }
+
+    @ViewBuilder
+    private func filterChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Color.indigo : Color(.tertiarySystemFill))
+                )
+        }
+        .buttonStyle(.plain)
+        .scrollTransition { content, phase in
+            content
+                .opacity(phase.isIdentity ? 1 : 0)
+                .scaleEffect(phase.isIdentity ? 1 : 0.8)
+                .offset(y: phase.isIdentity ? 0 : 10)
         }
     }
     
@@ -90,43 +132,23 @@ struct FullTrickListView: View {
                     
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
-                            Button(action: {
+                            filterChip(
+                                title: "All",
+                                isSelected: selectedType == nil
+                            ) {
                                 selectedType = nil
                                 expandedGroups = [:]
-                            }) {
-                                Text("All")
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 16)
-                                    .background(selectedType == nil ? Color.indigo : Color.gray.opacity(0.2))
-                                    .foregroundColor(selectedType == nil ? Color.white : Color.primary)
-                                    .cornerRadius(20)
                             }
-                            .scrollTransition { content, phase in
-                                content
-                                    .opacity(phase.isIdentity ? 1 : 0)
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.8)
-                                    .offset(y: phase.isIdentity ? 0 : 10)
-                            }
-                            
+
                             ForEach(TrickType.allCases
                                 .sorted(by: { $0.rawValue < $1.rawValue })
                                 .filter { visibleTrickTypes.contains($0) }, id: \.self) { type in
-                                Button(action: {
+                                filterChip(
+                                    title: type.rawValue == "Shuvit" ? type.displayName : type.rawValue,
+                                    isSelected: selectedType == type
+                                ) {
                                     selectedType = type
                                     expandedGroups = [type.rawValue: true]
-                                }) {
-                                    Text(type.rawValue == "Shuvit" ? type.displayName : type.rawValue)
-                                        .padding(.vertical, 8)
-                                        .padding(.horizontal, 16)
-                                        .background(selectedType == type ? Color.indigo : Color.gray.opacity(0.2))
-                                        .foregroundColor(selectedType == type ? Color.white : Color.primary)
-                                        .cornerRadius(20)
-                                }
-                                .scrollTransition { content, phase in
-                                    content
-                                        .opacity(phase.isIdentity ? 1 : 0)
-                                        .scaleEffect(phase.isIdentity ? 1 : 0.8)
-                                        .offset(y: phase.isIdentity ? 0 : 10)
                                 }
                             }
                         }
@@ -219,7 +241,7 @@ struct FullTrickListView: View {
                                 } label: {
                                     HStack {
                                         Text(type.rawValue)
-                                        Text("\(tricks.filter { $0.isLearned }.count)/\(tricks.count)")
+                                        Text("\(learnedCount)/\(tricks.count)")
                                     }
                                     .textScale(.secondary)
                                     .textCase(.uppercase)
@@ -287,35 +309,9 @@ struct FullTrickListView: View {
                     
             }
             Spacer()
-            HStack {
-                GroupBox {
-                    HStack {
-                        Text("\(filteredTricks.count)")
-                            .fontWeight(.bold)
-                            .foregroundStyle(.indigo)
-                        Text("tricks")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary, lineWidth: 1)
-                        .opacity(0.2)
-                )
-                GroupBox {
-                    HStack {
-                        Text("\(tricks.filter { $0.isLearned }.count)")
-                            .fontWeight(.bold)
-                            .foregroundStyle(.indigo)
-                        Text("learned")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.secondary, lineWidth: 1)
-                        .opacity(0.2)
-                )
+            HStack(spacing: 12) {
+                statPill(value: "\(filteredTricks.count)", label: "tricks")
+                statPill(value: "\(learnedCount)", label: "learned")
             }
             .padding(.horizontal)
             .padding(.bottom, isTabItem ? 8 : 0)

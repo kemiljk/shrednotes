@@ -9,33 +9,43 @@ import SwiftUI
 struct ConsistencyRatingView: View {
     @Binding var consistency: Int
     let labels = ["Never", "Not often", "Sometimes", "Often", "Always"]
+    @ScaledMetric(relativeTo: .body) private var baseHeight: CGFloat = 40
+    @ScaledMetric(relativeTo: .body) private var heightStep: CGFloat = 20
 
     var body: some View {
         VStack {
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(0..<labels.count, id: \.self) { index in
-                    VStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(consistency >= index ? LinearGradient(
-                                gradient: Gradient(colors: [Color.indigo, Color.blue]),
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ) : LinearGradient(
-                                gradient: Gradient(colors: [Color.secondary.opacity(0.3), Color.secondary.opacity(0.1)]),
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ))
-                            .frame(height: CGFloat(40 + index * 20))
-                        Text(labels[index])
-                            .font(.caption)
-                            .foregroundColor(consistency == index ? .primary : .secondary)
-                    }
-                    .onTapGesture {
+                    Button {
                         consistency = index
+                    } label: {
+                        VStack {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(consistency >= index ? LinearGradient(
+                                    gradient: Gradient(colors: [Color.indigo, Color.blue]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ) : LinearGradient(
+                                    gradient: Gradient(colors: [Color.secondary.opacity(0.3), Color.secondary.opacity(0.1)]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ))
+                                .frame(height: baseHeight + CGFloat(index) * heightStep)
+                            Text(labels[index])
+                                .font(.caption)
+                                .foregroundColor(consistency == index ? .primary : .secondary)
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Consistency \(labels[index])")
+                    .accessibilityValue(consistency == index ? "selected" : "")
+                    .accessibilityAddTraits(consistency == index ? [.isButton, .isSelected] : .isButton)
+                    .accessibilityHint("Sets the practice consistency to \(labels[index])")
                 }
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Practice consistency rating")
     }
 }
 

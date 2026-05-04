@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
-    @EnvironmentObject var healthKitManager: HealthKitManager
-    @StateObject private var locationManager = LocationManager()
+    @Environment(HealthKitManager.self) private var healthKitManager: HealthKitManager
+    @State private var locationManager = LocationManager()
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
     @Binding var visibleTrickTypes: Set<TrickType>

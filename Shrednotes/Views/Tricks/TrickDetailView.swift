@@ -20,7 +20,7 @@ struct TrickDetailView: View {
     @State private var selectedMediaItem: MediaItem?
     @State private var dragOffset: CGSize = .zero
     @Namespace private var trickPicture
-    @StateObject private var mediaState = MediaState()
+    @State private var mediaState = MediaState()
     @State private var preloadedPlayers: [UUID: AVPlayer] = [:]
     @State private var loadingMedia: Set<UUID> = []
     @State private var newNoteText: String = ""
@@ -113,9 +113,10 @@ struct TrickDetailView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
-                            .frame(width: 32, height: 32)
+                            .frame(minWidth: 44, minHeight: 44)
                             .contentShape(.circle)
                     }
+                    .accessibilityLabel("More options")
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     HStack {
@@ -323,8 +324,10 @@ struct TrickDetailView: View {
     private func generateTrickTip() async {
         isGenerating = true
         defer { isGenerating = false }
-        
-        let result = await AIModelAvailability.withAvailability {
+
+        let result: String?
+        do {
+            result = try await AIModelAvailability.withAvailability {
             let instructions = Instructions {
                 """
                 You are a skateboarding professional with over 30 years of experience on the board. Your job is to provide useful tips for the SPECIFIC trick requested.
@@ -359,19 +362,32 @@ struct TrickDetailView: View {
                 """
             }
             
-            let prompt = Prompt("Provide trick tips for \(trick.name) using STRICT numbered list formatting. Follow the format rules exactly.")
+            let safeName = String(trick.name.prefix(100))
+            let prompt = Prompt("Provide trick tips for \(safeName) using STRICT numbered list formatting. Follow the format rules exactly.")
             let session = LanguageModelSession(instructions: instructions)
             let response = try await session.respond(to: prompt)
             return response.content
-            
+
         } onUnavailable: { error in
             return
         }
-        
-        if let tip = result {
-            await MainActor.run {
-                self.trick.tip = tip
+        } catch let error as LanguageModelSession.GenerationError {
+            switch error {
+            case .exceededContextWindowSize:
+                self.trick.tip = "Tip too long to generate. Try a different trick."
+            case .guardrailViolation:
+                self.trick.tip = "Tip couldn't be generated due to content policy."
+            default:
+                self.trick.tip = "Tip couldn't be generated: \(error.localizedDescription)"
             }
+            return
+        } catch {
+            print("Unexpected AI error: \(error)")
+            return
+        }
+
+        if let tip = result {
+            self.trick.tip = tip
         }
     }
      

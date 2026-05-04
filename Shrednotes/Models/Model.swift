@@ -43,14 +43,14 @@ final class SkateSession: Codable {
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        title = try container.decode(String.self, forKey: .title)
-        date = try container.decode(Date.self, forKey: .date)
-        note = try container.decode(String.self, forKey: .note)
-        feeling = try container.decode([Feeling].self, forKey: .feeling)
-        media = try container.decode([MediaItem].self, forKey: .media)
-        tricks = try container.decode([Trick].self, forKey: .tricks)
-        combos = try container.decode([ComboTrick].self, forKey: .combos)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        date = try container.decodeIfPresent(Date.self, forKey: .date)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        feeling = try container.decodeIfPresent([Feeling].self, forKey: .feeling)
+        media = try container.decodeIfPresent([MediaItem].self, forKey: .media)
+        tricks = try container.decodeIfPresent([Trick].self, forKey: .tricks)
+        combos = try container.decodeIfPresent([ComboTrick].self, forKey: .combos)
         latitude = try container.decodeIfPresent(Double.self, forKey: .latitude)
         longitude = try container.decodeIfPresent(Double.self, forKey: .longitude)
         location = try container.decodeIfPresent(IdentifiableLocation.self, forKey: .location)
@@ -87,7 +87,7 @@ struct SessionReference: Codable {
 }
 
 @Model
-final class Trick: ObservableObject, Identifiable, Codable {
+final class Trick: Identifiable, Codable {
     var id: UUID?
     var timestamp: Date = Date()
     var name: String = "Ollie"
@@ -156,24 +156,24 @@ final class Trick: ObservableObject, Identifiable, Codable {
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        timestamp = try container.decode(Date.self, forKey: .timestamp)
-        name = try container.decode(String.self, forKey: .name)
-        difficulty = try container.decode(Int.self, forKey: .difficulty)
-        type = try container.decode(TrickType.self, forKey: .type)
-        isLearned = try container.decode(Bool.self, forKey: .isLearned)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        timestamp = try container.decodeIfPresent(Date.self, forKey: .timestamp) ?? Date()
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Ollie"
+        difficulty = try container.decodeIfPresent(Int.self, forKey: .difficulty) ?? 1
+        type = try container.decodeIfPresent(TrickType.self, forKey: .type) ?? .air
+        isLearned = try container.decodeIfPresent(Bool.self, forKey: .isLearned) ?? false
         isLearnedDate = try container.decodeIfPresent(Date.self, forKey: .isLearnedDate)
-        isLearning = try container.decode(Bool.self, forKey: .isLearning)
-        isSkipped = try container.decode(Bool.self, forKey: .isSkipped)
-        consistency = try container.decode(Int.self, forKey: .consistency)
-        wantToLearn = try container.decode(Bool.self, forKey: .wantToLearn)
-        wantToLearnDate = try container.decode(Date.self, forKey: .wantToLearnDate)
+        isLearning = try container.decodeIfPresent(Bool.self, forKey: .isLearning) ?? false
+        isSkipped = try container.decodeIfPresent(Bool.self, forKey: .isSkipped) ?? false
+        consistency = try container.decodeIfPresent(Int.self, forKey: .consistency) ?? 0
+        wantToLearn = try container.decodeIfPresent(Bool.self, forKey: .wantToLearn) ?? false
+        wantToLearnDate = try container.decodeIfPresent(Date.self, forKey: .wantToLearnDate)
         tip = try container.decodeIfPresent(String.self, forKey: .tip)
     }
 }
 
 @Model
-final class Note: ObservableObject, Identifiable {
+final class Note: Identifiable {
     var id: UUID = UUID()
     var text: String = ""
     var date: Date = Date()
@@ -189,7 +189,7 @@ final class Note: ObservableObject, Identifiable {
 
 
 @Model
-final class Prerequisite: ObservableObject, Identifiable {
+final class Prerequisite: Identifiable {
     var id: UUID?
     var prerequisiteTricks: [Trick]?
     
@@ -200,7 +200,7 @@ final class Prerequisite: ObservableObject, Identifiable {
 }
 
 @Model
-final class DependentTricks: ObservableObject, Identifiable {
+final class DependentTricks: Identifiable {
     var id: UUID?
     var dependentTricks: [Trick]?
     
@@ -270,23 +270,21 @@ final class MediaItem: Identifiable, Codable, Hashable {
     }
 }
 
-class MediaState: ObservableObject {
-    @Published var imageCache: [UUID: UIImage] = [:]
-    @Published var videoThumbnails: [UUID: UIImage] = [:]
-    @Published var failedThumbnails: Set<UUID> = []  // Track failed thumbnails
-    
+@Observable
+@MainActor
+final class MediaState {
+    var imageCache: [UUID: UIImage] = [:]
+    var videoThumbnails: [UUID: UIImage] = [:]
+    var failedThumbnails: Set<UUID> = []  // Track failed thumbnails
+
     func markAsFailed(_ id: UUID) {
-        DispatchQueue.main.async {
-            self.failedThumbnails.insert(id)
-            self.imageCache.removeValue(forKey: id)
-            self.videoThumbnails.removeValue(forKey: id)
-        }
+        failedThumbnails.insert(id)
+        imageCache.removeValue(forKey: id)
+        videoThumbnails.removeValue(forKey: id)
     }
-    
+
     func clearFailed(_ id: UUID) {
-        DispatchQueue.main.async {
-            self.failedThumbnails.remove(id)
-        }
+        failedThumbnails.remove(id)
     }
 }
 
@@ -449,9 +447,6 @@ struct IdentifiableLocation: Identifiable, Codable, Equatable, Hashable {
     
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
-        hasher.combine(latitude)
-        hasher.combine(longitude)
-        hasher.combine(name)
     }
     
     init(id: UUID = UUID(), coordinate: CLLocationCoordinate2D, name: String) {

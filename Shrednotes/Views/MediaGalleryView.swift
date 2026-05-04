@@ -7,16 +7,16 @@ import CoreImage.CIFilterBuiltins
 struct MediaGalleryView: View {
     let mediaItems: [MediaItem]
     let initialItem: MediaItem
-    @StateObject private var mediaState: MediaState
+    @Bindable var mediaState: MediaState
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var currentIndex: Int
-    
+
     init(mediaItems: [MediaItem], initialItem: MediaItem, mediaState: MediaState) {
         self.mediaItems = mediaItems
         self.initialItem = initialItem
-        self._mediaState = StateObject(wrappedValue: mediaState)
-        
+        self.mediaState = mediaState
+
         let initialIndex = mediaItems.firstIndex(where: { $0.id == initialItem.id }) ?? 0
         self._currentIndex = State(initialValue: initialIndex)
     }
@@ -66,7 +66,7 @@ struct MediaGalleryView: View {
 // Separate view for each media item
 struct MediaItemView: View {
     let item: MediaItem
-    @ObservedObject var mediaState: MediaState
+    @Bindable var mediaState: MediaState
     
     @State private var loadedImage: UIImage?
     @State private var videoURL: URL?

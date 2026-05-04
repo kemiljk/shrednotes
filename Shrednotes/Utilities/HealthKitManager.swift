@@ -9,27 +9,31 @@ import HealthKit
 import UserNotifications
 import SwiftData
 
-class HealthKitManager: ObservableObject {
-    private lazy var healthStore: HKHealthStore = {
+@MainActor
+@Observable
+final class HealthKitManager {
+    @ObservationIgnored private lazy var healthStore: HKHealthStore = {
         return HKHealthStore()
     }()
-    
-    @Published private(set) var latestWorkout: HKWorkout?
-    @Published private(set) var allSkateboardingWorkouts: [HKWorkout] = []
-    @Published private(set) var activeEnergyBurned: Double = 0
-    @Published private(set) var energyBurnedCache: [UUID: Double] = [:]
-    
-    @Published var latestActiveEnergyBurned: Double = 0
-    @Published var latestTotalDuration: TimeInterval = 0
-    
-    private let workoutType = HKObjectType.workoutType()
-    private let energyBurnedType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
-    
-    private var workoutObserverQuery: HKAnchoredObjectQuery?
-    
-    static let shared = HealthKitManager()
-    
-    func requestAuthorization(completion: @escaping (Bool) -> Void) {
+
+    private(set) var latestWorkout: HKWorkout?
+    private(set) var allSkateboardingWorkouts: [HKWorkout] = []
+    private(set) var activeEnergyBurned: Double = 0
+    private(set) var energyBurnedCache: [UUID: Double] = [:]
+
+    var latestActiveEnergyBurned: Double = 0
+    var latestTotalDuration: TimeInterval = 0
+
+    @ObservationIgnored private let workoutType = HKObjectType.workoutType()
+    @ObservationIgnored private let energyBurnedType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+
+    @ObservationIgnored private var workoutObserverQuery: HKAnchoredObjectQuery?
+
+    @MainActor static let shared = HealthKitManager()
+
+    init() {}
+
+    func requestAuthorization(completion: @MainActor @Sendable @escaping (Bool) -> Void) {
         guard HKHealthStore.isHealthDataAvailable() else {
             print("HealthKit is not available on this device")
             completion(false)
@@ -43,125 +47,128 @@ class HealthKitManager: ObservableObject {
             if let error = error {
                 print("HealthKit authorization error: \(error.localizedDescription)")
             }
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 if success {
                     UserDefaults.standard.set(true, forKey: "HealthAccessGranted")
-                    self.fetchLatestWorkout()
+                    HealthKitManager.shared.fetchLatestWorkout()
                 }
                 completion(success)
             }
         }
     }
-    
+
     func fetchLatestWorkout() {
         let predicate = HKQuery.predicateForWorkouts(with: .skatingSports)
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: 1, sortDescriptors: [sortDescriptor]) { [weak self] _, samples, error in
-            guard let self = self, let samples = samples as? [HKWorkout], let latestWorkout = samples.first else { return }
-            DispatchQueue.main.async {
-                self.latestWorkout = latestWorkout
-                self.latestTotalDuration = latestWorkout.duration
-                
-                // Fetch active energy burned
-                self.fetchActiveEnergyBurnedForSingleWorkout(for: latestWorkout) { energy in
-                    DispatchQueue.main.async {
-                        self.latestActiveEnergyBurned = energy
-                    }
-                }
+        let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: 1, sortDescriptors: [sortDescriptor]) { _, samples, _ in
+            guard let samples = samples as? [HKWorkout], let latestWorkout = samples.first else { return }
+            Task { @MainActor in
+                let manager = HealthKitManager.shared
+                manager.latestWorkout = latestWorkout
+                manager.latestTotalDuration = latestWorkout.duration
+
+                let energy = await manager.fetchActiveEnergyBurnedAsync(for: latestWorkout)
+                manager.latestActiveEnergyBurned = energy
             }
         }
-        
-        healthStore.execute(query)
-    }
-    
-    func fetchAllSkateboardingWorkouts() {
-        let predicate = HKQuery.predicateForWorkouts(with: .skatingSports)
-        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
-        let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { [weak self] _, samples, error in
-            guard let self = self, let samples = samples as? [HKWorkout] else { return }
-            DispatchQueue.main.async {
-                self.allSkateboardingWorkouts = samples
-                print("Fetched \(samples.count) skateboarding workouts")
-            }
-        }
-        
+
         healthStore.execute(query)
     }
 
-    func sumWorkoutData(workouts: [HKWorkout], completion: @escaping (TimeInterval, Double) -> Void) {
-        let totalDuration = workouts.reduce(0) { $0 + $1.duration }
-        var totalEnergyBurned: Double = 0
-        
-        let group = DispatchGroup()
-        
-        for workout in workouts {
-            group.enter()
-            fetchActiveEnergyBurnedForSingleWorkout(for: workout) { energy in
-                totalEnergyBurned += energy
-                group.leave()
+    func fetchAllSkateboardingWorkouts() {
+        let predicate = HKQuery.predicateForWorkouts(with: .skatingSports)
+        let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+        let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { _, samples, _ in
+            guard let samples = samples as? [HKWorkout] else { return }
+            Task { @MainActor in
+                HealthKitManager.shared.allSkateboardingWorkouts = samples
             }
         }
-        
-        group.notify(queue: .main) {
-            completion(totalDuration, totalEnergyBurned)
+
+        healthStore.execute(query)
+    }
+
+    func sumWorkoutData(workouts: [HKWorkout]) async -> (TimeInterval, Double) {
+        let totalDuration = workouts.reduce(0) { $0 + $1.duration }
+        let totalEnergy = await withTaskGroup(of: Double.self) { group in
+            for workout in workouts {
+                group.addTask { [weak self] in
+                    guard let self else { return 0 }
+                    return await self.fetchActiveEnergyBurnedAsync(for: workout)
+                }
+            }
+            var sum: Double = 0
+            for await energy in group {
+                sum += energy
+            }
+            return sum
+        }
+        return (totalDuration, totalEnergy)
+    }
+
+    // Backwards-compatible callback wrapper for older call sites.
+    func sumWorkoutData(workouts: [HKWorkout], completion: @MainActor @Sendable @escaping (TimeInterval, Double) -> Void) {
+        Task { @MainActor in
+            let result = await self.sumWorkoutData(workouts: workouts)
+            completion(result.0, result.1)
         }
     }
-    
-    func fetchWorkoutsForDate(_ date: Date, completion: @escaping ([HKWorkout]) -> Void) {
+
+    func fetchWorkoutsForDate(_ date: Date, completion: @MainActor @Sendable @escaping ([HKWorkout]) -> Void) {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: date)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-        
+
         let datePredicate = HKQuery.predicateForSamples(withStart: startOfDay, end: endOfDay, options: .strictStartDate)
         let skatingSportsPredicate = HKQuery.predicateForWorkouts(with: .skatingSports)
         let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, skatingSportsPredicate])
-        
+
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: true)
-        
+
         let workoutType: HKSampleType = HKObjectType.workoutType()
-        
-        let query = HKSampleQuery(sampleType: workoutType, predicate: compoundPredicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { (query, samples, error) in
-            guard let workouts = samples as? [HKWorkout] else {
-                completion([])
-                return
-            }
-            DispatchQueue.main.async {
+
+        let query = HKSampleQuery(sampleType: workoutType, predicate: compoundPredicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { _, samples, _ in
+            let workouts = (samples as? [HKWorkout]) ?? []
+            Task { @MainActor in
                 completion(workouts)
             }
         }
-        
+
         healthStore.execute(query)
     }
-    
+
     private func fetchActiveEnergyBurned(for workout: HKWorkout) {
         let predicate = HKQuery.predicateForObjects(from: workout)
-        let query = HKStatisticsQuery(quantityType: energyBurnedType, quantitySamplePredicate: predicate, options: .cumulativeSum) { [weak self] _, result, _ in
-            guard let self = self, let result = result, let sum = result.sumQuantity() else { return }
-            DispatchQueue.main.async {
-                self.activeEnergyBurned = sum.doubleValue(for: .kilocalorie())
+        let query = HKStatisticsQuery(quantityType: energyBurnedType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
+            guard let result = result, let sum = result.sumQuantity() else { return }
+            let value = sum.doubleValue(for: .kilocalorie())
+            Task { @MainActor in
+                HealthKitManager.shared.activeEnergyBurned = value
             }
         }
-        
+
         healthStore.execute(query)
     }
-    
-    func fetchActiveEnergyBurnedForSingleWorkout(for workout: HKWorkout, completion: @escaping (Double) -> Void) {
-        let predicate = HKQuery.predicateForObjects(from: workout)
-        let energyBurnedType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
-        
-        let query = HKStatisticsQuery(quantityType: energyBurnedType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
-            guard let result = result, let sum = result.sumQuantity() else {
-                DispatchQueue.main.async {
-                    completion(0.0)
+
+    func fetchActiveEnergyBurnedAsync(for workout: HKWorkout) async -> Double {
+        await withCheckedContinuation { (cont: CheckedContinuation<Double, Never>) in
+            let predicate = HKQuery.predicateForObjects(from: workout)
+            let energyBurnedType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+            let query = HKStatisticsQuery(quantityType: energyBurnedType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
+                guard let result = result, let sum = result.sumQuantity() else {
+                    cont.resume(returning: 0.0)
+                    return
                 }
-                return
+                cont.resume(returning: sum.doubleValue(for: .kilocalorie()))
             }
-            let energyBurned = sum.doubleValue(for: .kilocalorie())
-            DispatchQueue.main.async {
-                completion(energyBurned)
-            }
+            healthStore.execute(query)
         }
-        
-        healthStore.execute(query)
+    }
+
+    func fetchActiveEnergyBurnedForSingleWorkout(for workout: HKWorkout, completion: @MainActor @Sendable @escaping (Double) -> Void) {
+        Task { @MainActor in
+            let value = await self.fetchActiveEnergyBurnedAsync(for: workout)
+            completion(value)
+        }
     }
 }

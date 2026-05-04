@@ -10,8 +10,8 @@ struct MainView: View {
     @Environment(\.modelContext) private var modelContext: ModelContext
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var healthKitManager: HealthKitManager
-    @EnvironmentObject var mediaState: MediaState
+    @Environment(HealthKitManager.self) private var healthKitManager: HealthKitManager
+    @Environment(MediaState.self) private var mediaState: MediaState
     
     @State private var isHealthAccessGranted: Bool = UserDefaults.standard.bool(forKey: "isHealthAccessGranted")
     @State private var expandedGroups: [String: Bool] = [:]
@@ -192,7 +192,7 @@ struct MainView: View {
         }
         .fullScreenCover(isPresented: $navigationModel.showViewJournal) {
             JournalView()
-                .environmentObject(SessionManager.shared)
+                .environment(SessionManager.shared)
         }
         .fullScreenCover(isPresented: $navigationModel.showPracticeTricks) {
             TrickPracticeView()
@@ -203,47 +203,104 @@ struct MainView: View {
         }
     }
     
+    private var isHomeEmpty: Bool {
+        skateSessions.isEmpty
+            && upNextTricks.isEmpty
+            && inProgressTricks.isEmpty
+            && combos.isEmpty
+            && !tricks.contains(where: { $0.isLearned })
+    }
+
+    private var emptyStateAppIconName: String {
+        let alt = UIApplication.shared.alternateIconName
+        let current = AppIcon.allCases.first(where: { $0.rawValue == alt }) ?? .appIcon
+        return current.previewImage
+    }
+
+    @ViewBuilder
+    private var emptyHomeState: some View {
+        ContentUnavailableView {
+            VStack(spacing: 16) {
+                Image(emptyStateAppIconName)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 96, height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
+                    .accessibilityHidden(true)
+                Text("Welcome to Shrednotes")
+                    .font(.title2.bold())
+            }
+        } description: {
+            Text("Log your first session to start tracking sessions, tricks and progress.")
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 12) {
+                Button {
+                    navigationModel.showAddSession = true
+                } label: {
+                    Label("Add Session", systemImage: "plus.circle")
+                }
+                .primaryButtonStyle()
+
+                Button("Browse tricks") {
+                    activeSheet = .fullTrickList
+                }
+                .buttonStyle(.borderless)
+                .tint(.indigo)
+            }
+            .padding(.bottom)
+        }
+    }
+
     @ViewBuilder
     private var mainContent: some View {
         VStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let latestSession = skateSessions.first {
-                        NavigationLink(value: latestSession) {
-                            StoredWorkoutView(session: latestSession, condensed: false)
-                                .padding(.bottom, 16)
+            if isHomeEmpty {
+                emptyHomeState
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let latestSession = skateSessions.first {
+                            NavigationLink(value: latestSession) {
+                                StoredWorkoutView(session: latestSession, condensed: false)
+                                    .padding(.bottom, 16)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                        if !upNextTricks.isEmpty {
+                            upNextSection
+                        }
+                        if !inProgressTricks.isEmpty {
+                            inProgressSection
+                        }
+                        if !combos.isEmpty {
+                            comboTricksSection
+                        }
+                        if !hideRecommendations {
+                            basedOnTricksYouKnowSection
+                        }
                     }
-                    if !upNextTricks.isEmpty {
-                        upNextSection
-                    }
-                    if !inProgressTricks.isEmpty {
-                        inProgressSection
-                    }
-                    if !combos.isEmpty {
-                        comboTricksSection
-                    }
-                    if !hideRecommendations {
-                        basedOnTricksYouKnowSection
-                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
-            }
-            .refreshable {
-                inProgressTricks = computeInProgressTricks()
-                nextCombinationTricks = computeNextCombinationTricks()
-                filteredTricks = computeFilteredTricks()
-                WidgetCenter.shared.reloadAllTimelines()
+                .refreshable {
+                    inProgressTricks = computeInProgressTricks()
+                    nextCombinationTricks = computeNextCombinationTricks()
+                    filteredTricks = computeFilteredTricks()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
             }
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button(action: {
+                Button {
                     activeSheet = .settings
-                }) {
-                    Image(systemName: "gearshape")
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                        .labelStyle(.iconOnly)
                 }
+                .accessibilityLabel("Settings")
                 .sensoryFeedback(.increase, trigger: activeSheet)
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -253,21 +310,24 @@ struct MainView: View {
                     } label: {
                         Label("Add Session", systemImage: "book")
                     }
-                    
+
                     Button {
                         activeSheet = .comboBuilder
                     } label: {
                         Label("Add Combo", systemImage: "rectangle.stack")
                     }
-                    
+
                     Button {
                         showingAddTrick = true
                     } label: {
                         Label("Add Trick", systemImage: "figure.skateboarding")
                     }
                 } label: {
-                    Image(systemName: "plus")
+                    Label("Add", systemImage: "plus")
+                        .labelStyle(.iconOnly)
                 }
+                .accessibilityLabel("Add")
+                .accessibilityHint("Add a session, combo or trick")
             }
         }
         .sheet(item: $activeSheet, onDismiss: {
@@ -280,7 +340,7 @@ struct MainView: View {
             switch item {
             case .settings:
                 SettingsView(visibleTrickTypes: $visibleTrickTypes)
-                    .environmentObject(healthKitManager)
+                    .environment(healthKitManager)
                     .onDisappear {
                         loadVisibleTrickTypes()
                     }
@@ -301,7 +361,7 @@ struct MainView: View {
             case .onboarding:
                 OnboardingView(isOnboardingComplete: $isOnboardingComplete)
                     .presentationDetents([.medium, .large])
-                    .environmentObject(healthKitManager)
+                    .environment(healthKitManager)
                     .interactiveDismissDisabled(!isOnboardingComplete)
             case .comboBuilder:
                 NavigationStack {
@@ -580,20 +640,6 @@ struct MainView: View {
     }
     
     @ViewBuilder
-    private func latestSkateView(latestSessionDate: Date) -> some View {
-        if let latestSession = skateSessions.first {
-            StoredWorkoutView(session: latestSession)
-                .onTapGesture {
-                    self.showSessionDetail = true
-                }
-                .fullScreenCover(isPresented: $showSessionDetail) {
-                    SessionDetailView(session: latestSession, mediaState: mediaState)
-                        .navigationTransition(.zoom(sourceID: latestSession.id, in: detailView))
-                }
-        }
-    }
-    
-    @ViewBuilder
     private var inProgressSection: some View {
         VStack(alignment: .leading) {
             HStack {
@@ -827,17 +873,10 @@ struct MainView: View {
                     .padding(.horizontal)
                 }
                 .padding(.vertical)
-                .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .foregroundStyle(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .opacity(colorScheme == .dark ? 0.125 : 0.05)
+                .glassEffect(
+                    .regular.tint(.indigo.opacity(0.12)),
+                    in: .rect(cornerRadius: 28, style: .continuous)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(colorScheme == .light ? .black : .white, lineWidth: 2)
-                        .blendMode(.overlay)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             } else {
@@ -915,17 +954,10 @@ struct MainView: View {
                     .padding(.horizontal)
                 }
                 .padding(.vertical)
-                .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .foregroundStyle(LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .opacity(colorScheme == .dark ? 0.125 : 0.05)
+                .glassEffect(
+                    .regular.tint(.indigo.opacity(0.12)),
+                    in: .rect(cornerRadius: 28, style: .continuous)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(colorScheme == .light ? .black : .white, lineWidth: 2)
-                        .blendMode(.overlay)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .padding(.bottom, 24)
             }
         }

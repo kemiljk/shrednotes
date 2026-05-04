@@ -13,7 +13,7 @@ import CoreImage
 
 struct SessionCard: View {
     let session: SkateSession
-    @ObservedObject var mediaState: MediaState
+    @Bindable var mediaState: MediaState
     @State private var loadingThumbnails: Set<UUID> = []
     @State private var locationName: String?
     let onTap: (() -> Void)
@@ -22,7 +22,7 @@ struct SessionCard: View {
     @State private var mediaData: Data?
     @State private var dominantColor: Color?
 
-    private let dateFormatter: DateFormatter = {
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "d MMM yy"
         return formatter
@@ -90,7 +90,7 @@ struct SessionCard: View {
             Divider()
             HStack {
                 if let date = session.date {
-                    Text(dateFormatter.string(from: date))
+                    Text(Self.dateFormatter.string(from: date))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -140,10 +140,10 @@ struct SessionCard: View {
                         Rectangle()
                             .fill(.ultraThinMaterial)
                     }
-            } else if let media = session.media?.first,
-                      let uiImage = UIImage(data: media.data) {
+            } else if let id = session.media?.first?.id,
+                      let cached = mediaState.imageCache[id] {
                 GeometryReader { geometry in
-                    Image(uiImage: uiImage)
+                    Image(uiImage: cached)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width, height: geometry.size.height)
@@ -175,18 +175,20 @@ struct SessionCard: View {
     
     @ViewBuilder
     private func mediaItemView(for item: MediaItem, fullWidth: Bool = false) -> some View {
-        if let uiImage = UIImage(data: item.data) {
+        let cachedImage = mediaState.imageCache[item.id ?? UUID()]
+        let cachedThumb = mediaState.videoThumbnails[item.id ?? UUID()]
+
+        if let uiImage = cachedImage {
             Image(uiImage: uiImage)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(minWidth: fullWidth ? 320 : 60, maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
+                .frame(maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                
-        } else if let thumbnail = mediaState.videoThumbnails[item.id ?? UUID()] {
+        } else if let thumbnail = cachedThumb {
             Image(uiImage: thumbnail)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
-                .frame(minWidth: fullWidth ? 320 : 60, maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
+                .frame(maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     Image(systemName: "play.circle")
@@ -197,34 +199,47 @@ struct SessionCard: View {
             ZStack {
                 Rectangle()
                     .fill(Color.gray.opacity(0.2))
-                    .frame(minWidth: fullWidth ? 320 : 60, maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
+                    .frame(maxWidth: fullWidth ? .infinity : 60, minHeight: fullWidth ? 200 : 60, maxHeight: fullWidth ? 200 : 60)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                
+
                 ProgressView()
             }
-            .onAppear {
-                loadThumbnail(for: item)
+            .task(id: item.id) {
+                await loadMedia(for: item)
             }
         }
     }
-    
-    private func loadThumbnail(for item: MediaItem) {
+
+    @MainActor
+    private func loadMedia(for item: MediaItem) async {
         guard let id = item.id else { return }
         guard !loadingThumbnails.contains(id) else { return }
-        
         loadingThumbnails.insert(id)
-        
-        if let videoURL = saveVideoToTemporaryDirectory(data: item.data) {
-            generateThumbnail(for: videoURL) { thumbnail in
-                DispatchQueue.main.async {
-                    if let thumbnail = thumbnail {
-                        mediaState.videoThumbnails[id] = thumbnail
+        defer { loadingThumbnails.remove(id) }
+
+        // Decode image off main thread.
+        let data = item.data
+        let decoded: UIImage? = await Task.detached(priority: .utility) {
+            UIImage(data: data)
+        }.value
+
+        if let img = decoded {
+            mediaState.imageCache[id] = img
+            return
+        }
+
+        // Fall back to video thumbnail.
+        if let videoURL = saveVideoToTemporaryDirectory(data: data) {
+            await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+                generateThumbnail(for: videoURL) { thumbnail in
+                    Task { @MainActor in
+                        if let thumb = thumbnail {
+                            mediaState.videoThumbnails[id] = thumb
+                        }
+                        cont.resume()
                     }
-                    loadingThumbnails.remove(id)
                 }
             }
-        } else {
-            loadingThumbnails.remove(id)
         }
     }
     

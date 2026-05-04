@@ -6,50 +6,51 @@
 //
 
 import CoreLocation
-import Combine
 
-class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
-    private var locationManager = CLLocationManager()
-    @Published var locationAccessGranted: Bool = false
-    @Published var currentLocation: CLLocationCoordinate2D?
-    @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
-    
+@MainActor
+@Observable
+final class LocationManager: NSObject, CLLocationManagerDelegate {
+    @ObservationIgnored private var locationManager = CLLocationManager()
+    var locationAccessGranted: Bool = false
+    var currentLocation: CLLocationCoordinate2D?
+    var authorizationStatus: CLAuthorizationStatus = .notDetermined
+
     override init() {
         super.init()
         locationManager.delegate = self
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        // Skatepark pin only needs ~100m accuracy; .best wakes GPS unnecessarily.
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
-    
+
     func requestLocation() {
         locationManager.requestWhenInUseAuthorization()
         locationManager.requestLocation()
     }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        currentLocation = locations.first?.coordinate
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        let coord = locations.first?.coordinate
+        Task { @MainActor [weak self] in
+            self?.currentLocation = coord
+        }
     }
-    
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location manager failed with error: \(error.localizedDescription)")
     }
-    
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
-        
-        if manager.authorizationStatus == .authorizedWhenInUse {
-            locationManager.requestLocation()
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            self.authorizationStatus = status
+            self.locationAccessGranted = (status == .authorizedWhenInUse || status == .authorizedAlways)
+            if status == .authorizedWhenInUse {
+                self.locationManager.requestLocation()
+            }
         }
     }
 
     func requestLocationAuthorization() {
         locationManager.requestWhenInUseAuthorization()
-    }
-
-    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        if status == .authorizedWhenInUse || status == .authorizedAlways {
-            locationAccessGranted = true
-        } else {
-            locationAccessGranted = false
-        }
     }
 }

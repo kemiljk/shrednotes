@@ -7,21 +7,17 @@ import TipKit
 import WidgetKit
 import UIKit
 
-enum TabIdentifier {
-    case home, journal, skate, tricks, search
-}
+typealias TabIdentifier = AppTabID
 
 @main
 struct SkateboardTrickApp: App {
     @AppStorage("isFirstTimeLaunch") private var isFirstTimeLaunch: Bool = true
     @AppStorage("hasBeenOnboarded") private var hasBeenOnboarded: Bool = false
     @AppStorage("trickDatabaseVersion") private var trickDatabaseVersion: Int = 1
-    
-    @State private var selectedTab: TabIdentifier = .home
     @State private var showTrickUpdateAlert = false
-    @StateObject private var sessionManager = SessionManager.shared
-    @StateObject private var healthKitManager = HealthKitManager()
-    @StateObject private var mediaState = MediaState()
+    @State private var sessionManager = SessionManager.shared
+    @State private var healthKitManager = HealthKitManager.shared
+    @State private var mediaState = MediaState()
     @State private var isLoading = false
     @State private var isOnboardingComplete = UserDefaults.standard.bool(forKey: "isOnboardingComplete")
     @State private var searchText = ""
@@ -65,112 +61,60 @@ struct SkateboardTrickApp: App {
     
     var body: some Scene {
         WindowGroup {
-            Group {
-                if #available(iOS 26, *) {
-                    TabView(selection: $selectedTab) {
-                        Tab(
-                            "Home",
-                            systemImage: "square.grid.2x2",
-                            value: TabIdentifier.home
-                        ) {
-                            MainView()
-                        }
-                        
-                        Tab(
-                            "Journal",
-                            systemImage: "book",
-                            value: TabIdentifier.journal
-                        ) {
-                            JournalView()
-                        }
-                        
-                        Tab(
-                            "Tricks",
-                            systemImage: "figure.skating",
-                            value: TabIdentifier.tricks
-                        ) {
-                            FullTrickListView(
-                                visibleTrickTypes: $visibleTrickTypes,
-                                searchText: $searchText,
-                                expandedGroups: $expandedGroups,
-                                selectedType: $selectedType,
-                                isTabItem: true
-                            )
-                        }
-                        
-                        Tab(
-                            "S.K.A.T.E",
-                            systemImage: "skateboard",
-                            value: TabIdentifier.skate
-                        ) {
-                            SKATEGameView()
-                        }
-                        
-                        Tab(
-                            "Search",
-                            systemImage: "magnifyingglass",
-                            value: TabIdentifier.search,
-                            role: .search
-                        ) {
-                            SearchView(searchText: $searchText)
-                        }
-                    }
-                    .tabBarMinimizeBehavior(.onScrollDown)
-                } else {
-                    TabView(selection: $selectedTab) {
-                        Tab(
-                            "Home",
-                            systemImage: "square.grid.2x2",
-                            value: TabIdentifier.home
-                        ) {
-                            MainView()
-                        }
-                        
-                        Tab(
-                            "Journal",
-                            systemImage: "book",
-                            value: TabIdentifier.journal
-                        ) {
-                            JournalView()
-                        }
-                        
-                        Tab(
-                            "Tricks",
-                            systemImage: "figure.skating",
-                            value: TabIdentifier.tricks
-                        ) {
-                            FullTrickListView(
-                                visibleTrickTypes: $visibleTrickTypes,
-                                searchText: $searchText,
-                                expandedGroups: $expandedGroups,
-                                selectedType: $selectedType,
-                                isTabItem: true
-                            )
-                        }
-                        
-                        Tab(
-                            "S.K.A.T.E",
-                            systemImage: "skateboard",
-                            value: TabIdentifier.skate
-                        ) {
-                            SKATEGameView()
-                        }
-                        
-                        Tab(
-                            "Search",
-                            systemImage: "magnifyingglass",
-                            value: TabIdentifier.search,
-                            role: .search
-                        ) {
-                            SearchView(searchText: $searchText)
-                        }
-                    }
+            @Bindable var navigationModel = sceneNavigationModel
+            TabView(selection: $navigationModel.selectedTab) {
+                Tab(
+                    "Home",
+                    systemImage: "square.grid.2x2",
+                    value: TabIdentifier.home
+                ) {
+                    MainView()
+                }
+
+                Tab(
+                    "Journal",
+                    systemImage: "book",
+                    value: TabIdentifier.journal
+                ) {
+                    JournalView()
+                }
+
+                Tab(
+                    "Tricks",
+                    systemImage: "figure.skating",
+                    value: TabIdentifier.tricks
+                ) {
+                    FullTrickListView(
+                        visibleTrickTypes: $visibleTrickTypes,
+                        searchText: $searchText,
+                        expandedGroups: $expandedGroups,
+                        selectedType: $selectedType,
+                        isTabItem: true
+                    )
+                }
+
+                Tab(
+                    "S.K.A.T.E",
+                    systemImage: "skateboard",
+                    value: TabIdentifier.skate
+                ) {
+                    SKATEGameView()
+                }
+
+                Tab(
+                    "Search",
+                    systemImage: "magnifyingglass",
+                    value: TabIdentifier.search,
+                    role: .search
+                ) {
+                    SearchView(searchText: $searchText)
                 }
             }
+            .tabBarMinimizeBehavior(.onScrollDown)
             .learnedTrickPrompt()
-            .environmentObject(healthKitManager)
-            .environmentObject(mediaState)
-            .environmentObject(sessionManager)
+            .environment(healthKitManager)
+            .environment(mediaState)
+            .environment(sessionManager)
             .environment(sceneNavigationModel)
             .task {
                 try? Tips.configure([
@@ -204,7 +148,22 @@ struct SkateboardTrickApp: App {
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                 TempFileCleanup.shared.cleanupOldVideoFiles()
             }
+            .onOpenURL { url in
+                handleDeepLink(url)
+            }
         }
         .modelContainer(sharedModelContainer)
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "shrednotes" else { return }
+        // Route trick deep links to the Tricks tab; sessions to Journal.
+        if url.path.contains("/trickDetail/") {
+            sceneNavigationModel.selectedTab = .tricks
+        } else if url.path.contains("/sessionDetail/") {
+            sceneNavigationModel.selectedTab = .journal
+        }
+        // The destination view (MainView's existing onOpenURL) still handles the actual decode + push;
+        // tab switch ensures it's visible.
     }
 }

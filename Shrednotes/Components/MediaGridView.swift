@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MediaGridView: View {
     var media: [MediaItem]
-    @ObservedObject var mediaState: MediaState
+    @Bindable var mediaState: MediaState
     var onTap: (MediaItem) -> Void
     @State private var loadingThumbnails: Set<UUID> = []
 
@@ -34,7 +34,7 @@ struct MediaGridView: View {
 
 struct MediaGridItemView: View {
     let item: MediaItem
-    @ObservedObject var mediaState: MediaState
+    @Bindable var mediaState: MediaState
     let onTap: (MediaItem) -> Void
     @State private var loadedImage: UIImage?
     @State private var isLoading = true
