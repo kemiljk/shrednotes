@@ -4,334 +4,529 @@
 //
 //  Created by Karl Koch on 12/11/2024.
 //
+//  Note: this file used to be one ~340-line function with 257 mutually
+//  referential `let` bindings and a 257-element return-array literal.
+//  Swift's type checker took ~3-4s of compile time on it.  It is now
+//  split into per-category builders that each compile fast in isolation.
+//
 
 import Foundation
 import SwiftUI
 
-func generateTricks() -> [Trick] {
-    let ollie = Trick(name: "Ollie", difficulty: 1, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let fs180 = Trick(name: "FS 180", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let bs180 = Trick(name: "BS 180", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let kickturn = Trick(name: "Kickturn", difficulty: 1, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let nollie = Trick(name: "Nollie", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let fakieOllie = Trick(name: "Fakie Ollie", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let ticTac = Trick(name: "Tic-Tac", difficulty: 1, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let bs360 = Trick(name: "BS 360", difficulty: 3, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [bs180])])
-    let fs360 = Trick(name: "FS 360", difficulty: 3, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [fs180])])
-    let bsCaballerial = Trick(name: "BS Caballerial", difficulty: 4, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [bs360])])
-    let fsCaballerial = Trick(name: "FS Caballerial", difficulty: 4, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [fs360])])
-    let bsHalfCab = Trick(name: "BS Half Cab", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [bs180])])
-    let fsHalfCab = Trick(name: "FS Half Cab", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [fs180])])
-    let ollieNorth = Trick(name: "Ollie North", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let ollieSouth = Trick(name: "Ollie South", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let powerslide = Trick(name: "Powerslide", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let switchBs180 = Trick(name: "Switch BS 180", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [bs180])])
-    let switchBs360 = Trick(name: "Switch BS 360", difficulty: 3, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [bs360])])
-    let switchFs180 = Trick(name: "Switch FS 180", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [fs180])])
-    let switchFs360 = Trick(name: "Switch FS 360", difficulty: 3, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [fs360])])
-    let switchOllie = Trick(name: "Switch Ollie", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
+// MARK: - Helpers
 
-    // Flip and Shove-It Tricks
-    let kickflip = Trick(name: "Kickflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let heelflip = Trick(name: "Heelflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let popShuvit = Trick(name: "Pop Shove It", difficulty: 3, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let fsPopShuvit = Trick(name: "FS Pop Shove It", difficulty: 3, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let varialKickflip = Trick(name: "Varial Kickflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, popShuvit])])
-    let varialHeelflip = Trick(name: "Varial Heelflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [heelflip, fsPopShuvit])])
-    let fsKickflip = Trick(name: "FS 180 Kickflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, fs180])])
-    let bsKickflip = Trick(name: "BS 180 Kickflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, bs180])])
-    let fsHeelflip = Trick(name: "FS 180 Heelflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [heelflip, fs180])])
-    let bsHeelflip = Trick(name: "BS 180 Heelflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [heelflip, bs180])])
-    let nollieBs180 = Trick(name: "Nollie BS 180", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, bs180])])
-    let nollieFs180 = Trick(name: "Nollie FS 180", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, fs180])])
-    let nollie360Flip = Trick(name: "Nollie 360 Flip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, kickflip, popShuvit])])
-    let nollieVarialHeelflip = Trick(name: "Nollie Varial Heelflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, varialHeelflip])])
-    let nollieVarialKickflip = Trick(name: "Nollie Varial Kickflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, varialKickflip])])
-    let fsBigspin = Trick(name: "FS Bigspin", difficulty: 5, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [fsPopShuvit, fs180])])
-    let bsBigspin = Trick(name: "BS Bigspin", difficulty: 5, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [popShuvit, bs180])])
-    let treFlip = Trick(name: "Tre Flip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, popShuvit, bsBigspin])])
-    let hardflip = Trick(name: "Hardflip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, heelflip, fsPopShuvit])])
-    let laserFlip = Trick(name: "Laser Flip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [fsBigspin, kickflip, fsPopShuvit, heelflip])])
-    let bigspin = Trick(name: "Bigspin", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [popShuvit, bs180])])
-    let bigflip = Trick(name: "Bigflip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [bigspin, kickflip])])
-    let biggerflip = Trick(name: "Biggerflip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [bigflip])])
-    let impossible = Trick(name: "Impossible", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let inwardHeelflip = Trick(name: "Inward Heelflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let casperFlip = Trick(name: "Casper Flip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let halfCasperFlip = Trick(name: "Half Casper Flip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let pressureFlip = Trick(name: "Pressure Flip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let hospitalFlip = Trick(name: "Hospital Flip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let doubleKickflip = Trick(name: "Double Kickflip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let doubleHeelflip = Trick(name: "Double Heelflip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [heelflip])])
-    let dragonFlip = Trick(name: "Dragon Flip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, popShuvit])])
-    let dolphinFlip = Trick(name: "Dolphin Flip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, popShuvit])])
-    let ghettoBird = Trick(name: "Ghetto Bird", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, bs180])])
-    let nollieShuvit = Trick(name: "Nollie Shove It", difficulty: 2, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let fsShuvit = Trick(name: "Nollie FS Shove It", difficulty: 2, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let nollieFsShuvit = Trick(name: "FS Shove It", difficulty: 2, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let shuvit360 = Trick(name: "360 Shove It", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [popShuvit])])
-    let fs360Shuvit = Trick(name: "FS 360 Shove It", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [fsPopShuvit])])
-    let fakie360Shuvit = Trick(name: "Fakie 360 Shove It", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [fakieOllie, popShuvit])])
-    let biggerspin = Trick(name: "Biggerspin", difficulty: 6, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [bsBigspin, bs360])])
-    let nollie360Hardflip = Trick(name: "Nollie 360 Hardflip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, kickflip, hardflip])])
-    let nollie360PopShuvit = Trick(name: "Nollie 360 Pop Shove It", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, popShuvit])])
-    let nollieBsBigspin = Trick(name: "Nollie BS Bigspin", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, bsBigspin])])
-    let nollieFsBigspin = Trick(name: "Nollie FS Bigspin", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, fsBigspin])])
-    let nollieHardflip = Trick(name: "Nollie Hardflip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, hardflip])])
-    let nollieHeelflip = Trick(name: "Nollie Heelflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, heelflip])])
-    let nollieImpossible = Trick(name: "Nollie Impossible", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, impossible])])
-    let nollieInwardHeelflip = Trick(name: "Nollie Inward Heelflip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, inwardHeelflip])])
-    let nollieKickflip = Trick(name: "Nollie Kickflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, kickflip])])
-    let nollieLaserFlip = Trick(name: "Nollie Laser Flip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, laserFlip])])
+@inline(__always)
+private func pre(_ tricks: Trick...) -> [Prerequisite] {
+    [Prerequisite(prerequisiteTricks: tricks)]
+}
 
-    // Grinds and Slides
-    let backside50_50 = Trick(name: "BS 50-50", difficulty: 3, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontside50_50 = Trick(name: "FS 50-50", difficulty: 3, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backside5_0 = Trick(name: "BS 5-0", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [backside50_50])])
-    let frontside5_0 = Trick(name: "FS 5-0", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [frontside50_50])])
-    let backsideCrooked = Trick(name: "BS Crooked", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideCrooked = Trick(name: "FS Crooked", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideFeeble = Trick(name: "BS Feeble", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideFeeble = Trick(name: "FS Feeble", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideLipslide = Trick(name: "BS Lipslide", difficulty: 4, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideLipslide = Trick(name: "FS Lipslide", difficulty: 4, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideNosegrind = Trick(name: "BS Nosegrind", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideNosegrind = Trick(name: "FS Nosegrind", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideNoseslide = Trick(name: "BS Noseslide", difficulty: 3, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideNoseslide = Trick(name: "FS Noseslide", difficulty: 3, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideOvercrook = Trick(name: "BS Overcrook", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideOvercrook = Trick(name: "FS Overcrook", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideSalad = Trick(name: "BS Salad", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideSalad = Trick(name: "FS Salad", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideSmith = Trick(name: "BS Smith", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideSmith = Trick(name: "FS Smith", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideSuski = Trick(name: "BS Suski", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [backside5_0, backsideSalad])])
-    let frontsideSuski = Trick(name: "FS Suski", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [frontside5_0, frontsideSalad])])
-    let willyGrind = Trick(name: "Willy Grind", difficulty: 5, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [frontside5_0])])
-    let hurricaneGrind = Trick(name: "Hurricane Grind", difficulty: 5, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [backsideCrooked, bs180])])
-    let backsideTailslide = Trick(name: "BS Tailslide", difficulty: 4, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideTailslide = Trick(name: "FS Tailslide", difficulty: 4, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideBluntslide = Trick(name: "BS Bluntslide", difficulty: 5, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [backsideTailslide])])
-    let frontsideBluntslide = Trick(name: "FS Bluntslide", difficulty: 5, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideTailslide])])
-    let backsideNosebluntSlide = Trick(name: "BS Noseblunt Slide", difficulty: 5, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [backsideNoseslide])])
-    let frontsideNosebluntSlide = Trick(name: "FS Noseblunt Slide", difficulty: 5, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideNoseslide])])
-    let backsideBoardslide = Trick(name: "BS Boardslide", difficulty: 3, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideBoardslide = Trick(name: "FS Boardslide", difficulty: 3, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let darkslide = Trick(name: "Darkslide", difficulty: 6, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [backsideBoardslide])])
+@inline(__always)
+private func dep(_ tricks: Trick...) -> [DependentTricks] {
+    [DependentTricks(dependentTricks: tricks)]
+}
 
-    // Airs and Transition
-    let air540 = Trick(name: "540", difficulty: 5, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let air720 = Trick(name: "720", difficulty: 6, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [air540])])
-    let air900 = Trick(name: "900", difficulty: 7, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [air720])])
-    let airwalk = Trick(name: "Airwalk", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let axleDropIn = Trick(name: "Axle Drop-In", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontside50_50])])
-    let backsideAxleStall = Trick(name: "BS Axle Stall", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [backside50_50])])
-    let backsideCrookedStall = Trick(name: "BS Crooked Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [backsideCrooked])])
-    let backsideDisaster = Trick(name: "BS Disaster", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [backsideBoardslide])])
-    let backsideFeebleStall = Trick(name: "BS Feeble Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [backsideFeeble])])
-    let backsideHurricaneStall = Trick(name: "BS Hurricane Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsidePivotStall = Trick(name: "BS Pivot Stall", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [backside5_0])])
-    let backsideRockNRoll = Trick(name: "BS Rock 'n' roll", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBoardslide])])
-    let backsideSmithStall = Trick(name: "BS Smith Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [backsideSmith])])
-    let backsideTailStall = Trick(name: "BS Tail Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [backsideTailslide])])
-    let benihana = Trick(name: "Benihana", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let bluntStall180Out = Trick(name: "Blunt Stall 180 Out", difficulty: 5, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBluntslide])])
-    let bluntStallPullBack = Trick(name: "Blunt Stall Pull Back", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBluntslide])])
-    let bluntStallToFakie = Trick(name: "Blunt Stall to Fakie", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBluntslide])])
-    let bodyJar = Trick(name: "Body Jar", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let cannonball = Trick(name: "Cannonball", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let christAir = Trick(name: "Christ Air", difficulty: 5, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let crailGrab = Trick(name: "Crail Grab", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let creeper = Trick(name: "Creeper", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let crossbone = Trick(name: "Crossbone", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let delmarIndy = Trick(name: "Delmar Indy", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let doubleGrab = Trick(name: "Double Grab", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let dropIn = Trick(name: "Drop-In", difficulty: 2, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let fakieNosebluntStall = Trick(name: "Fakie Noseblunt Stall", difficulty: 5, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideNosebluntSlide])])
-    let fakieRock = Trick(name: "Fakie Rock", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBoardslide])])
-    let fakieTailStall = Trick(name: "Fakie Tail Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frigidAir = Trick(name: "Frigid Air", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideAir = Trick(name: "FS Air", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideAxleStall = Trick(name: "FS Axle Stall", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontside50_50])])
-    let frontsideCrookedStall = Trick(name: "FS Crooked Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideCrooked])])
-    let frontsideDisaster = Trick(name: "FS Disaster", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBoardslide])])
-    let frontsideFeebleStall = Trick(name: "FS Feeble Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideFeeble])])
-    let frontsideHurricaneStall = Trick(name: "FS Hurricane Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideNosePick = Trick(name: "FS Nose Pick", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideNosegrind])])
-    let frontsideNosebluntStall = Trick(name: "FS Noseblunt Stall", difficulty: 5, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideNosebluntSlide])])
-    let frontsidePivotStall = Trick(name: "FS Pivot Stall", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontside50_50])])
-    let frontsideRockNRoll = Trick(name: "FS Rock 'n' roll", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBoardslide])])
-    let frontsideSmithStall = Trick(name: "FS Smith Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideSmith])])
-    let frontsideSugarcaneStall = Trick(name: "FS Sugarcane Stall", difficulty: 5, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideSweeper = Trick(name: "FS Sweeper", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideTailStall = Trick(name: "FS Tail Stall", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideTailslide])])
-    let grosmanGrab = Trick(name: "Grosman Grab", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let helipop = Trick(name: "Helipop", difficulty: 5, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let indy = Trick(name: "Indy", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let indyGrab = Trick(name: "Indy Grab", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let invert = Trick(name: "Invert", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let japanAir = Trick(name: "Japan Air", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let judoAir = Trick(name: "Judo Air", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let lienAir = Trick(name: "Lien Air", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let madonna = Trick(name: "Madonna", difficulty: 5, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let mcTwist = Trick(name: "McTwist", difficulty: 5, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let melancholyGrab = Trick(name: "Melancholy Grab", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let melon = Trick(name: "Melon", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let methodAir = Trick(name: "Method Air", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let muteAir = Trick(name: "Mute Air", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let noseGrab = Trick(name: "Nose Grab", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let nosePick = Trick(name: "Nose Pick", difficulty: 4, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideNosegrind])])
-    let noseStall = Trick(name: "Nose Stall", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideNoseslide])])
-    let nosebone = Trick(name: "Nosebone", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let nuclearGrab = Trick(name: "Nuclear Grab", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let riverdance = Trick(name: "Riverdance", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let roastbeefGrab = Trick(name: "Roastbeef Grab", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let rockToFakie = Trick(name: "Rock to Fakie", difficulty: 3, type: .transition, prerequisites: [Prerequisite(prerequisiteTricks: [frontsideBoardslide])])
-    let rocketAir = Trick(name: "Rocket Air", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let sacktap = Trick(name: "Sacktap", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let salFlip = Trick(name: "Sal Flip", difficulty: 5, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let saranWrap = Trick(name: "Saran Wrap", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let seatbeltGrab = Trick(name: "Seatbelt Grab", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let slobAir = Trick(name: "Slob Air", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let stalefishGrab = Trick(name: "Stalefish Grab", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let stallfish = Trick(name: "Stallfish", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let stiffy = Trick(name: "Stiffy", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let supermanGrab = Trick(name: "Superman Grab", difficulty: 5, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let tailGrab = Trick(name: "Tail Grab", difficulty: 3, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let tailbone = Trick(name: "Tailbone", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let tuckKnee = Trick(name: "Tuck Knee", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let varial = Trick(name: "Varial", difficulty: 4, type: .air, prerequisites: [Prerequisite(prerequisiteTricks: [])])
+@inline(__always)
+private func mk(_ name: String, _ difficulty: Int, _ type: TrickType, _ prereqs: [Prerequisite] = []) -> Trick {
+    Trick(name: name, difficulty: difficulty, type: type, prerequisites: prereqs)
+}
 
-    // Footplant Tricks
-    let beanPlant = Trick(name: "Bean Plant", difficulty: 3, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let eggPlant = Trick(name: "Egg Plant", difficulty: 4, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let fastplant = Trick(name: "Fastplant", difficulty: 3, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let gymnastPlant = Trick(name: "Gymnast Plant", difficulty: 4, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let hoHo = Trick(name: "Ho-Ho", difficulty: 5, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let laybackAir = Trick(name: "Layback Air", difficulty: 4, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let millerFlip = Trick(name: "Miller Flip", difficulty: 5, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let powerOllie = Trick(name: "Power Ollie", difficulty: 3, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let sadPlant = Trick(name: "Sad Plant", difficulty: 4, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let stapleGun = Trick(name: "Staple Gun", difficulty: 4, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let texasPlant = Trick(name: "Texas Plant", difficulty: 4, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let texasTwoStep = Trick(name: "Texas Two-Step", difficulty: 4, type: .footplant, prerequisites: [Prerequisite(prerequisiteTricks: [])])
+// MARK: - Category aggregates
 
-    // Balance Tricks
-    let manual = Trick(name: "Manual", difficulty: 2, type: .balance, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let noseManual = Trick(name: "Nose Manual", difficulty: 3, type: .balance, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let oneFootManual = Trick(name: "One Foot Manual", difficulty: 3, type: .balance, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let oneWheelManual = Trick(name: "One Wheel Manual", difficulty: 4, type: .balance, prerequisites: [Prerequisite(prerequisiteTricks: [])])
+/// Strongly-typed bundle of basic tricks so other categories can reference
+/// them by name without searching a dictionary.
+private struct BasicTricks {
+    let ollie: Trick, fs180: Trick, bs180: Trick, kickturn: Trick, nollie: Trick
+    let fakieOllie: Trick, ticTac: Trick, bs360: Trick, fs360: Trick
+    let bsCaballerial: Trick, fsCaballerial: Trick, bsHalfCab: Trick, fsHalfCab: Trick
+    let ollieNorth: Trick, ollieSouth: Trick, powerslide: Trick
+    let switchBs180: Trick, switchBs360: Trick, switchFs180: Trick, switchFs360: Trick
+    let switchOllie: Trick
 
-    // Miscellaneous Freestyle and Old School Tricks
-    let casper = Trick(name: "Casper", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let casperStall = Trick(name: "Casper Stall", difficulty: 5, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let noComply = Trick(name: "No Comply", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let acidDrop = Trick(name: "Acid Drop", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let alleyOop = Trick(name: "Alley Oop", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideBoneless = Trick(name: "BS Boneless", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideWallride = Trick(name: "BS Wallride", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let bodyVarial = Trick(name: "Body Varial", difficulty: 2, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let boneless = Trick(name: "Boneless", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let caveman = Trick(name: "Caveman", difficulty: 2, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let coffin = Trick(name: "Coffin", difficulty: 2, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let daffy = Trick(name: "Daffy", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let firecracker = Trick(name: "Firecracker", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let flamingo = Trick(name: "Flamingo", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontsideBoneless = Trick(name: "FS Boneless", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let frontsideWallride = Trick(name: "FS Wallride", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let hangTen = Trick(name: "Hang Ten", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let hippieJump = Trick(name: "Hippie Jump", difficulty: 2, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let pogo = Trick(name: "Pogo", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let primoStall = Trick(name: "Primo Stall", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let rollIn = Trick(name: "Roll In", difficulty: 2, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let strawberryMilkshake = Trick(name: "Strawberry Milkshake", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let streetPlant = Trick(name: "Street Plant", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-   let wallie = Trick(name: "Wallie", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    
-    ollie.dependentTricks = [DependentTricks(dependentTricks: [ollieNorth, ollieSouth, powerslide, switchOllie])]
-    fs180.dependentTricks = [DependentTricks(dependentTricks: [fs360, fsHalfCab, switchFs180])]
-    bs180.dependentTricks = [DependentTricks(dependentTricks: [bs360, bsHalfCab, switchBs180])]
-    nollie.dependentTricks = [DependentTricks(dependentTricks: [nollieBs180, nollieFs180])]
-    bs360.dependentTricks = [DependentTricks(dependentTricks: [bsCaballerial, switchBs360])]
-    fs360.dependentTricks = [DependentTricks(dependentTricks: [fsCaballerial, switchFs360])]
-    kickflip.dependentTricks = [DependentTricks(dependentTricks: [varialKickflip, fsKickflip, bsKickflip, treFlip])]
-    heelflip.dependentTricks = [DependentTricks(dependentTricks: [varialHeelflip, fsHeelflip, bsHeelflip])]
-    popShuvit.dependentTricks = [DependentTricks(dependentTricks: [varialKickflip, bsBigspin, treFlip])]
-    fsPopShuvit.dependentTricks = [DependentTricks(dependentTricks: [varialHeelflip, fsBigspin])]
-    bigflip.dependentTricks = [DependentTricks(dependentTricks: [biggerflip])]
-    backside50_50.dependentTricks = [DependentTricks(dependentTricks: [backside5_0, backsideSmith, backsideFeeble])]
-    frontside50_50.dependentTricks = [DependentTricks(dependentTricks: [frontside5_0, frontsideSmith, frontsideFeeble])]
-    backside5_0.dependentTricks = [DependentTricks(dependentTricks: [backsideSuski])]
-    frontside5_0.dependentTricks = [DependentTricks(dependentTricks: [frontsideSuski])]
-    backsideNoseslide.dependentTricks = [DependentTricks(dependentTricks: [backsideNosebluntSlide])]
-    frontsideNoseslide.dependentTricks = [DependentTricks(dependentTricks: [frontsideNosebluntSlide])]
-    backsideTailslide.dependentTricks = [DependentTricks(dependentTricks: [backsideBluntslide])]
-    frontsideTailslide.dependentTricks = [DependentTricks(dependentTricks: [frontsideBluntslide])]
-    air540.dependentTricks = [DependentTricks(dependentTricks: [air720])]
-    air720.dependentTricks = [DependentTricks(dependentTricks: [air900])]
-    
+    var all: [Trick] {
+        [ollie, fs180, bs180, kickturn, nollie, fakieOllie, ticTac,
+         bs360, fs360, bsCaballerial, fsCaballerial, bsHalfCab, fsHalfCab,
+         ollieNorth, ollieSouth, powerslide, switchBs180, switchBs360,
+         switchFs180, switchFs360, switchOllie]
+    }
+}
+
+private struct FlipTricks {
+    let kickflip: Trick, heelflip: Trick, popShuvit: Trick, fsPopShuvit: Trick
+    let varialKickflip: Trick, varialHeelflip: Trick
+    let fsKickflip: Trick, bsKickflip: Trick, fsHeelflip: Trick, bsHeelflip: Trick
+    let nollieBs180: Trick, nollieFs180: Trick
+    let fsBigspin: Trick, bsBigspin: Trick, treFlip: Trick, hardflip: Trick
+    let laserFlip: Trick, bigspin: Trick, bigflip: Trick, biggerflip: Trick
+    let impossible: Trick, inwardHeelflip: Trick
+    let casperFlip: Trick, halfCasperFlip: Trick, pressureFlip: Trick
+    let hospitalFlip: Trick, doubleKickflip: Trick, doubleHeelflip: Trick
+    let dragonFlip: Trick, dolphinFlip: Trick, ghettoBird: Trick
+    let nollieShuvit: Trick, fsShuvit: Trick, nollieFsShuvit: Trick
+    let shuvit360: Trick, fs360Shuvit: Trick, fakie360Shuvit: Trick, biggerspin: Trick
+    let nollie360Hardflip: Trick, nollie360PopShuvit: Trick
+    let nollieBsBigspin: Trick, nollieFsBigspin: Trick, nollieHardflip: Trick
+    let nollieHeelflip: Trick, nollieImpossible: Trick, nollieInwardHeelflip: Trick
+    let nollieKickflip: Trick, nollieLaserFlip: Trick
+    let nollie360Flip: Trick, nollieVarialHeelflip: Trick, nollieVarialKickflip: Trick
+
+    var all: [Trick] {
+        [kickflip, heelflip, popShuvit, fsPopShuvit, varialKickflip, varialHeelflip,
+         fsKickflip, bsKickflip, fsHeelflip, bsHeelflip, nollieBs180, nollieFs180,
+         nollie360Flip, nollie360Hardflip, nollie360PopShuvit, nollieBsBigspin,
+         nollieFsBigspin, nollieHardflip, nollieHeelflip, nollieImpossible,
+         nollieInwardHeelflip, nollieKickflip, nollieLaserFlip, nollieVarialHeelflip,
+         nollieVarialKickflip, fsBigspin, bsBigspin, treFlip, hardflip, laserFlip,
+         bigspin, bigflip, biggerflip, fsShuvit, nollieShuvit, nollieFsShuvit,
+         casperFlip, halfCasperFlip, pressureFlip, hospitalFlip, doubleKickflip,
+         doubleHeelflip, dragonFlip, ghettoBird, shuvit360, fs360Shuvit,
+         fakie360Shuvit, biggerspin, dolphinFlip]
+    }
+}
+
+private struct GrindAndSlideTricks {
+    let backside50_50: Trick, frontside50_50: Trick
+    let backside5_0: Trick, frontside5_0: Trick
+    let backsideCrooked: Trick, frontsideCrooked: Trick
+    let backsideFeeble: Trick, frontsideFeeble: Trick
+    let backsideLipslide: Trick, frontsideLipslide: Trick
+    let backsideNosegrind: Trick, frontsideNosegrind: Trick
+    let backsideNoseslide: Trick, frontsideNoseslide: Trick
+    let backsideOvercrook: Trick, frontsideOvercrook: Trick
+    let backsideSalad: Trick, frontsideSalad: Trick
+    let backsideSmith: Trick, frontsideSmith: Trick
+    let backsideSuski: Trick, frontsideSuski: Trick
+    let backsideTailslide: Trick, frontsideTailslide: Trick
+    let backsideBluntslide: Trick, frontsideBluntslide: Trick
+    let backsideNosebluntSlide: Trick, frontsideNosebluntSlide: Trick
+    let backsideBoardslide: Trick, frontsideBoardslide: Trick
+    let backsideHurricaneStall: Trick, frontsideHurricaneStall: Trick
+    let willyGrind: Trick, hurricaneGrind: Trick, darkslide: Trick
+
+    var all: [Trick] {
+        [backside50_50, frontside50_50, backside5_0, frontside5_0,
+         backsideCrooked, frontsideCrooked, backsideFeeble, frontsideFeeble,
+         backsideLipslide, frontsideLipslide, backsideNosegrind, frontsideNosegrind,
+         backsideNoseslide, frontsideNoseslide, backsideOvercrook, frontsideOvercrook,
+         backsideSalad, frontsideSalad, backsideSmith, frontsideSmith,
+         backsideSuski, frontsideSuski, backsideTailslide, frontsideTailslide,
+         backsideBluntslide, frontsideBluntslide, backsideNosebluntSlide,
+         frontsideNosebluntSlide, backsideBoardslide, frontsideBoardslide,
+         backsideHurricaneStall, frontsideHurricaneStall, willyGrind, hurricaneGrind,
+         darkslide]
+    }
+}
+
+// MARK: - Builders
+
+private func makeBasicTricks() -> BasicTricks {
+    let ollie       = mk("Ollie",      1, .basic)
+    let kickturn    = mk("Kickturn",   1, .basic)
+    let ticTac      = mk("Tic-Tac",    1, .basic)
+    let fs180       = mk("FS 180",     2, .basic, pre(ollie))
+    let bs180       = mk("BS 180",     2, .basic, pre(ollie))
+    let nollie      = mk("Nollie",     2, .basic, pre(ollie))
+    let fakieOllie  = mk("Fakie Ollie", 2, .basic, pre(ollie))
+    let bs360       = mk("BS 360",     3, .basic, pre(bs180))
+    let fs360       = mk("FS 360",     3, .basic, pre(fs180))
+    let bsCaballerial = mk("BS Caballerial", 4, .basic, pre(bs360))
+    let fsCaballerial = mk("FS Caballerial", 4, .basic, pre(fs360))
+    let bsHalfCab   = mk("BS Half Cab", 2, .basic, pre(bs180))
+    let fsHalfCab   = mk("FS Half Cab", 2, .basic, pre(fs180))
+    let ollieNorth  = mk("Ollie North", 2, .basic, pre(ollie))
+    let ollieSouth  = mk("Ollie South", 2, .basic, pre(ollie))
+    let powerslide  = mk("Powerslide",  2, .basic, pre(ollie))
+    let switchBs180 = mk("Switch BS 180", 2, .basic, pre(bs180))
+    let switchBs360 = mk("Switch BS 360", 3, .basic, pre(bs360))
+    let switchFs180 = mk("Switch FS 180", 2, .basic, pre(fs180))
+    let switchFs360 = mk("Switch FS 360", 3, .basic, pre(fs360))
+    let switchOllie = mk("Switch Ollie", 2, .basic, pre(ollie))
+
+    return BasicTricks(
+        ollie: ollie, fs180: fs180, bs180: bs180, kickturn: kickturn, nollie: nollie,
+        fakieOllie: fakieOllie, ticTac: ticTac, bs360: bs360, fs360: fs360,
+        bsCaballerial: bsCaballerial, fsCaballerial: fsCaballerial,
+        bsHalfCab: bsHalfCab, fsHalfCab: fsHalfCab,
+        ollieNorth: ollieNorth, ollieSouth: ollieSouth, powerslide: powerslide,
+        switchBs180: switchBs180, switchBs360: switchBs360,
+        switchFs180: switchFs180, switchFs360: switchFs360, switchOllie: switchOllie
+    )
+}
+
+private func makeFlipTricks(basic b: BasicTricks) -> FlipTricks {
+    let kickflip   = mk("Kickflip",       3, .flip,   pre(b.ollie))
+    let heelflip   = mk("Heelflip",       3, .flip,   pre(b.ollie))
+    let popShuvit  = mk("Pop Shove It",   3, .shuvit)
+    let fsPopShuvit = mk("FS Pop Shove It", 3, .shuvit)
+    let varialKickflip = mk("Varial Kickflip", 4, .flip, pre(kickflip, popShuvit))
+    let varialHeelflip = mk("Varial Heelflip", 4, .flip, pre(heelflip, fsPopShuvit))
+    let fsKickflip = mk("FS 180 Kickflip", 4, .flip, pre(kickflip, b.fs180))
+    let bsKickflip = mk("BS 180 Kickflip", 4, .flip, pre(kickflip, b.bs180))
+    let fsHeelflip = mk("FS 180 Heelflip", 4, .flip, pre(heelflip, b.fs180))
+    let bsHeelflip = mk("BS 180 Heelflip", 4, .flip, pre(heelflip, b.bs180))
+    let nollieBs180 = mk("Nollie BS 180", 3, .flip, pre(b.nollie, b.bs180))
+    let nollieFs180 = mk("Nollie FS 180", 3, .flip, pre(b.nollie, b.fs180))
+    let fsBigspin  = mk("FS Bigspin",     5, .shuvit, pre(fsPopShuvit, b.fs180))
+    let bsBigspin  = mk("BS Bigspin",     5, .shuvit, pre(popShuvit, b.bs180))
+    let treFlip    = mk("Tre Flip",       5, .flip,   pre(kickflip, popShuvit, bsBigspin))
+    let hardflip   = mk("Hardflip",       5, .flip,   pre(kickflip, heelflip, fsPopShuvit))
+    let laserFlip  = mk("Laser Flip",     6, .flip,   pre(fsBigspin, kickflip, fsPopShuvit, heelflip))
+    let bigspin    = mk("Bigspin",        4, .shuvit, pre(popShuvit, b.bs180))
+    let bigflip    = mk("Bigflip",        5, .flip,   pre(bigspin, kickflip))
+    let biggerflip = mk("Biggerflip",     6, .flip,   pre(bigflip))
+    let impossible = mk("Impossible",     6, .flip)
+    let inwardHeelflip = mk("Inward Heelflip", 3, .flip)
+    let casperFlip = mk("Casper Flip",    5, .flip, pre(kickflip))
+    let halfCasperFlip = mk("Half Casper Flip", 4, .flip, pre(kickflip))
+    let pressureFlip = mk("Pressure Flip", 4, .flip, pre(b.ollie))
+    let hospitalFlip = mk("Hospital Flip", 4, .flip, pre(kickflip))
+    let doubleKickflip = mk("Double Kickflip", 6, .flip, pre(kickflip))
+    let doubleHeelflip = mk("Double Heelflip", 6, .flip, pre(heelflip))
+    let dragonFlip = mk("Dragon Flip", 6, .flip, pre(kickflip, popShuvit))
+    let dolphinFlip = mk("Dolphin Flip", 6, .flip, pre(kickflip, popShuvit))
+    let ghettoBird = mk("Ghetto Bird", 5, .flip, pre(b.nollie, b.bs180))
+    let nollieShuvit = mk("Nollie Shove It", 2, .shuvit)
+    let fsShuvit = mk("Nollie FS Shove It", 2, .shuvit)
+    let nollieFsShuvit = mk("FS Shove It", 2, .shuvit)
+    let shuvit360 = mk("360 Shove It", 4, .shuvit, pre(popShuvit))
+    let fs360Shuvit = mk("FS 360 Shove It", 4, .shuvit, pre(fsPopShuvit))
+    let fakie360Shuvit = mk("Fakie 360 Shove It", 4, .shuvit, pre(b.fakieOllie, popShuvit))
+    let biggerspin = mk("Biggerspin", 6, .shuvit, pre(bsBigspin, b.bs360))
+    let nollie360Flip = mk("Nollie 360 Flip", 5, .flip, pre(b.nollie, kickflip, popShuvit))
+    let nollieVarialHeelflip = mk("Nollie Varial Heelflip", 4, .flip, pre(b.nollie, varialHeelflip))
+    let nollieVarialKickflip = mk("Nollie Varial Kickflip", 4, .flip, pre(b.nollie, varialKickflip))
+    let nollie360Hardflip = mk("Nollie 360 Hardflip", 5, .flip, pre(b.nollie, kickflip, hardflip))
+    let nollie360PopShuvit = mk("Nollie 360 Pop Shove It", 4, .shuvit, pre(b.nollie, popShuvit))
+    let nollieBsBigspin = mk("Nollie BS Bigspin", 4, .shuvit, pre(b.nollie, bsBigspin))
+    let nollieFsBigspin = mk("Nollie FS Bigspin", 4, .shuvit, pre(b.nollie, fsBigspin))
+    let nollieHardflip = mk("Nollie Hardflip", 5, .flip, pre(b.nollie, hardflip))
+    let nollieHeelflip = mk("Nollie Heelflip", 3, .flip, pre(b.nollie, heelflip))
+    let nollieImpossible = mk("Nollie Impossible", 5, .flip, pre(b.nollie, impossible))
+    let nollieInwardHeelflip = mk("Nollie Inward Heelflip", 4, .flip, pre(b.nollie, inwardHeelflip))
+    let nollieKickflip = mk("Nollie Kickflip", 3, .flip, pre(b.nollie, kickflip))
+    let nollieLaserFlip = mk("Nollie Laser Flip", 6, .flip, pre(b.nollie, laserFlip))
+
+    return FlipTricks(
+        kickflip: kickflip, heelflip: heelflip, popShuvit: popShuvit, fsPopShuvit: fsPopShuvit,
+        varialKickflip: varialKickflip, varialHeelflip: varialHeelflip,
+        fsKickflip: fsKickflip, bsKickflip: bsKickflip, fsHeelflip: fsHeelflip, bsHeelflip: bsHeelflip,
+        nollieBs180: nollieBs180, nollieFs180: nollieFs180,
+        fsBigspin: fsBigspin, bsBigspin: bsBigspin, treFlip: treFlip, hardflip: hardflip,
+        laserFlip: laserFlip, bigspin: bigspin, bigflip: bigflip, biggerflip: biggerflip,
+        impossible: impossible, inwardHeelflip: inwardHeelflip,
+        casperFlip: casperFlip, halfCasperFlip: halfCasperFlip, pressureFlip: pressureFlip,
+        hospitalFlip: hospitalFlip, doubleKickflip: doubleKickflip, doubleHeelflip: doubleHeelflip,
+        dragonFlip: dragonFlip, dolphinFlip: dolphinFlip, ghettoBird: ghettoBird,
+        nollieShuvit: nollieShuvit, fsShuvit: fsShuvit, nollieFsShuvit: nollieFsShuvit,
+        shuvit360: shuvit360, fs360Shuvit: fs360Shuvit, fakie360Shuvit: fakie360Shuvit, biggerspin: biggerspin,
+        nollie360Hardflip: nollie360Hardflip, nollie360PopShuvit: nollie360PopShuvit,
+        nollieBsBigspin: nollieBsBigspin, nollieFsBigspin: nollieFsBigspin, nollieHardflip: nollieHardflip,
+        nollieHeelflip: nollieHeelflip, nollieImpossible: nollieImpossible, nollieInwardHeelflip: nollieInwardHeelflip,
+        nollieKickflip: nollieKickflip, nollieLaserFlip: nollieLaserFlip,
+        nollie360Flip: nollie360Flip, nollieVarialHeelflip: nollieVarialHeelflip, nollieVarialKickflip: nollieVarialKickflip
+    )
+}
+
+private func makeGrindAndSlideTricks(basic b: BasicTricks) -> GrindAndSlideTricks {
+    let backside50_50  = mk("BS 50-50", 3, .grind)
+    let frontside50_50 = mk("FS 50-50", 3, .grind)
+    let backside5_0    = mk("BS 5-0",   4, .grind, pre(backside50_50))
+    let frontside5_0   = mk("FS 5-0",   4, .grind, pre(frontside50_50))
+    let backsideCrooked  = mk("BS Crooked", 4, .grind)
+    let frontsideCrooked = mk("FS Crooked", 4, .grind)
+    let backsideFeeble  = mk("BS Feeble", 4, .grind)
+    let frontsideFeeble = mk("FS Feeble", 4, .grind)
+    let backsideLipslide  = mk("BS Lipslide", 4, .slide)
+    let frontsideLipslide = mk("FS Lipslide", 4, .slide)
+    let backsideNosegrind  = mk("BS Nosegrind", 4, .grind)
+    let frontsideNosegrind = mk("FS Nosegrind", 4, .grind)
+    let backsideNoseslide  = mk("BS Noseslide", 3, .slide)
+    let frontsideNoseslide = mk("FS Noseslide", 3, .slide)
+    let backsideOvercrook  = mk("BS Overcrook", 4, .grind)
+    let frontsideOvercrook = mk("FS Overcrook", 4, .grind)
+    let backsideSalad  = mk("BS Salad", 4, .grind)
+    let frontsideSalad = mk("FS Salad", 4, .grind)
+    let backsideSmith  = mk("BS Smith", 4, .grind)
+    let frontsideSmith = mk("FS Smith", 4, .grind)
+    let backsideSuski  = mk("BS Suski", 4, .grind, pre(backside5_0, backsideSalad))
+    let frontsideSuski = mk("FS Suski", 4, .grind, pre(frontside5_0, frontsideSalad))
+    let willyGrind     = mk("Willy Grind", 5, .grind, pre(frontside5_0))
+    let hurricaneGrind = mk("Hurricane Grind", 5, .grind, pre(backsideCrooked, b.bs180))
+    let backsideTailslide  = mk("BS Tailslide", 4, .slide)
+    let frontsideTailslide = mk("FS Tailslide", 4, .slide)
+    let backsideBluntslide = mk("BS Bluntslide", 5, .slide, pre(backsideTailslide))
+    let frontsideBluntslide = mk("FS Bluntslide", 5, .slide, pre(frontsideTailslide))
+    let backsideNosebluntSlide  = mk("BS Noseblunt Slide", 5, .slide, pre(backsideNoseslide))
+    let frontsideNosebluntSlide = mk("FS Noseblunt Slide", 5, .slide, pre(frontsideNoseslide))
+    let backsideBoardslide  = mk("BS Boardslide", 3, .slide)
+    let frontsideBoardslide = mk("FS Boardslide", 3, .slide)
+    let backsideHurricaneStall  = mk("BS Hurricane Stall", 4, .transition)
+    let frontsideHurricaneStall = mk("FS Hurricane Stall", 4, .transition)
+    let darkslide = mk("Darkslide", 6, .slide, pre(backsideBoardslide))
+
+    return GrindAndSlideTricks(
+        backside50_50: backside50_50, frontside50_50: frontside50_50,
+        backside5_0: backside5_0, frontside5_0: frontside5_0,
+        backsideCrooked: backsideCrooked, frontsideCrooked: frontsideCrooked,
+        backsideFeeble: backsideFeeble, frontsideFeeble: frontsideFeeble,
+        backsideLipslide: backsideLipslide, frontsideLipslide: frontsideLipslide,
+        backsideNosegrind: backsideNosegrind, frontsideNosegrind: frontsideNosegrind,
+        backsideNoseslide: backsideNoseslide, frontsideNoseslide: frontsideNoseslide,
+        backsideOvercrook: backsideOvercrook, frontsideOvercrook: frontsideOvercrook,
+        backsideSalad: backsideSalad, frontsideSalad: frontsideSalad,
+        backsideSmith: backsideSmith, frontsideSmith: frontsideSmith,
+        backsideSuski: backsideSuski, frontsideSuski: frontsideSuski,
+        backsideTailslide: backsideTailslide, frontsideTailslide: frontsideTailslide,
+        backsideBluntslide: backsideBluntslide, frontsideBluntslide: frontsideBluntslide,
+        backsideNosebluntSlide: backsideNosebluntSlide, frontsideNosebluntSlide: frontsideNosebluntSlide,
+        backsideBoardslide: backsideBoardslide, frontsideBoardslide: frontsideBoardslide,
+        backsideHurricaneStall: backsideHurricaneStall, frontsideHurricaneStall: frontsideHurricaneStall,
+        willyGrind: willyGrind, hurricaneGrind: hurricaneGrind, darkslide: darkslide
+    )
+}
+
+private func makeAirAndTransitionTricks(grinds g: GrindAndSlideTricks) -> [Trick] {
+    let air540 = mk("540", 5, .air)
+    let air720 = mk("720", 6, .air, pre(air540))
+    let air900 = mk("900", 7, .air, pre(air720))
+
+    let airwalk = mk("Airwalk", 4, .air)
+    let axleDropIn = mk("Axle Drop-In", 3, .transition, pre(g.frontside50_50))
+    let backsideAxleStall = mk("BS Axle Stall", 3, .transition, pre(g.backside50_50))
+    let backsideCrookedStall = mk("BS Crooked Stall", 4, .transition, pre(g.backsideCrooked))
+    let backsideDisaster = mk("BS Disaster", 4, .transition, pre(g.backsideBoardslide))
+    let backsideFeebleStall = mk("BS Feeble Stall", 4, .transition, pre(g.backsideFeeble))
+    let backsidePivotStall = mk("BS Pivot Stall", 3, .transition, pre(g.backside5_0))
+    let backsideRockNRoll = mk("BS Rock 'n' roll", 3, .transition, pre(g.frontsideBoardslide))
+    let backsideSmithStall = mk("BS Smith Stall", 4, .transition, pre(g.backsideSmith))
+    let backsideTailStall = mk("BS Tail Stall", 4, .transition, pre(g.backsideTailslide))
+    let benihana = mk("Benihana", 4, .air)
+    let bluntStall180Out = mk("Blunt Stall 180 Out", 5, .transition, pre(g.frontsideBluntslide))
+    let bluntStallPullBack = mk("Blunt Stall Pull Back", 4, .transition, pre(g.frontsideBluntslide))
+    let bluntStallToFakie = mk("Blunt Stall to Fakie", 4, .transition, pre(g.frontsideBluntslide))
+    let bodyJar = mk("Body Jar", 4, .air)
+    let cannonball = mk("Cannonball", 3, .air)
+    let christAir = mk("Christ Air", 5, .air)
+    let crailGrab = mk("Crail Grab", 3, .air)
+    let creeper = mk("Creeper", 3, .air)
+    let crossbone = mk("Crossbone", 4, .air)
+    let delmarIndy = mk("Delmar Indy", 4, .air)
+    let doubleGrab = mk("Double Grab", 4, .air)
+    let dropIn = mk("Drop-In", 2, .transition)
+    let fakieNosebluntStall = mk("Fakie Noseblunt Stall", 5, .transition, pre(g.frontsideNosebluntSlide))
+    let fakieRock = mk("Fakie Rock", 3, .transition, pre(g.frontsideBoardslide))
+    let fakieTailStall = mk("Fakie Tail Stall", 4, .transition)
+    let frigidAir = mk("Frigid Air", 4, .air)
+    let frontsideAir = mk("FS Air", 3, .air)
+    let frontsideAxleStall = mk("FS Axle Stall", 3, .transition, pre(g.frontside50_50))
+    let frontsideCrookedStall = mk("FS Crooked Stall", 4, .transition, pre(g.frontsideCrooked))
+    let frontsideDisaster = mk("FS Disaster", 4, .transition, pre(g.frontsideBoardslide))
+    let frontsideFeebleStall = mk("FS Feeble Stall", 4, .transition, pre(g.frontsideFeeble))
+    let frontsideNosePick = mk("FS Nose Pick", 4, .transition, pre(g.frontsideNosegrind))
+    let frontsideNosebluntStall = mk("FS Noseblunt Stall", 5, .transition, pre(g.frontsideNosebluntSlide))
+    let frontsidePivotStall = mk("FS Pivot Stall", 3, .transition, pre(g.frontside50_50))
+    let frontsideRockNRoll = mk("FS Rock 'n' roll", 3, .transition, pre(g.frontsideBoardslide))
+    let frontsideSmithStall = mk("FS Smith Stall", 4, .transition, pre(g.frontsideSmith))
+    let frontsideSugarcaneStall = mk("FS Sugarcane Stall", 5, .transition)
+    let frontsideSweeper = mk("FS Sweeper", 3, .transition)
+    let frontsideTailStall = mk("FS Tail Stall", 4, .transition, pre(g.frontsideTailslide))
+    let grosmanGrab = mk("Grosman Grab", 4, .air)
+    let helipop = mk("Helipop", 5, .air)
+    let indy = mk("Indy", 3, .air)
+    let indyGrab = mk("Indy Grab", 3, .air)
+    let invert = mk("Invert", 4, .air)
+    let japanAir = mk("Japan Air", 4, .air)
+    let judoAir = mk("Judo Air", 4, .air)
+    let lienAir = mk("Lien Air", 4, .air)
+    let madonna = mk("Madonna", 5, .air)
+    let mcTwist = mk("McTwist", 5, .air)
+    let melancholyGrab = mk("Melancholy Grab", 4, .air)
+    let melon = mk("Melon", 3, .air)
+    let methodAir = mk("Method Air", 4, .air)
+    let muteAir = mk("Mute Air", 3, .air)
+    let noseGrab = mk("Nose Grab", 3, .air)
+    let nosePick = mk("Nose Pick", 4, .transition, pre(g.frontsideNosegrind))
+    let noseStall = mk("Nose Stall", 3, .transition, pre(g.frontsideNoseslide))
+    let nosebone = mk("Nosebone", 4, .air)
+    let nuclearGrab = mk("Nuclear Grab", 4, .air)
+    let riverdance = mk("Riverdance", 4, .air)
+    let roastbeefGrab = mk("Roastbeef Grab", 3, .air)
+    let rockToFakie = mk("Rock to Fakie", 3, .transition, pre(g.frontsideBoardslide))
+    let rocketAir = mk("Rocket Air", 4, .air)
+    let sacktap = mk("Sacktap", 4, .air)
+    let salFlip = mk("Sal Flip", 5, .air)
+    let saranWrap = mk("Saran Wrap", 4, .air)
+    let seatbeltGrab = mk("Seatbelt Grab", 3, .air)
+    let slobAir = mk("Slob Air", 3, .air)
+    let stalefishGrab = mk("Stalefish Grab", 3, .air)
+    let stallfish = mk("Stallfish", 4, .air)
+    let stiffy = mk("Stiffy", 4, .air)
+    let supermanGrab = mk("Superman Grab", 5, .air)
+    let tailGrab = mk("Tail Grab", 3, .air)
+    let tailbone = mk("Tailbone", 4, .air)
+    let tuckKnee = mk("Tuck Knee", 4, .air)
+    let varial = mk("Varial", 4, .air)
+
+    // Wire up multi-stage air dependencies
+    air540.dependentTricks = dep(air720)
+    air720.dependentTricks = dep(air900)
+
     return [
-        // Basic Tricks
-        ollie, fs180, bs180, kickturn, nollie, fakieOllie, ticTac, bs360, fs360, bsCaballerial, fsCaballerial, bsHalfCab, fsHalfCab, ollieNorth, ollieSouth, powerslide, switchBs180, switchBs360, switchFs180, switchFs360, switchOllie,
-
-        // Flip and Shove-It Tricks
-        kickflip, heelflip, popShuvit, fsPopShuvit, varialKickflip, varialHeelflip, fsKickflip, bsKickflip, fsHeelflip, bsHeelflip, nollieBs180, nollieFs180, nollie360Flip, nollie360Hardflip, nollie360PopShuvit, nollieBsBigspin, nollieFsBigspin, nollieHardflip, nollieHeelflip, nollieImpossible, nollieInwardHeelflip, nollieKickflip, nollieLaserFlip, nollieVarialHeelflip, nollieVarialKickflip, fsBigspin, bsBigspin, treFlip, hardflip, laserFlip, bigspin, bigflip, biggerflip, fsShuvit, nollieShuvit, nollieFsShuvit, casperFlip, halfCasperFlip, pressureFlip, hospitalFlip, doubleKickflip, doubleHeelflip, dragonFlip, ghettoBird, shuvit360, fs360Shuvit, fakie360Shuvit, biggerspin, dolphinFlip,
-
-        // Grinds and Slides
-        backside50_50, frontside50_50, backside5_0, frontside5_0, backsideCrooked, frontsideCrooked, backsideFeeble, frontsideFeeble, backsideLipslide, frontsideLipslide, backsideNosegrind, frontsideNosegrind, backsideNoseslide, frontsideNoseslide, backsideOvercrook, frontsideOvercrook, backsideSalad, frontsideSalad, backsideSmith, frontsideSmith, backsideSuski, frontsideSuski, backsideTailslide, frontsideTailslide, backsideBluntslide, frontsideBluntslide, backsideNosebluntSlide, frontsideNosebluntSlide, backsideBoardslide, frontsideBoardslide, backsideHurricaneStall, frontsideHurricaneStall, willyGrind, hurricaneGrind, darkslide,
-
-        // Airs and Transition
-        air540, air720, air900, airwalk, axleDropIn, backsideAxleStall, backsideCrookedStall, backsideDisaster, backsideFeebleStall, backsidePivotStall, backsideRockNRoll, backsideSmithStall, backsideTailStall, benihana, bluntStall180Out, bluntStallPullBack, bluntStallToFakie, bodyJar, cannonball, christAir, crailGrab, creeper, crossbone, delmarIndy, doubleGrab, dropIn, fakieNosebluntStall, fakieRock, fakieTailStall, frigidAir, frontsideAir, frontsideAxleStall, frontsideCrookedStall, frontsideDisaster, frontsideFeebleStall, frontsideNosePick, frontsideNosebluntStall, frontsidePivotStall, frontsideRockNRoll, frontsideSmithStall, frontsideSugarcaneStall, frontsideSweeper, frontsideTailStall, grosmanGrab, helipop, indy, indyGrab, invert, japanAir, judoAir, lienAir, madonna, mcTwist, melancholyGrab, melon, methodAir, muteAir, noseGrab, nosePick, noseStall, nosebone, nuclearGrab, riverdance, roastbeefGrab, rockToFakie, rocketAir, sacktap, salFlip, saranWrap, seatbeltGrab, slobAir, stalefishGrab, stallfish, stiffy, supermanGrab, tailGrab, tailbone, tuckKnee, varial,
-
-        // Footplant Tricks
-        beanPlant, eggPlant, fastplant, gymnastPlant, hoHo, laybackAir, millerFlip, powerOllie, sadPlant, stapleGun, texasPlant, texasTwoStep,
-
-        // Balance Tricks
-        manual, noseManual, oneFootManual, oneWheelManual,
-
-        // Miscellaneous Freestyle and Old School Tricks
-        acidDrop, alleyOop, backsideBoneless, backsideWallride, bodyVarial, boneless, caveman, coffin, daffy, firecracker, flamingo, frontsideBoneless, frontsideWallride, hangTen, hippieJump, pogo, primoStall, rollIn, strawberryMilkshake, streetPlant, wallie, casper, casperStall, noComply
+        air540, air720, air900, airwalk, axleDropIn, backsideAxleStall, backsideCrookedStall,
+        backsideDisaster, backsideFeebleStall, backsidePivotStall, backsideRockNRoll,
+        backsideSmithStall, backsideTailStall, benihana, bluntStall180Out, bluntStallPullBack,
+        bluntStallToFakie, bodyJar, cannonball, christAir, crailGrab, creeper, crossbone,
+        delmarIndy, doubleGrab, dropIn, fakieNosebluntStall, fakieRock, fakieTailStall,
+        frigidAir, frontsideAir, frontsideAxleStall, frontsideCrookedStall, frontsideDisaster,
+        frontsideFeebleStall, frontsideNosePick, frontsideNosebluntStall, frontsidePivotStall,
+        frontsideRockNRoll, frontsideSmithStall, frontsideSugarcaneStall, frontsideSweeper,
+        frontsideTailStall, grosmanGrab, helipop, indy, indyGrab, invert, japanAir, judoAir,
+        lienAir, madonna, mcTwist, melancholyGrab, melon, methodAir, muteAir, noseGrab,
+        nosePick, noseStall, nosebone, nuclearGrab, riverdance, roastbeefGrab, rockToFakie,
+        rocketAir, sacktap, salFlip, saranWrap, seatbeltGrab, slobAir, stalefishGrab,
+        stallfish, stiffy, supermanGrab, tailGrab, tailbone, tuckKnee, varial
     ]
 }
 
+private func makeFootplantTricks() -> [Trick] {
+    [
+        mk("Bean Plant",   3, .footplant),
+        mk("Egg Plant",    4, .footplant),
+        mk("Fastplant",    3, .footplant),
+        mk("Gymnast Plant", 4, .footplant),
+        mk("Ho-Ho",        5, .footplant),
+        mk("Layback Air",  4, .footplant),
+        mk("Miller Flip",  5, .footplant),
+        mk("Power Ollie",  3, .footplant),
+        mk("Sad Plant",    4, .footplant),
+        mk("Staple Gun",   4, .footplant),
+        mk("Texas Plant",  4, .footplant),
+        mk("Texas Two-Step", 4, .footplant)
+    ]
+}
+
+private func makeBalanceTricks() -> [Trick] {
+    [
+        mk("Manual",            2, .balance),
+        mk("Nose Manual",       3, .balance),
+        mk("One Foot Manual",   3, .balance),
+        mk("One Wheel Manual",  4, .balance)
+    ]
+}
+
+private func makeMiscTricks() -> [Trick] {
+    [
+        mk("Casper",         4, .misc),
+        mk("Casper Stall",   5, .misc),
+        mk("No Comply",      3, .misc),
+        mk("Acid Drop",      3, .misc),
+        mk("Alley Oop",      3, .misc),
+        mk("BS Boneless",    3, .misc),
+        mk("BS Wallride",    4, .misc),
+        mk("Body Varial",    2, .misc),
+        mk("Boneless",       3, .misc),
+        mk("Caveman",        2, .misc),
+        mk("Coffin",         2, .misc),
+        mk("Daffy",          3, .misc),
+        mk("Firecracker",    3, .misc),
+        mk("Flamingo",       4, .misc),
+        mk("FS Boneless",    3, .misc),
+        mk("FS Wallride",    4, .misc),
+        mk("Hang Ten",       3, .misc),
+        mk("Hippie Jump",    2, .misc),
+        mk("Pogo",           3, .misc),
+        mk("Primo Stall",    4, .misc),
+        mk("Roll In",        2, .misc),
+        mk("Strawberry Milkshake", 4, .misc),
+        mk("Street Plant",   4, .misc),
+        mk("Wallie",         3, .misc)
+    ]
+}
+
+private func wireTopLevelDependents(basic b: BasicTricks, flips f: FlipTricks, grinds g: GrindAndSlideTricks) {
+    b.ollie.dependentTricks      = dep(b.ollieNorth, b.ollieSouth, b.powerslide, b.switchOllie)
+    b.fs180.dependentTricks      = dep(b.fs360, b.fsHalfCab, b.switchFs180)
+    b.bs180.dependentTricks      = dep(b.bs360, b.bsHalfCab, b.switchBs180)
+    b.nollie.dependentTricks     = dep(f.nollieBs180, f.nollieFs180)
+    b.bs360.dependentTricks      = dep(b.bsCaballerial, b.switchBs360)
+    b.fs360.dependentTricks      = dep(b.fsCaballerial, b.switchFs360)
+    f.kickflip.dependentTricks   = dep(f.varialKickflip, f.fsKickflip, f.bsKickflip, f.treFlip)
+    f.heelflip.dependentTricks   = dep(f.varialHeelflip, f.fsHeelflip, f.bsHeelflip)
+    f.popShuvit.dependentTricks  = dep(f.varialKickflip, f.bsBigspin, f.treFlip)
+    f.fsPopShuvit.dependentTricks = dep(f.varialHeelflip, f.fsBigspin)
+    f.bigflip.dependentTricks    = dep(f.biggerflip)
+    g.backside50_50.dependentTricks  = dep(g.backside5_0, g.backsideSmith, g.backsideFeeble)
+    g.frontside50_50.dependentTricks = dep(g.frontside5_0, g.frontsideSmith, g.frontsideFeeble)
+    g.backside5_0.dependentTricks    = dep(g.backsideSuski)
+    g.frontside5_0.dependentTricks   = dep(g.frontsideSuski)
+    g.backsideNoseslide.dependentTricks  = dep(g.backsideNosebluntSlide)
+    g.frontsideNoseslide.dependentTricks = dep(g.frontsideNosebluntSlide)
+    g.backsideTailslide.dependentTricks  = dep(g.backsideBluntslide)
+    g.frontsideTailslide.dependentTricks = dep(g.frontsideBluntslide)
+}
+
+// MARK: - Public entry points
+
+func generateTricks() -> [Trick] {
+    let basic = makeBasicTricks()
+    let flips = makeFlipTricks(basic: basic)
+    let grinds = makeGrindAndSlideTricks(basic: basic)
+    let airs = makeAirAndTransitionTricks(grinds: grinds)
+    let footplant = makeFootplantTricks()
+    let balance = makeBalanceTricks()
+    let misc = makeMiscTricks()
+
+    wireTopLevelDependents(basic: basic, flips: flips, grinds: grinds)
+
+    var all: [Trick] = []
+    all.reserveCapacity(basic.all.count + flips.all.count + grinds.all.count
+                        + airs.count + footplant.count + balance.count + misc.count)
+    all.append(contentsOf: basic.all)
+    all.append(contentsOf: flips.all)
+    all.append(contentsOf: grinds.all)
+    all.append(contentsOf: airs)
+    all.append(contentsOf: footplant)
+    all.append(contentsOf: balance)
+    all.append(contentsOf: misc)
+    return all
+}
+
 func generateNewTricksV2() -> [Trick] {
-    let ollie = Trick(name: "Ollie", difficulty: 1, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let kickflip = Trick(name: "Kickflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let heelflip = Trick(name: "Heelflip", difficulty: 3, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let popShuvit = Trick(name: "Pop Shove It", difficulty: 3, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let fsPopShuvit = Trick(name: "FS Pop Shove It", difficulty: 3, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let fakieOllie = Trick(name: "Fakie Ollie", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let nollie = Trick(name: "Nollie", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let bs180 = Trick(name: "BS 180", difficulty: 2, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let backsideBoardslide = Trick(name: "BS Boardslide", difficulty: 3, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let backsideCrooked = Trick(name: "BS Crooked", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let frontside5_0 = Trick(name: "FS 5-0", difficulty: 4, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let bsBigspin = Trick(name: "BS Bigspin", difficulty: 5, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [popShuvit])])
-    let bs360 = Trick(name: "BS 360", difficulty: 3, type: .basic, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    
-    let casperFlip = Trick(name: "Casper Flip", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let halfCasperFlip = Trick(name: "Half Casper Flip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let pressureFlip = Trick(name: "Pressure Flip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [ollie])])
-    let hospitalFlip = Trick(name: "Hospital Flip", difficulty: 4, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let doubleKickflip = Trick(name: "Double Kickflip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip])])
-    let doubleHeelflip = Trick(name: "Double Heelflip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [heelflip])])
-    let dragonFlip = Trick(name: "Dragon Flip", difficulty: 6, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [kickflip, popShuvit])])
-    let ghettoBird = Trick(name: "Ghetto Bird", difficulty: 5, type: .flip, prerequisites: [Prerequisite(prerequisiteTricks: [nollie, bs180])])
-    let shuvit360 = Trick(name: "360 Shove It", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [popShuvit])])
-    let fs360Shuvit = Trick(name: "FS 360 Shove It", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [fsPopShuvit])])
-    let fakie360Shuvit = Trick(name: "Fakie 360 Shove It", difficulty: 4, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [fakieOllie, popShuvit])])
-    let biggerspin = Trick(name: "Biggerspin", difficulty: 6, type: .shuvit, prerequisites: [Prerequisite(prerequisiteTricks: [bsBigspin, bs360])])
-    let darkslide = Trick(name: "Darkslide", difficulty: 6, type: .slide, prerequisites: [Prerequisite(prerequisiteTricks: [backsideBoardslide])])
-    let willyGrind = Trick(name: "Willy Grind", difficulty: 5, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [frontside5_0])])
-    let hurricaneGrind = Trick(name: "Hurricane Grind", difficulty: 5, type: .grind, prerequisites: [Prerequisite(prerequisiteTricks: [backsideCrooked, bs180])])
-    let casper = Trick(name: "Casper", difficulty: 4, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let casperStall = Trick(name: "Casper Stall", difficulty: 5, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    let noComply = Trick(name: "No Comply", difficulty: 3, type: .misc, prerequisites: [Prerequisite(prerequisiteTricks: [])])
-    
+    let ollie       = mk("Ollie",          1, .basic)
+    let kickflip    = mk("Kickflip",       3, .flip,   pre(ollie))
+    let heelflip    = mk("Heelflip",       3, .flip,   pre(ollie))
+    let popShuvit   = mk("Pop Shove It",   3, .shuvit)
+    let fsPopShuvit = mk("FS Pop Shove It", 3, .shuvit)
+    let fakieOllie  = mk("Fakie Ollie",    2, .basic, pre(ollie))
+    let nollie      = mk("Nollie",         2, .basic, pre(ollie))
+    let bs180       = mk("BS 180",         2, .basic, pre(ollie))
+    let backsideBoardslide = mk("BS Boardslide", 3, .slide)
+    let backsideCrooked    = mk("BS Crooked",    4, .grind)
+    let frontside5_0       = mk("FS 5-0",        4, .grind)
+    let bsBigspin = mk("BS Bigspin", 5, .shuvit, pre(popShuvit))
+    let bs360     = mk("BS 360",     3, .basic)
+
+    let casperFlip       = mk("Casper Flip",       5, .flip, pre(kickflip))
+    let halfCasperFlip   = mk("Half Casper Flip",  4, .flip, pre(kickflip))
+    let pressureFlip     = mk("Pressure Flip",     4, .flip, pre(ollie))
+    let hospitalFlip     = mk("Hospital Flip",     4, .flip, pre(kickflip))
+    let doubleKickflip   = mk("Double Kickflip",   6, .flip, pre(kickflip))
+    let doubleHeelflip   = mk("Double Heelflip",   6, .flip, pre(heelflip))
+    let dragonFlip       = mk("Dragon Flip",       6, .flip, pre(kickflip, popShuvit))
+    let ghettoBird       = mk("Ghetto Bird",       5, .flip, pre(nollie, bs180))
+    let shuvit360        = mk("360 Shove It",      4, .shuvit, pre(popShuvit))
+    let fs360Shuvit      = mk("FS 360 Shove It",   4, .shuvit, pre(fsPopShuvit))
+    let fakie360Shuvit   = mk("Fakie 360 Shove It", 4, .shuvit, pre(fakieOllie, popShuvit))
+    let biggerspin       = mk("Biggerspin",        6, .shuvit, pre(bsBigspin, bs360))
+    let darkslide        = mk("Darkslide",         6, .slide,  pre(backsideBoardslide))
+    let willyGrind       = mk("Willy Grind",       5, .grind,  pre(frontside5_0))
+    let hurricaneGrind   = mk("Hurricane Grind",   5, .grind,  pre(backsideCrooked, bs180))
+    let casper           = mk("Casper",            4, .misc)
+    let casperStall      = mk("Casper Stall",      5, .misc)
+    let noComply         = mk("No Comply",         3, .misc)
+
     return [
-        casperFlip, halfCasperFlip, pressureFlip, hospitalFlip, doubleKickflip, doubleHeelflip, dragonFlip, ghettoBird,
-        shuvit360, fs360Shuvit, fakie360Shuvit, biggerspin,
-        darkslide, willyGrind, hurricaneGrind,
-        casper, casperStall, noComply
+        casperFlip, halfCasperFlip, pressureFlip, hospitalFlip, doubleKickflip,
+        doubleHeelflip, dragonFlip, ghettoBird, shuvit360, fs360Shuvit, fakie360Shuvit,
+        biggerspin, darkslide, willyGrind, hurricaneGrind, casper, casperStall, noComply
     ]
 }
