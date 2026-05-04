@@ -30,96 +30,13 @@ struct SessionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if let media = session.media, !media.isEmpty {
-                mediaItemView(for: media.first!, fullWidth: true)
-            }
-            if let title = session.title {
-                Text(title)
-                    .font(.headline)
-                    .fontWidth(.expanded)
-                    .multilineTextAlignment(.leading)
-            }
-            
-            if let feelings = session.feeling {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        ForEach(feelings, id: \.self) { feeling in
-                            Text(feeling.rawValue.capitalized)
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.indigo.opacity(0.2))
-                                .cornerRadius(10)
-                        }
-                        .scrollTransition { content, phase in
-                            content
-                                .opacity(phase.isIdentity ? 1 : 0)
-                                .scaleEffect(phase.isIdentity ? 1 : 0.8)
-                                .offset(y: phase.isIdentity ? 0 : 10)
-                        }
-                    }
-                    .scrollTargetBehavior(.viewAligned)
-                }
-            }
-            if let note = session.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                let lines = note.components(separatedBy: .newlines)
-                let truncatedNote = lines.prefix(3).joined(separator: "\n")
-                let displayText = lines.count > 3 ? truncatedNote + "..." : truncatedNote
-                
-                Text(displayText)
-                    .font(.body)
-                    .multilineTextAlignment(.leading)
-                    .padding(.top, 8)
-            }
-            if let media = session.media, !media.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        ForEach(media.dropFirst().prefix(3), id: \.id) { item in
-                            mediaItemView(for: item)
-                        }
-                        if media.count > 4 {
-                            Text("+\(media.count - 4)")
-                                .font(.caption)
-                                .frame(width: 60, height: 60)
-                                .background(Color.secondary.opacity(0.2))
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                    }
-                }
-            }
+            heroMediaIfAny
+            titleIfAny
+            feelingsScroll
+            noteIfAny
+            mediaThumbnailRow
             Divider()
-            HStack {
-                if let date = session.date {
-                    Text(Self.dateFormatter.string(from: date))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                if let duration = session.workoutDuration, duration > 0 {
-                    Text("•")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Label(formatDuration(duration), systemImage: "clock")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .labelStyle(.titleOnly)
-                }
-                if let locationName = session.location?.name {
-                    Text("•")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(locationName)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer()
-                if let tricks = session.tricks {
-                    Text("\(tricks.count) tricks")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            metaRow
         }
         .padding(20)
         .background {
@@ -172,7 +89,120 @@ struct SessionCard: View {
             onTap()
         }
     }
-    
+
+    // MARK: - Body slices
+
+    @ViewBuilder
+    private var heroMediaIfAny: some View {
+        if let media = session.media, !media.isEmpty, let first = media.first {
+            mediaItemView(for: first, fullWidth: true)
+        }
+    }
+
+    @ViewBuilder
+    private var titleIfAny: some View {
+        if let title = session.title {
+            Text(title)
+                .font(.headline)
+                .fontWidth(.expanded)
+                .multilineTextAlignment(.leading)
+        }
+    }
+
+    @ViewBuilder
+    private var feelingsScroll: some View {
+        if let feelings = session.feeling {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack {
+                    ForEach(feelings, id: \.self) { feeling in
+                        Text(feeling.rawValue.capitalized)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.indigo.opacity(0.2))
+                            .cornerRadius(10)
+                    }
+                    .scrollTransition { content, phase in
+                        content
+                            .opacity(phase.isIdentity ? 1 : 0)
+                            .scaleEffect(phase.isIdentity ? 1 : 0.8)
+                            .offset(y: phase.isIdentity ? 0 : 10)
+                    }
+                }
+                .scrollTargetBehavior(.viewAligned)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var noteIfAny: some View {
+        if let note = session.note,
+           !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let lines = note.components(separatedBy: .newlines)
+            let truncated = lines.prefix(3).joined(separator: "\n")
+            let display = lines.count > 3 ? truncated + "..." : truncated
+            Text(display)
+                .font(.body)
+                .multilineTextAlignment(.leading)
+                .padding(.top, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var mediaThumbnailRow: some View {
+        if let media = session.media, !media.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack {
+                    ForEach(media.dropFirst().prefix(3), id: \.id) { item in
+                        mediaItemView(for: item)
+                    }
+                    if media.count > 4 {
+                        Text("+\(media.count - 4)")
+                            .font(.caption)
+                            .frame(width: 60, height: 60)
+                            .background(Color.secondary.opacity(0.2))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+            }
+        }
+    }
+
+    private var metaRow: some View {
+        HStack {
+            if let date = session.date {
+                Text(Self.dateFormatter.string(from: date))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            if let duration = session.workoutDuration, duration > 0 {
+                Text("•")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Label(formatDuration(duration), systemImage: "clock")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .labelStyle(.titleOnly)
+            }
+            if let locationName = session.location?.name {
+                Text("•")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text(locationName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if let tricks = session.tricks {
+                Text("\(tricks.count) tricks")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     @ViewBuilder
     private func mediaItemView(for item: MediaItem, fullWidth: Bool = false) -> some View {
         let cachedImage = mediaState.imageCache[item.id ?? UUID()]

@@ -19,254 +19,19 @@ struct SettingsView: View {
     @State private var toastIcon = "info.circle"
     @State private var showingDeleteConfirmation = false
     @AppStorage("trickDatabaseVersion") private var trickDatabaseVersion: Int = 1
-    
+
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading) {
-                Text("Settings")
-                    .fontWidth(.expanded)
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding(.leading)
-
-                List {
-                    Section(header: Text("Customisation").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        HStack {
-                            Label("Active Types", systemImage: "list.bullet")
-                            Spacer()
-                            Menu {
-                                ForEach(TrickType.allCases, id: \.self) { type in
-                                    Button(action: {
-                                        if visibleTrickTypes.contains(type) {
-                                            visibleTrickTypes.remove(type)
-                                        } else {
-                                            visibleTrickTypes.insert(type)
-                                        }
-                                        saveVisibleTrickTypes()
-                                    }) {
-                                        HStack {
-                                            Text(type.displayName)
-                                            Spacer()
-                                            if visibleTrickTypes.contains(type) {
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Text("\(visibleTrickTypes.count)")
-                                    Image(systemName: "chevron.up.chevron.down")
-                                        .imageScale(.small)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .tint(.primary)
-                            .menuActionDismissBehavior(.disabled)
-                        }
-                        Toggle(isOn: $hideRecommendations) {
-                            Label("Hide Recommendations", systemImage: "sparkles.rectangle.stack")
-                        }
-                        .tint(.indigo)
-                        .onChange(of: hideRecommendations) { _, newValue in
-                            UserDefaults.standard.set(newValue, forKey: "HideRecommendations")
-                        }
-                        Toggle(isOn: $hideJournal) {
-                            Label("Hide Journal", systemImage: "book")
-                        }
-                        .tint(.indigo)
-                        .onChange(of: hideJournal) { _, newValue in
-                            UserDefaults.standard.set(newValue, forKey: "HideJournal")
-                        }
-                    }
-                    .listRowSeparator(.hidden)
-                    
-                    Section(header: Text("Change App Icon").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        HStack {
-                            ForEach(AppIcon.allCases, id: \.rawValue) { icon in
-                                VStack {
-                                    Image(icon.previewImage)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 48, height: 48)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .stroke(currentAppIcon == icon ? Color.pink : Color.clear, lineWidth: 1)
-                                        }
-                                }
-                                .contentShape(.rect)
-                                .onTapGesture {
-                                    Task {
-                                        try? await UIApplication.shared.setAlternateIconName(icon.iconValue)
-                                        currentAppIcon = icon
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .listRowSeparator(.hidden)
-                    
-                    Section(header: Text("Permissions").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        Button {
-                            if let url = URL(string: "x-apple-health://") {
-                                if UIApplication.shared.canOpenURL(url) {
-                                    UIApplication.shared.open(url)
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Label("Apple Health Sync", systemImage: "heart")
-                                Spacer()
-                                HStack {
-                                    Text("Update")
-                                    Image(systemName: "chevron.right")
-                                        .imageScale(.small)
-                                }
-                                .foregroundStyle(.secondary)
-                            }
-                        }
-                        Button {
-                            if notificationAccessGranted, let bundleIdentifier = Bundle.main.bundleIdentifier,
-                               let url = URL(string: "app-settings:root=\(bundleIdentifier)") {
-                                if UIApplication.shared.canOpenURL(url) {
-                                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
-                                } else {
-                                    requestNotificationAuthorization()
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Label("Manage Notifications", systemImage: "app.badge")
-                                Spacer()
-                                HStack {
-                                    Text("Update")
-                                    Image(systemName: "chevron.right")
-                                        .imageScale(.small)
-                                }
-                                .foregroundStyle(.secondary)
-                            }
-                        }
-                        Button {
-                            if locationAccessGranted, let bundleIdentifier = Bundle.main.bundleIdentifier,
-                               let url = URL(string: "app-settings:root=\(bundleIdentifier)") {
-                                if UIApplication.shared.canOpenURL(url) {
-                                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
-                                } else {
-                                    locationManager.requestLocationAuthorization()
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Label("Manage Location", systemImage: "location")
-                                Spacer()
-                                HStack {
-                                    Text("Update")
-                                    Image(systemName: "chevron.right")
-                                        .imageScale(.small)
-                                }
-                                .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    .listRowSeparator(.hidden)
-                    
-                    Section(header: Text("Support Shrednotes").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        Link(destination: URL(string: "https://apps.apple.com/app/id6648789549?action=write-review")!) {
-                            Label("Leave a Review", systemImage: "star")
-                        }
-                        ShareLink(
-                            item: "https://apps.apple.com/app/id6648789549",
-                            subject: Text("Check out this app!"),
-                            message: Text("I wanted to share this link with you."),
-                            preview: SharePreview("Shrednotes", image: Image("preview-image"))
-                        ) {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                    .listRowSeparator(.hidden)
-                    
-                    Section(header: Text("More").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        Link(destination: URL(string: "https://apps.apple.com/us/developer/karl-koch/id1518887592?itsct=apps_box_link&itscg=30200")!) {
-                            Label("My Other Apps", systemImage: "person.crop.rectangle.stack")
-                        }
-                        Link(destination: URL(string: "mailto:karl+shrednotes@kejk.tech?subject=Feedback%20from%20Shrednotes%20app%20link")!) {
-                            Label("Get in Touch", systemImage: "envelope")
-                        }
-                    }
-                    .listRowSeparator(.hidden)
-                    
-                    if trickDatabaseVersion < 2 {
-                        Section(header: Text("Database").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                                Button {
-                                    Task {
-                                        let count = await addNewTricks()
-                                        if count > 0 {
-                                            toastMessage = "\(count) new tricks added!"
-                                        } else {
-                                            toastMessage = "All tricks already in your database"
-                                        }
-                                        toastIcon = "checkmark.circle"
-                                        withAnimation {
-                                            showToast = true
-                                        }
-                                    }
-                                } label: {
-                                    Label("Add New Tricks (18)", systemImage: "plus.circle")
-                                }
-                                .tint(.green)
-                        }
-                        .listRowSeparator(.hidden)
-                    }
-                    
-                    Section(header: Text("Danger Zone").fontWeight(.regular).fontWidth(.expanded).textScale(.secondary).textCase(.uppercase)) {
-                        
-                        Button(role: .destructive) {
-                            showingDeleteConfirmation = true
-                        } label: {
-                            Label("Delete All Data", systemImage: "trash")
-                        }
-                    }
-                    .listRowSeparator(.hidden)
-    
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("All data is stored on your device and backed up to your iCloud account. No one else has access to it.")
-                        Text("Made in the UK")
-                    }
-                    .textScale(.secondary)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .listRowSeparator(.hidden)
-                    .onTapGesture(count: 3) {
-                        self.showDebug = true
-                    }
-                }
-                .listStyle(.plain)
+                title
+                listContent
             }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                }
-            }
-            .onAppear {
-                if let alternativeAppIcon = UIApplication.shared.alternateIconName, let appIcon = AppIcon.allCases.first(where: { $0.rawValue == alternativeAppIcon }) {
-                    currentAppIcon = appIcon
-                } else {
-                    currentAppIcon = .appIcon
-                }
-            }
+            .toolbar { toolbarContent }
+            .onAppear(perform: loadCurrentAppIcon)
             .alert("Are you sure?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     deleteAllData()
-                    toastMessage = "All data has been deleted."
-                    toastIcon = "checkmark.circle"
-                    withAnimation {
-                        showToast = true
-                    }
+                    showToast(message: "All data has been deleted.", icon: "checkmark.circle")
                 }
             } message: {
                 Text("This will permanently delete all your tricks, sessions, and other data. This action cannot be undone.")
@@ -276,12 +41,335 @@ struct SettingsView: View {
             )
         }
     }
-    
+
+    // MARK: - Layout
+
+    private var title: some View {
+        Text("Settings")
+            .fontWidth(.expanded)
+            .font(.largeTitle)
+            .fontWeight(.bold)
+            .padding(.leading)
+    }
+
+    private var listContent: some View {
+        List {
+            customisationSection
+            appIconSection
+            permissionsSection
+            supportSection
+            moreSection
+            databaseSection
+            dangerZoneSection
+            footer
+        }
+        .listStyle(.plain)
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .accessibilityLabel("Close settings")
+        }
+    }
+
+    // MARK: - Sections
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .fontWeight(.regular)
+            .fontWidth(.expanded)
+            .textScale(.secondary)
+            .textCase(.uppercase)
+    }
+
+    private var customisationSection: some View {
+        Section(header: sectionHeader("Customisation")) {
+            activeTypesRow
+            hideRecommendationsToggle
+            hideJournalToggle
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    private var activeTypesRow: some View {
+        HStack {
+            Label("Active Types", systemImage: "list.bullet")
+            Spacer()
+            activeTypesMenu
+        }
+    }
+
+    private var activeTypesMenu: some View {
+        Menu {
+            ForEach(TrickType.allCases, id: \.self) { type in
+                Button {
+                    toggleType(type)
+                } label: {
+                    activeTypesMenuItem(type)
+                }
+            }
+        } label: {
+            HStack {
+                Text("\(visibleTrickTypes.count)")
+                Image(systemName: "chevron.up.chevron.down")
+                    .imageScale(.small)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .tint(.primary)
+        .menuActionDismissBehavior(.disabled)
+    }
+
+    @ViewBuilder
+    private func activeTypesMenuItem(_ type: TrickType) -> some View {
+        HStack {
+            Text(type.displayName)
+            Spacer()
+            if visibleTrickTypes.contains(type) {
+                Image(systemName: "checkmark")
+            }
+        }
+    }
+
+    private var hideRecommendationsToggle: some View {
+        Toggle(isOn: $hideRecommendations) {
+            Label("Hide Recommendations", systemImage: "sparkles.rectangle.stack")
+        }
+        .tint(.indigo)
+        .onChange(of: hideRecommendations) { _, newValue in
+            UserDefaults.standard.set(newValue, forKey: "HideRecommendations")
+        }
+    }
+
+    private var hideJournalToggle: some View {
+        Toggle(isOn: $hideJournal) {
+            Label("Hide Journal", systemImage: "book")
+        }
+        .tint(.indigo)
+        .onChange(of: hideJournal) { _, newValue in
+            UserDefaults.standard.set(newValue, forKey: "HideJournal")
+        }
+    }
+
+    private var appIconSection: some View {
+        Section(header: sectionHeader("Change App Icon")) {
+            HStack {
+                ForEach(AppIcon.allCases, id: \.rawValue) { icon in
+                    appIconButton(icon)
+                }
+            }
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    @ViewBuilder
+    private func appIconButton(_ icon: AppIcon) -> some View {
+        let isSelected = (currentAppIcon == icon)
+        VStack {
+            Image(icon.previewImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isSelected ? Color.pink : Color.clear, lineWidth: 2)
+                }
+        }
+        .contentShape(.rect)
+        .onTapGesture {
+            Task {
+                try? await UIApplication.shared.setAlternateIconName(icon.iconValue)
+                currentAppIcon = icon
+            }
+        }
+        .accessibilityLabel(Text(icon.previewImage))
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private var permissionsSection: some View {
+        Section(header: sectionHeader("Permissions")) {
+            permissionRow(
+                title: "Apple Health Sync",
+                systemImage: "heart",
+                action: openHealthSettings
+            )
+            permissionRow(
+                title: "Manage Notifications",
+                systemImage: "app.badge",
+                action: openNotificationSettings
+            )
+            permissionRow(
+                title: "Manage Location",
+                systemImage: "location",
+                action: openLocationSettings
+            )
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    @ViewBuilder
+    private func permissionRow(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Label(title, systemImage: systemImage)
+                Spacer()
+                HStack {
+                    Text("Update")
+                    Image(systemName: "chevron.right")
+                        .imageScale(.small)
+                }
+                .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var supportSection: some View {
+        Section(header: sectionHeader("Support Shrednotes")) {
+            Link(destination: URL(string: "https://apps.apple.com/app/id6648789549?action=write-review")!) {
+                Label("Leave a Review", systemImage: "star")
+            }
+            ShareLink(
+                item: "https://apps.apple.com/app/id6648789549",
+                subject: Text("Check out this app!"),
+                message: Text("I wanted to share this link with you."),
+                preview: SharePreview("Shrednotes", image: Image("preview-image"))
+            ) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    private var moreSection: some View {
+        Section(header: sectionHeader("More")) {
+            Link(destination: URL(string: "https://apps.apple.com/us/developer/karl-koch/id1518887592?itsct=apps_box_link&itscg=30200")!) {
+                Label("My Other Apps", systemImage: "person.crop.rectangle.stack")
+            }
+            Link(destination: URL(string: "mailto:karl+shrednotes@kejk.tech?subject=Feedback%20from%20Shrednotes%20app%20link")!) {
+                Label("Get in Touch", systemImage: "envelope")
+            }
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    @ViewBuilder
+    private var databaseSection: some View {
+        if trickDatabaseVersion < 2 {
+            Section(header: sectionHeader("Database")) {
+                Button {
+                    Task { await runAddNewTricks() }
+                } label: {
+                    Label("Add New Tricks (18)", systemImage: "plus.circle")
+                }
+                .tint(.green)
+            }
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    private var dangerZoneSection: some View {
+        Section(header: sectionHeader("Danger Zone")) {
+            Button(role: .destructive) {
+                showingDeleteConfirmation = true
+            } label: {
+                Label("Delete All Data", systemImage: "trash")
+            }
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("All data is stored on your device and backed up to your iCloud account. No one else has access to it.")
+            Text("Made in the UK")
+        }
+        .textScale(.secondary)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.leading)
+        .listRowSeparator(.hidden)
+        .onTapGesture(count: 3) {
+            self.showDebug = true
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func toggleType(_ type: TrickType) {
+        if visibleTrickTypes.contains(type) {
+            visibleTrickTypes.remove(type)
+        } else {
+            visibleTrickTypes.insert(type)
+        }
+        saveVisibleTrickTypes()
+    }
+
+    private func openHealthSettings() {
+        if let url = URL(string: "x-apple-health://"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func openNotificationSettings() {
+        if notificationAccessGranted,
+           let bundleIdentifier = Bundle.main.bundleIdentifier,
+           let url = URL(string: "app-settings:root=\(bundleIdentifier)") {
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            } else {
+                requestNotificationAuthorization()
+            }
+        }
+    }
+
+    private func openLocationSettings() {
+        if locationAccessGranted,
+           let bundleIdentifier = Bundle.main.bundleIdentifier,
+           let url = URL(string: "app-settings:root=\(bundleIdentifier)") {
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            } else {
+                locationManager.requestLocationAuthorization()
+            }
+        }
+    }
+
+    private func loadCurrentAppIcon() {
+        if let alternativeAppIcon = UIApplication.shared.alternateIconName,
+           let appIcon = AppIcon.allCases.first(where: { $0.rawValue == alternativeAppIcon }) {
+            currentAppIcon = appIcon
+        } else {
+            currentAppIcon = .appIcon
+        }
+    }
+
+    private func showToast(message: String, icon: String) {
+        toastMessage = message
+        toastIcon = icon
+        withAnimation {
+            showToast = true
+        }
+    }
+
+    private func runAddNewTricks() async {
+        let count = await addNewTricks()
+        let message = count > 0
+            ? "\(count) new tricks added!"
+            : "All tricks already in your database"
+        showToast(message: message, icon: "checkmark.circle")
+    }
+
     private func saveVisibleTrickTypes() {
         let encodedData = try? JSONEncoder().encode(visibleTrickTypes)
         UserDefaults.standard.set(encodedData, forKey: "visibleTrickTypes")
     }
-    
+
     private func deleteAllData() {
         do {
             try modelContext.delete(model: Trick.self)
@@ -292,7 +380,7 @@ struct SettingsView: View {
             print("Failed to delete all data: \(error)")
         }
     }
-    
+
     private func requestNotificationAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             DispatchQueue.main.async {
@@ -301,7 +389,7 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     @MainActor
     private func addNewTricks() async -> Int {
         let insertedCount = await insertNewTricksIfNeeded(context: modelContext)
@@ -314,23 +402,16 @@ enum AppIcon: String, CaseIterable {
     case appIcon = "Default"
     case appIcon2 = "AppIcon2"
     case appIcon3 = "AppIcon3"
-    
+
     var iconValue: String? {
-        if self == .appIcon {
-            return nil
-        } else {
-            return rawValue
-        }
+        self == .appIcon ? nil : rawValue
     }
-    
+
     var previewImage: String {
         switch self {
-            case .appIcon:
-            return "Logo 1"
-        case .appIcon2:
-            return "Logo 2"
-        case .appIcon3:
-            return "Logo 3"
+        case .appIcon: return "Logo 1"
+        case .appIcon2: return "Logo 2"
+        case .appIcon3: return "Logo 3"
         }
     }
 }

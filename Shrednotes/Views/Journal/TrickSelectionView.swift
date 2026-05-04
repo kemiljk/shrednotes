@@ -195,29 +195,39 @@ struct TrickSelectionView: View {
     
     @MainActor
     private func filteredAndDeduplicatedTricks() -> (recent: [Trick], learning: [Trick], grouped: [TrickType: [Trick]]) {
-        var displayedTricks = Set<Trick>()
-        
+        var displayedTricks: Set<Trick> = []
+
         // Filter recent tricks
-        let recentTricks = recentSessions.flatMap { $0.tricks ?? [] }
-            .filter { trickMatchesSearch($0) && (selectedType == nil || $0.type == selectedType) }
-        let uniqueRecentTricks = Array(Set(recentTricks)).sorted { $0.name < $1.name }
+        let allRecentTricks: [Trick] = recentSessions.flatMap { $0.tricks ?? [] }
+        let matchingRecentTricks: [Trick] = allRecentTricks.filter { trick in
+            let matchesSearch = trickMatchesSearch(trick)
+            let matchesType = (selectedType == nil) || (trick.type == selectedType)
+            return matchesSearch && matchesType
+        }
+        let uniqueRecentTricks: [Trick] = Array(Set(matchingRecentTricks))
+            .sorted { $0.name < $1.name }
         displayedTricks.formUnion(uniqueRecentTricks)
-        
+
         // Filter learning tricks
-        let learningTricks = filteredTricks.filter { $0.isLearning && !displayedTricks.contains($0) }
+        let learningTricks: [Trick] = filteredTricks.filter { trick in
+            trick.isLearning && !displayedTricks.contains(trick)
+        }
         displayedTricks.formUnion(learningTricks)
-        
+
         // Group remaining tricks by type
         var groupedTricks: [TrickType: [Trick]] = [:]
         for type in visibleTrickTypes {
-            let tricksOfType = filteredTricks.filter { $0.type == type && !displayedTricks.contains($0) }
+            let tricksOfType: [Trick] = filteredTricks.filter { trick in
+                trick.type == type && !displayedTricks.contains(trick)
+            }
             if !tricksOfType.isEmpty {
                 groupedTricks[type] = tricksOfType
             }
             displayedTricks.formUnion(tricksOfType)
         }
-        
-        return (uniqueRecentTricks, learningTricks.sorted { $0.name < $1.name }, groupedTricks)
+
+        let sortedLearning = learningTricks.sorted { $0.name < $1.name }
+        return (uniqueRecentTricks, sortedLearning, groupedTricks)
     }
     
     private func sectionedTricks(for tricks: [Trick]) -> [String: [Trick]] {

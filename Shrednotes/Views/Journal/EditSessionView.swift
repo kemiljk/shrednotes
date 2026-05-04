@@ -83,149 +83,28 @@ struct EditSessionView: View {
         _selectedLocation = State(initialValue: session.latitude != nil && session.longitude != nil ? IdentifiableLocation(coordinate: initialCoordinate, name: session.location?.name ?? "") : nil)
     }
     
+    private var sessionTricksBinding: Binding<Set<Trick>> {
+        Binding(
+            get: { Set(session.tricks ?? []) },
+            set: { session.tricks = Array($0) }
+        )
+    }
+
+    private var sessionCombosBinding: Binding<Set<ComboTrick>> {
+        Binding(
+            get: { Set(session.combos ?? []) },
+            set: { session.combos = Array($0) }
+        )
+    }
+
     var body: some View {
         NavigationStack {
             List {
-                Section(header: Text("Session Details")) {
-                    TextField("Title", text: $debouncedTitle)
-                        .padding()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(titleIsFocused ? LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(gradient: Gradient(colors: [Color.secondary.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: titleIsFocused ? 2 : 1)
-                        )
-                        .focused($titleIsFocused)
-                        .onChange(of: debouncedTitle) { _, newValue in
-                            debounceUpdateTitle(newValue)
-                        }
-                    
-                    DatePicker("Date", selection: $session.date.withDefault(Date()), displayedComponents: .date)
-                    
-                    HStack {
-                        Text("Duration")
-                        Spacer()
-                        Text(formatDuration(duration))
-                            .padding(.vertical, 5)
-                            .padding(.horizontal, 10)
-                            .background {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.secondary.opacity(0.2))
-                            }
-                    }
-                    .onTapGesture {
-                        withAnimation {
-                            hasDuration.toggle()
-                        }
-                    }
-                    
-                    if hasDuration {
-                        DatePicker("Duration", selection: $duration, displayedComponents: .hourAndMinute)
-                            .datePickerStyle(.wheel)
-                            .labelsHidden()
-                            .frame(maxWidth: .infinity)
-                            .animation(.spring, value: hasDuration)
-                            .onChange(of: duration) { oldValue, newValue in
-                                manualDuration = getDurationInSeconds() ?? 0
-                            }
-                    }
-                    
-                    Section(header: Text("Feeling").font(.subheadline).fontWeight(.semibold).foregroundStyle(.secondary)) {
-                        FeelingPickerView(feelings: $session.feeling.withDefault([]))
-                            .listRowInsets(EdgeInsets())
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextField("Add some more details...", text: $debouncedNote, axis: .vertical)
-                            .padding()
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(noteIsFocused ? LinearGradient(gradient: Gradient(colors: [Color.blue, Color.indigo, Color.pink]), startPoint: .topLeading, endPoint: .bottomTrailing) : LinearGradient(gradient: Gradient(colors: [Color.secondary.opacity(0.2)]), startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: noteIsFocused ? 2 : 1)
-                            )
-                            .focused($noteIsFocused)
-                            .onChange(of: debouncedNote) { _, newValue in
-                                debounceUpdateNote(newValue)
-                            }
-                        
-                        if #available(iOS 26, *) {
-                            Button {
-                                Task {
-                                    await generateTrickSuggestions()
-                                }
-                            } label: {
-                                HStack {
-                                    Label(isSuggestingTricks ? "Thinking..." : "Suggest Tricks", systemImage: "sparkles")
-                                        .transition(.opacity)
-                                }
-                            }
-                            .disabled(debouncedNote.isEmpty || isSuggestingTricks)
-                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
-                            .buttonStyle(.bordered)
-                            .buttonBorderShape(.capsule)
-                            .controlSize(.mini)
-                            .animation(.linear, value: isSuggestingTricks)
-                            .listRowSeparator(.hidden)
-                        }
-                        
-                        if !suggestedTricks.isEmpty {
-                            TrickSuggestionPickerView(
-                                suggestedTricks: $suggestedTricks,
-                                selectedTricks: Binding(
-                                    get: { Set(session.tricks ?? []) },
-                                    set: { session.tricks = Array($0) }
-                                ),
-                                note: debouncedNote
-                            )
-                        }
-                    }
-                }
-                .listRowSeparator(.hidden)
-                
-                
+                detailsSection
                 mediaSection
-                
-                Section(header: Text("Tricks")) {
-                    ForEach(session.tricks ?? [], id: \.id) { trick in
-                        Text(trick.name)
-                            .fontWidth(.expanded)
-                    }
-                    Button {
-                        self.isAddingTricks = true
-                    } label: {
-                        Label("Select Tricks", systemImage: "figure.skateboarding")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 32)
-                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                }
-                .listRowSeparator(.hidden)
-                
-                Section(header: Text("Combos")) {
-                    ForEach(Array(session.combos ?? []), id: \.id) { combo in
-                        if let name = combo.name {
-                            Text(name)
-                                .fontWidth(.expanded)
-                        }
-                    }
-                    Button {
-                        self.isSelectingCombo = true
-                    } label: {
-                        Label("Select Combos", systemImage: "list.bullet")
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 32)
-                            .foregroundStyle(colorScheme == .light ? .indigo : .white)
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                }
-                .listRowSeparator(.hidden)
-                
-                Section(header: Text("Location")) {
-                    LocationPickerView(selectedLocation: $selectedLocation, locationSearchIsFocused: $locationSearchIsFocused)
-                }
-                .listRowSeparator(.hidden)
+                tricksSection
+                combosSection
+                locationSection
             }
             .listStyle(.plain)
             .onAppear {
@@ -233,63 +112,222 @@ struct EditSessionView: View {
                     locationManager.requestLocationAuthorization()
                 }
             }
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    HStack {
-                        Spacer()
-                        Button {
-                            dismissKeyboard()
-                        } label: {
-                            Image(systemName: "keyboard.chevron.compact.down")
-                                .foregroundStyle(.indigo)
-                        }
-                    }
-                }
-                ToolbarItemGroup(placement: .cancellationAction) {
-                    if #available(iOS 26.0, *) {
-                        Button(role: .cancel) {
-                            dismiss()
-                        }
-                    } else {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                    }
-                }
-                ToolbarItemGroup(placement: .confirmationAction) {
-                    if #available(iOS 26.0, *) {
-                        Button(role: .confirm) {
-                            saveSession()
-                        }
-                    } else {
-                        Button("Save") {
-                            saveSession()
-                        }
-                        .fontWeight(.bold)
-                        .sensoryFeedback(.success, trigger: isSaved)
-                    }
-                }
-            }
+            .toolbar { toolbarContent }
             .navigationTitle("Edit Session")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $isAddingTricks) {
-                TrickSelectionView(selectedTricks: Binding(
-                    get: { Set(session.tricks ?? []) },
-                    set: { session.tricks = Array($0) }
-                ))
-                
+                TrickSelectionView(selectedTricks: sessionTricksBinding)
             }
             .sheet(isPresented: $isSelectingCombo) {
-                ComboPicker(selectedCombos: Binding(
-                    get: { Set(session.combos ?? []) },
-                    set: { session.combos = Array($0) }
-                ))
-                
+                ComboPicker(selectedCombos: sessionCombosBinding)
             }
         }
         .onAppear {
             loadExistingMedia()
             initializeDuration()
+        }
+    }
+
+    // MARK: - Sections
+
+    private var detailsSection: some View {
+        Section(header: Text("Session Details")) {
+            titleField
+            DatePicker("Date", selection: $session.date.withDefault(Date()), displayedComponents: .date)
+            durationRow
+            if hasDuration {
+                durationPicker
+            }
+            feelingSection
+            noteBlock
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    private var titleField: some View {
+        TextField("Title", text: $debouncedTitle)
+            .padding()
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        titleIsFocused ? Color.indigo : Color.secondary.opacity(0.2),
+                        lineWidth: titleIsFocused ? 2 : 1
+                    )
+            )
+            .focused($titleIsFocused)
+            .onChange(of: debouncedTitle) { _, newValue in
+                debounceUpdateTitle(newValue)
+            }
+    }
+
+    private var durationRow: some View {
+        HStack {
+            Text("Duration")
+            Spacer()
+            Text(formatDuration(duration))
+                .padding(.vertical, 5)
+                .padding(.horizontal, 10)
+                .background {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.secondary.opacity(0.2))
+                }
+        }
+        .onTapGesture {
+            withAnimation { hasDuration.toggle() }
+        }
+    }
+
+    private var durationPicker: some View {
+        DatePicker("Duration", selection: $duration, displayedComponents: .hourAndMinute)
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
+            .animation(.spring, value: hasDuration)
+            .onChange(of: duration) { _, _ in
+                manualDuration = getDurationInSeconds() ?? 0
+            }
+    }
+
+    private var feelingSection: some View {
+        Section(header: Text("Feeling").font(.subheadline).fontWeight(.semibold).foregroundStyle(.secondary)) {
+            FeelingPickerView(feelings: $session.feeling.withDefault([]))
+                .listRowInsets(EdgeInsets())
+        }
+    }
+
+    private var noteBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("Add some more details...", text: $debouncedNote, axis: .vertical)
+                .padding()
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(
+                            noteIsFocused ? Color.indigo : Color.secondary.opacity(0.2),
+                            lineWidth: noteIsFocused ? 2 : 1
+                        )
+                )
+                .focused($noteIsFocused)
+                .onChange(of: debouncedNote) { _, newValue in
+                    debounceUpdateNote(newValue)
+                }
+
+            if #available(iOS 26, *) {
+                suggestTricksButton
+            }
+
+            if !suggestedTricks.isEmpty {
+                TrickSuggestionPickerView(
+                    suggestedTricks: $suggestedTricks,
+                    selectedTricks: sessionTricksBinding,
+                    note: debouncedNote
+                )
+            }
+        }
+    }
+
+    @available(iOS 26, *)
+    @ViewBuilder
+    private var suggestTricksButton: some View {
+        Button {
+            Task { await generateTrickSuggestions() }
+        } label: {
+            HStack {
+                Label(
+                    isSuggestingTricks ? "Thinking..." : "Suggest Tricks",
+                    systemImage: "sparkles"
+                )
+                .transition(.opacity)
+            }
+        }
+        .disabled(debouncedNote.isEmpty || isSuggestingTricks)
+        .foregroundStyle(colorScheme == .light ? Color.indigo : Color.white)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.capsule)
+        .controlSize(.mini)
+        .animation(.linear, value: isSuggestingTricks)
+        .listRowSeparator(.hidden)
+    }
+
+    private var tricksSection: some View {
+        Section(header: Text("Tricks")) {
+            ForEach(session.tricks ?? [], id: \.id) { trick in
+                Text(trick.name)
+                    .fontWidth(.expanded)
+            }
+            Button {
+                self.isAddingTricks = true
+            } label: {
+                pickerButtonLabel(title: "Select Tricks", systemImage: "figure.skateboarding")
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    private var combosSection: some View {
+        Section(header: Text("Combos")) {
+            ForEach(Array(session.combos ?? []), id: \.id) { combo in
+                if let name = combo.name {
+                    Text(name)
+                        .fontWidth(.expanded)
+                }
+            }
+            Button {
+                self.isSelectingCombo = true
+            } label: {
+                pickerButtonLabel(title: "Select Combos", systemImage: "list.bullet")
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.large)
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    @ViewBuilder
+    private func pickerButtonLabel(title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .frame(maxWidth: .infinity)
+            .frame(height: 32)
+            .foregroundStyle(colorScheme == .light ? Color.indigo : Color.white)
+    }
+
+    private var locationSection: some View {
+        Section(header: Text("Location")) {
+            LocationPickerView(
+                selectedLocation: $selectedLocation,
+                locationSearchIsFocused: $locationSearchIsFocused
+            )
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItemGroup(placement: .keyboard) {
+            HStack {
+                Spacer()
+                Button {
+                    dismissKeyboard()
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .foregroundStyle(.indigo)
+                }
+            }
+        }
+        ToolbarItemGroup(placement: .cancellationAction) {
+            Button(role: .cancel) {
+                dismiss()
+            }
+            .accessibilityLabel("Cancel")
+        }
+        ToolbarItemGroup(placement: .confirmationAction) {
+            Button(role: .confirm) {
+                saveSession()
+            }
+            .accessibilityLabel("Save session")
         }
     }
     

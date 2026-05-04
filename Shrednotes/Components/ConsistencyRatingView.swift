@@ -12,40 +12,50 @@ struct ConsistencyRatingView: View {
     @ScaledMetric(relativeTo: .body) private var baseHeight: CGFloat = 40
     @ScaledMetric(relativeTo: .body) private var heightStep: CGFloat = 20
 
+    private static let activeGradient = LinearGradient(
+        gradient: Gradient(colors: [Color.indigo, Color.blue]),
+        startPoint: .top,
+        endPoint: .bottom
+    )
+    private static let inactiveGradient = LinearGradient(
+        gradient: Gradient(colors: [Color.secondary.opacity(0.3), Color.secondary.opacity(0.1)]),
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
     var body: some View {
         VStack {
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(0..<labels.count, id: \.self) { index in
-                    Button {
-                        consistency = index
-                    } label: {
-                        VStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(consistency >= index ? LinearGradient(
-                                    gradient: Gradient(colors: [Color.indigo, Color.blue]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                ) : LinearGradient(
-                                    gradient: Gradient(colors: [Color.secondary.opacity(0.3), Color.secondary.opacity(0.1)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                ))
-                                .frame(height: baseHeight + CGFloat(index) * heightStep)
-                            Text(labels[index])
-                                .font(.caption)
-                                .foregroundColor(consistency == index ? .primary : .secondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Consistency \(labels[index])")
-                    .accessibilityValue(consistency == index ? "selected" : "")
-                    .accessibilityAddTraits(consistency == index ? [.isButton, .isSelected] : .isButton)
-                    .accessibilityHint("Sets the practice consistency to \(labels[index])")
+                    bar(at: index)
                 }
             }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Practice consistency rating")
+    }
+
+    @ViewBuilder
+    private func bar(at index: Int) -> some View {
+        let isActive = consistency >= index
+        let isSelected = consistency == index
+        Button {
+            consistency = index
+        } label: {
+            VStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isActive ? Self.activeGradient : Self.inactiveGradient)
+                    .frame(height: baseHeight + CGFloat(index) * heightStep)
+                Text(labels[index])
+                    .font(.caption)
+                    .foregroundColor(isSelected ? .primary : .secondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Consistency \(labels[index])")
+        .accessibilityValue(isSelected ? "selected" : "")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityHint("Sets the practice consistency to \(labels[index])")
     }
 }
 
