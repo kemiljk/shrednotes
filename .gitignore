@@ -1,0 +1,14 @@
+.DS_Store
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+
+# Xcode and local build output
+BuildData/
+build/
+DerivedData/
+
+# Local audit captures
+tasks/audit-screenshots/
+screenshot_*.png

@@ -15,22 +15,22 @@ struct TrickSuggestionPickerView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(suggestedTricks) { trick in
-                    Button(action: {
-                        if selectedTricks.contains(trick) {
-                            selectedTricks.remove(trick)
-                        } else {
-                            selectedTricks.insert(trick)
+                    Text(trick.name.highlightMatching(words: note.components(separatedBy: .whitespacesAndNewlines)))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(selectedTricks.contains(trick) ? Color.indigo : Color.indigo.opacity(0.1))
+                        .foregroundColor(selectedTricks.contains(trick) ? .white : .indigo)
+                        .clipShape(Capsule())
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if selectedTricks.contains(trick) {
+                                selectedTricks.remove(trick)
+                            } else {
+                                selectedTricks.insert(trick)
+                            }
+                            suggestedTricks.removeAll { $0.id == trick.id }
                         }
-                        suggestedTricks.removeAll { $0.id == trick.id }
-                    }) {
-                        Text(trick.name.highlightMatching(words: note.components(separatedBy: .whitespacesAndNewlines)))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(selectedTricks.contains(trick) ? Color.indigo : Color.indigo.opacity(0.1))
-                            .foregroundColor(selectedTricks.contains(trick) ? .white : .indigo)
-                            .cornerRadius(4)
-                    }
-                    .scrollTransition { content, phase in
+                        .scrollTransition { content, phase in
                         content
                             .opacity(phase.isIdentity ? 1 : 0)
                             .scaleEffect(phase.isIdentity ? 1 : 0.8)
@@ -41,7 +41,7 @@ struct TrickSuggestionPickerView: View {
             .padding(.bottom, 8)
             .scrollTargetBehavior(.viewAligned)
         }
-        .contentMargins(.horizontal, 16, for: .scrollContent)
+        .contentMargins(.horizontal, 20, for: .scrollContent)
         .transition(.opacity)
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets())

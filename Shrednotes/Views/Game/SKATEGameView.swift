@@ -251,43 +251,22 @@ struct SKATEGameView: View {
                         Button {
                             gameMode = .skate
                         } label: {
-                            VStack(spacing: 8) {
-                                Text("S.K.A.T.E")
-                                    .font(.headline)
-                                Text("5 letters")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(
-                                gameMode == .skate ? Color(.accent).gradient : Color(
-                                    .systemGray6
-                                ).gradient
-                            )
-                            .foregroundStyle(gameMode == .skate ? .white : .primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            Text("S.K.A.T.E")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
                         }
+                        .gameModeButtonStyle(isSelected: gameMode == .skate)
                         
                         Button {
                             gameMode = .skateboard
                         } label: {
-                            VStack(spacing: 8) {
-                                Text("S.K.A.T.E.B.O.A.R.D")
-                                    .font(.headline)
-                                Text("10 letters")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(gameMode == .skateboard ? Color(.accent).gradient : Color(
-                                    .systemGray6
-                                ).gradient
-                            )
-                            .foregroundStyle(gameMode == .skateboard ? .white : .primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            Text("S.K.A.T.E.B.O.A.R.D")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
                         }
+                        .gameModeButtonStyle(isSelected: gameMode == .skateboard)
                     }
                 }
                 
@@ -934,4 +913,25 @@ struct SKATEGameView: View {
 #Preview {
     SKATEGameView()
         .modelContainer(for: [Trick.self, SkateSession.self], inMemory: true)
+}
+
+struct GameModeButtonStyleModifier: ViewModifier {
+    let isSelected: Bool
+    
+    func body(content: Content) -> some View {
+        if isSelected {
+            content
+                .buttonStyle(.glassProminent)
+                .tint(.indigo)
+        } else {
+            content
+                .buttonStyle(.glass)
+        }
+    }
+}
+
+extension View {
+    fileprivate func gameModeButtonStyle(isSelected: Bool) -> some View {
+        modifier(GameModeButtonStyleModifier(isSelected: isSelected))
+    }
 } 
